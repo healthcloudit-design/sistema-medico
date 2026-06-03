@@ -42,7 +42,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
       if (existing) {
         pacienteId = (existing as { id: string }).id
         if (!pacienteId) throw new Error('ID de paciente inválido')
-        // Actualizar datos del paciente si ya existe
         await supabase.from('pacientes').update({
           nombre: state.nombre,
           email: state.email || null,
@@ -68,10 +67,8 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
         if (!pacienteId) throw new Error('No se pudo crear el paciente')
       }
 
-      // Estado según obra social: con OS → pendiente de verificación, sin OS → confirmado
       const estadoTurno = state.obra_social.trim() ? 'pendiente' : 'confirmado'
 
-      // Usar RPC atómica para evitar race condition (verificación + insert en una transacción)
       const { data: rpcResult, error: rpcError } = await supabase.rpc('reservar_turno', {
         p_paciente_id: pacienteId,
         p_consultorio_id: state.consultorio.id,
@@ -97,7 +94,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({ turno_id: turnoId }),
-        }).catch(() => {}) // no bloqueamos el flujo si falla el mail
+        }).catch(() => {})
       }
 
       onComplete()
@@ -119,7 +116,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
       </button>
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Confirme su turno</h2>
 
-      {/* Resumen */}
       <div className="bg-sky-50 rounded-2xl p-4 mb-5 space-y-2.5">
         <div className="flex items-center gap-3 text-sm">
           <Stethoscope className="w-4 h-4 text-sky-500 flex-shrink-0" />
@@ -178,7 +174,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
           />
         </div>
 
-        {/* Obra social + nro de socio */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Obra social <span className="text-gray-400 text-xs font-normal">(opcional)</span>

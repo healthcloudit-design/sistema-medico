@@ -87,6 +87,19 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
         setLoading(false)
         return
       }
+
+      const turnoId = (rpcResult as { id?: string })?.id
+      if (turnoId && state.email) {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirm-appointment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ turno_id: turnoId }),
+        }).catch(() => {}) // no bloqueamos el flujo si falla el mail
+      }
+
       onComplete()
     } catch (err) {
       console.error(err)

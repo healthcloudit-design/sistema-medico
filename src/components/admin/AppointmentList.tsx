@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { Search, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Turno, TurnoEstado } from '../../types'

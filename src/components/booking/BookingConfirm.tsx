@@ -79,6 +79,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
       })
 
       if (rpcError) throw rpcError
+      console.log('rpcResult:', JSON.stringify(rpcResult))
       if ((rpcResult as { error?: string })?.error === 'slot_taken') {
         setError('Ese horario ya fue reservado por otra persona. Por favor elegí otro.')
         setLoading(false)

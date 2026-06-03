@@ -55,12 +55,9 @@ export function BookingFlow() {
           >
             Reservar otro turno
           </button>
-          <button
-            onClick={() => window.close()}
-            className="w-full mt-3 text-gray-400 text-sm hover:text-gray-600 transition-colors"
-          >
-            Listo, cerrar
-          </button>
+          <p className="mt-3 text-gray-400 text-sm text-center">
+            Ya podés cerrar esta ventana.
+          </p>
         </div>
       </div>
     )

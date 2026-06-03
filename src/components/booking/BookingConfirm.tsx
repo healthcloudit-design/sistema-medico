@@ -87,7 +87,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
 
       const turnoId = (rpcResult as { id?: string })?.id
       if (turnoId && state.email) {
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirm-appointment`, {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirm-appoiment`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

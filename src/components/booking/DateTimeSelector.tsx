@@ -2,23 +2,23 @@ import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isBefore, startOfDay, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import type { Consultorio } from '../../types'
+import type { Professional } from '../../types'
 import { useAvailability } from '../../hooks/useAvailability'
 
 interface Props {
-  consultorio: Consultorio
+  professional: Professional
   selectedDate?: string
   selectedTime?: string
   onSelect: (fecha: string, hora: string) => void
   onBack: () => void
 }
 
-export function DateTimeSelector({ consultorio, selectedDate, selectedTime, onSelect, onBack }: Props) {
+export function DateTimeSelector({ professional, selectedDate, selectedTime, onSelect, onBack }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [localDate, setLocalDate] = useState(selectedDate)
   const [localTime, setLocalTime] = useState(selectedTime)
 
-  const { slots, loading, availableDates } = useAvailability(consultorio.id, localDate)
+  const { slots, loading, availableDates } = useAvailability(professional.id, localDate)
 
   const today = startOfDay(new Date())
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) })
@@ -29,10 +29,9 @@ export function DateTimeSelector({ consultorio, selectedDate, selectedTime, onSe
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-2 rounded-xl transition-colors mb-4">
         <ChevronLeft className="w-4 h-4" /> Volver
       </button>
-      <h2 className="text-lg font-semibold text-gray-900 mb-1">Elegí fecha y hora</h2>
-      <p className="text-sm text-gray-500 mb-4">Los días disponibles están marcados en el calendario</p>
+      <h2 className="text-lg font-semibold text-gray-900 mb-1">Elegi fecha y hora</h2>
+      <p className="text-sm text-gray-500 mb-4">Los dias disponibles estan marcados en el calendario</p>
 
-      {/* Calendario */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => setCurrentMonth(m => subMonths(m, 1))} className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -46,7 +45,7 @@ export function DateTimeSelector({ consultorio, selectedDate, selectedTime, onSe
           </button>
         </div>
         <div className="grid grid-cols-7 mb-2">
-          {['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(d => (
+          {['Lu','Ma','Mi','Ju','Vi','Sa','Do'].map(d => (
             <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
           ))}
         </div>
@@ -74,12 +73,11 @@ export function DateTimeSelector({ consultorio, selectedDate, selectedTime, onSe
         </div>
       </div>
 
-      {/* Horarios */}
       {localDate && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4 text-sky-500" />
-            Horarios — {format(parseISO(localDate), "d 'de' MMMM", { locale: es })}
+            Horarios - {format(parseISO(localDate), "d 'de' MMMM", { locale: es })}
           </h3>
           {loading ? (
             <div className="grid grid-cols-4 gap-2">
@@ -112,7 +110,7 @@ export function DateTimeSelector({ consultorio, selectedDate, selectedTime, onSe
           onClick={() => onSelect(localDate, localTime)}
           className="w-full bg-sky-600 text-white py-3.5 rounded-2xl font-semibold hover:bg-sky-700 transition-colors shadow-sm"
         >
-          Continuar — {format(parseISO(localDate), "d/MM", { locale: es })} a las {localTime}hs
+          Continuar - {format(parseISO(localDate), "d/MM", { locale: es })} a las {localTime}hs
         </button>
       )}
     </div>

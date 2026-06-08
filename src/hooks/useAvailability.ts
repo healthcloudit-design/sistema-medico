@@ -1,78 +1,107 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import type { TimeSlot, HorarioTemplate, DiasBloqueados, Turno } from '../types'
-import { format, addMinutes, parseISO, isBefore, startOfDay } from 'date-fns'
+import type { TimeSlot, Schedule, AvailabilityBlock } from '../types'
+import { format, startOfDay, isBefore } from 'date-fns'
+
+// Argentina siempre UTC-3 (sin DST)
+const ARG_OFFSET_MS = -3 * 60 * 60 * 1000
+
+function toArgTime(iso: string): string {
+  const ms = new Date(iso).getTime() + ARG_OFFSET_MS
+  const d = new Date(ms)
+  return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`
+}
 
 export function useAvailability(
-  consultorioId: string | undefined,
-  selectedDate: string | undefined
+  professionalId: string | undefined,
+  selectedDate: string | undefined,
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
 
-  // Cargar slots del día seleccionado
   useEffect(() => {
-    if (!consultorioId || !selectedDate) { setSlots([]); return }
+    if (!professionalId || !selectedDate) {
+      setSlots([])
+      return
+    }
 
     const load = async () => {
       setLoading(true)
       try {
-        const dateObj = parseISO(selectedDate)
-        const dayOfWeek = dateObj.getDay()
+        const dayOfWeek = new Date(selectedDate + 'T12:00:00').getDay()
+        const dayStart = `${selectedDate}T00:00:00-03:00`
+        const dayEnd   = `${selectedDate}T23:59:59-03:00`
 
-        const [horarioRes, bloqueadoRes, turnosRes] = await Promise.all([
+        const [scheduleRes, blockRes, apptRes] = await Promise.all([
           supabase
-            .from('horarios_template')
+            .from('schedules')
             .select('*')
-            .eq('consultorio_id', consultorioId)
-            .eq('dia_semana', dayOfWeek)
-            .eq('activo', true),
+            .eq('professional_id', professionalId)
+            .eq('day_of_week', dayOfWeek)
+            .eq('active', true),
           supabase
-            .from('dias_bloqueados')
+            .from('availability_blocks')
             .select('*')
-            .eq('consultorio_id', consultorioId)
-            .eq('fecha', selectedDate),
+            .eq('professional_id', professionalId)
+            .or(`blocked_date.eq.${selectedDate},and(blocked_start.lte.${dayEnd},blocked_end.gte.${dayStart})`),
           supabase
-            .from('turnos')
-            .select('hora')
-            .eq('consultorio_id', consultorioId)
-            .eq('fecha', selectedDate)
-            .not('estado', 'eq', 'cancelado'),
+            .from('appointments')
+            .select('starts_at')
+            .eq('professional_id', professionalId)
+            .gte('starts_at', dayStart)
+            .lte('starts_at', dayEnd)
+            .neq('status', 'cancelado'),
         ])
 
-        if (horarioRes.error) throw horarioRes.error
-        if (bloqueadoRes.error) throw bloqueadoRes.error
-        if (turnosRes.error) throw turnosRes.error
+        if (scheduleRes.error) throw scheduleRes.error
+        if (apptRes.error) throw apptRes.error
 
-        // Si el día está bloqueado, no hay slots
-        if ((bloqueadoRes.data ?? []).length > 0) { setSlots([]); setLoading(false); return }
+        const blocks = (blockRes.data ?? []) as AvailabilityBlock[]
 
-        const horarios = (horarioRes.data ?? []) as HorarioTemplate[]
-        const turnosTomados = new Set((turnosRes.data ?? []).map((t: { hora: string }) => t.hora.slice(0, 5)))
+        if (blocks.some(b => b.blocked_date === selectedDate)) {
+          setSlots([])
+          setLoading(false)
+          return
+        }
+
+        const schedules = (scheduleRes.data ?? []) as Schedule[]
+        const takenTimes = new Set(
+          (apptRes.data ?? []).map((a: { starts_at: string }) => toArgTime(a.starts_at)),
+        )
+
+        const blockedRanges = blocks
+          .filter(b => b.blocked_start && b.blocked_end)
+          .map(b => ({
+            start: toArgTime(b.blocked_start as string),
+            end:   toArgTime(b.blocked_end as string),
+          }))
+
+        const isBlockedByRange = (hora: string) =>
+          blockedRanges.some(r => hora >= r.start && hora < r.end)
+
         const now = new Date()
-
         const slotMap = new Map<string, TimeSlot>()
 
-        for (const h of horarios) {
-          const [startH, startM] = h.hora_inicio.split(':').map(Number)
-          const [endH, endM] = h.hora_fin.split(':').map(Number)
+        for (const sch of schedules) {
+          const [startH, startM] = sch.start_time.split(':').map(Number)
+          const [endH, endM]     = sch.end_time.split(':').map(Number)
           const startMin = startH * 60 + startM
-          const endMin = endH * 60 + endM
+          const endMin   = endH   * 60 + endM
+          const interval = Math.max(sch.interval_minutes ?? 30, 5)
 
-          const intervalo = Math.max(h.intervalo_minutos, 5) // evitar loop infinito si intervalo es 0
-          for (let m = startMin; m < endMin; m += intervalo) {
-            const hh = Math.floor(m / 60).toString().padStart(2, '0')
-            const mm = (m % 60).toString().padStart(2, '0')
+          for (let m = startMin; m < endMin; m += interval) {
+            const hh   = Math.floor(m / 60).toString().padStart(2, '0')
+            const mm   = (m % 60).toString().padStart(2, '0')
             const hora = `${hh}:${mm}`
 
-            const slotDt = new Date(dateObj)
-            slotDt.setHours(Number(hh), Number(mm), 0, 0)
-            const isPast = isBefore(slotDt, now)
-            const isTaken = turnosTomados.has(hora)
+            const slotDt    = new Date(`${selectedDate}T${hora}:00-03:00`)
+            const isPast    = isBefore(slotDt, now)
+            const isTaken   = takenTimes.has(hora)
+            const isBlocked = isBlockedByRange(hora)
 
-            if (!slotMap.has(hora) || (!isPast && !isTaken)) {
-              slotMap.set(hora, { hora, disponible: !isPast && !isTaken })
+            if (!slotMap.has(hora)) {
+              slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
             }
           }
         }
@@ -84,25 +113,36 @@ export function useAvailability(
     }
 
     load()
-  }, [consultorioId, selectedDate])
+  }, [professionalId, selectedDate])
 
-  // Calcular días disponibles (próximos 2 meses)
   useEffect(() => {
-    if (!consultorioId) return
+    if (!professionalId) {
+      setAvailableDates(new Set())
+      return
+    }
 
     const loadDates = async () => {
-      const [horarioRes, bloqueadosRes] = await Promise.all([
-        supabase.from('horarios_template').select('dia_semana').eq('consultorio_id', consultorioId).eq('activo', true),
-        supabase.from('dias_bloqueados').select('fecha').eq('consultorio_id', consultorioId),
+      const [schedRes, blockRes] = await Promise.all([
+        supabase
+          .from('schedules')
+          .select('day_of_week')
+          .eq('professional_id', professionalId)
+          .eq('active', true),
+        supabase
+          .from('availability_blocks')
+          .select('blocked_date')
+          .eq('professional_id', professionalId)
+          .not('blocked_date', 'is', null),
       ])
 
-      if (horarioRes.error || bloqueadosRes.error) {
-        console.error('Error cargando disponibilidad:', horarioRes.error ?? bloqueadosRes.error)
-        return
-      }
+      if (schedRes.error || blockRes.error) return
 
-      const diasDisponibles = new Set((horarioRes.data ?? []).map((h: { dia_semana: number }) => h.dia_semana))
-      const diasBloqueados = new Set((bloqueadosRes.data ?? []).map((d: { fecha: string }) => d.fecha))
+      const availDays = new Set(
+        (schedRes.data ?? []).map((s: { day_of_week: number }) => s.day_of_week),
+      )
+      const blockedDates = new Set(
+        (blockRes.data ?? []).map((b: { blocked_date: string }) => b.blocked_date),
+      )
 
       const dates = new Set<string>()
       const today = startOfDay(new Date())
@@ -112,7 +152,7 @@ export function useAvailability(
       const cursor = new Date(today)
       while (cursor <= limit) {
         const dateStr = format(cursor, 'yyyy-MM-dd')
-        if (diasDisponibles.has(cursor.getDay()) && !diasBloqueados.has(dateStr)) {
+        if (availDays.has(cursor.getDay()) && !blockedDates.has(dateStr)) {
           dates.add(dateStr)
         }
         cursor.setDate(cursor.getDate() + 1)
@@ -122,7 +162,7 @@ export function useAvailability(
     }
 
     loadDates()
-  }, [consultorioId])
+  }, [professionalId])
 
   return { slots, loading, availableDates }
 }

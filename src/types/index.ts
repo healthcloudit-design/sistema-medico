@@ -1,93 +1,102 @@
-// ============================================================
-// TIPOS DE DOMINIO — Centro Oftalmológico
-// ============================================================
-
-export type TurnoEstado = 'confirmado' | 'cancelado' | 'ausente' | 'atendido' | 'pendiente'
-
-export interface Consultorio {
+export interface Service {
   id: string
-  nombre: string
-  direccion?: string
-  telefono?: string
-  activo: boolean
-  qr_url?: string
+  organization_id: string
+  name: string
+  description?: string
+  duration_minutes: number
+  price?: number
+  color: string
+  active: boolean
   created_at: string
 }
 
-export interface Servicio {
+export interface Professional {
   id: string
-  consultorio_id: string
-  nombre: string
-  descripcion?: string
-  duracion_minutos: number
-  icono?: string
-  activo: boolean
-  precio?: number
+  organization_id: string
+  location_id?: string
+  user_id?: string
+  full_name: string
+  specialty?: string
+  bio?: string
+  avatar_url?: string
+  active: boolean
+  created_at: string
 }
 
-export interface HorarioTemplate {
+export interface Schedule {
   id: string
-  consultorio_id: string
-  dia_semana: number   // 0=Dom, 1=Lun, ..., 6=Sáb
-  hora_inicio: string  // "HH:MM"
-  hora_fin: string     // "HH:MM"
-  intervalo_minutos: number
-  activo: boolean
+  professional_id: string
+  day_of_week: number
+  start_time: string
+  end_time: string
+  interval_minutes: number
+  active: boolean
+  created_at: string
 }
 
-export interface DiasBloqueados {
+export interface AvailabilityBlock {
   id: string
-  consultorio_id: string
-  fecha: string   // "YYYY-MM-DD"
-  motivo?: string
+  professional_id: string
+  blocked_date?: string
+  blocked_start?: string
+  blocked_end?: string
+  reason?: string
+  created_at: string
 }
 
-export interface Disponibilidad {
+export interface Patient {
   id: string
-  consultorio_id: string
-  fecha: string
-  hora: string
-  disponible: boolean
-  motivo_bloqueo?: string
-}
-
-export interface Paciente {
-  id: string
-  nombre: string
-  telefono: string
+  organization_id: string
+  full_name: string
+  phone?: string
   email?: string
+  dni?: string
   obra_social?: string
   nro_socio?: string
-  observaciones?: string
+  notes?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface Turno {
+export type AppointmentStatus =
+  | 'pendiente'
+  | 'confirmado'
+  | 'cancelado'
+  | 'no_asistio'
+  | 'completado'
+
+export interface Appointment {
   id: string
-  paciente_id?: string
-  consultorio_id: string
-  servicio_id: string
-  fecha: string   // "YYYY-MM-DD"
-  hora: string    // "HH:MM"
-  estado: TurnoEstado
-  estado_pago?: string
-  importe?: number
-  fecha_pago?: string
-  medio_pago?: string
+  organization_id: string
+  location_id?: string
+  professional_id: string
+  service_id: string
+  patient_id?: string
+  starts_at: string
+  ends_at: string
+  status: AppointmentStatus
+  notes?: string
+  patient_name: string
+  patient_phone?: string
+  patient_email?: string
+  payment_status?: string
+  payment_amount?: number
+  payment_date?: string
+  payment_provider?: string
   transaction_id?: string
   created_at: string
-  // Joins
-  paciente?: Paciente
-  consultorio?: Consultorio
-  servicio?: Servicio
+  updated_at: string
+  patient?: Patient
+  professional?: Professional
+  service?: Service
 }
 
-// Para el flujo de reserva paso a paso
 export interface BookingState {
   step: 1 | 2 | 3 | 4
-  servicio?: Servicio
-  consultorio?: Consultorio
-  fecha?: string     // "YYYY-MM-DD"
-  hora?: string      // "HH:MM"
+  service?: Service
+  professional?: Professional
+  fecha?: string
+  hora?: string
   nombre: string
   telefono: string
   email: string

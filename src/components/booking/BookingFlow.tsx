@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { CheckCircle, Calendar, Building2, Stethoscope } from 'lucide-react'
+import { CheckCircle, Calendar, UserCircle, Stethoscope } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { BookingState } from '../../types'
 import { ServiceSelector } from './ServiceSelector'
-import { ConsultorioSelector } from './ConsultorioSelector'
+import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
 
 const STEPS = [
-  { label: 'Servicio',    icon: Stethoscope },
-  { label: 'Consultorio', icon: Building2 },
+  { label: 'Servicio',     icon: Stethoscope },
+  { label: 'Profesional',  icon: UserCircle },
   { label: 'Fecha y hora', icon: Calendar },
-  { label: 'Confirmar',   icon: CheckCircle },
+  { label: 'Confirmar',    icon: CheckCircle },
 ]
 
 const INITIAL_STATE: BookingState = {
@@ -44,8 +44,8 @@ export function BookingFlow() {
             Su turno fue registrado con éxito. Lo contactaremos para confirmar.
           </p>
           <div className="bg-sky-50 rounded-xl p-4 text-left space-y-2 text-sm text-gray-600 mb-6">
-            <div><span className="font-medium">Servicio:</span> {state.servicio?.icono} {state.servicio?.nombre}</div>
-            <div><span className="font-medium">Consultorio:</span> {state.consultorio?.nombre}</div>
+            <div><span className="font-medium">Servicio:</span> {state.service?.name}</div>
+            <div><span className="font-medium">Profesional:</span> {state.professional?.full_name}</div>
             <div><span className="font-medium">Fecha:</span> {state.fecha ? format(parseISO(state.fecha), 'dd/MM/yy') : ''}</div>
             <div><span className="font-medium">Hora:</span> {state.hora}hs</div>
           </div>
@@ -95,22 +95,22 @@ export function BookingFlow() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {state.step === 1 && (
           <ServiceSelector
-            selected={state.servicio}
-            onSelect={s => { update({ servicio: s, consultorio: undefined, fecha: undefined, hora: undefined }); next() }}
+            selected={state.service}
+            onSelect={s => { update({ service: s, professional: undefined, fecha: undefined, hora: undefined }); next() }}
           />
         )}
-        {state.step === 2 && state.servicio && (
-          <ConsultorioSelector
-            servicio={state.servicio}
-            selected={state.consultorio}
-            onSelect={c => update({ consultorio: c, fecha: undefined, hora: undefined })}
+        {state.step === 2 && state.service && (
+          <ProfessionalSelector
+            service={state.service}
+            selected={state.professional}
+            onSelect={p => update({ professional: p, fecha: undefined, hora: undefined })}
             onConfirm={next}
             onBack={back}
           />
         )}
-        {state.step === 3 && state.consultorio && (
+        {state.step === 3 && state.professional && (
           <DateTimeSelector
-            consultorio={state.consultorio}
+            professional={state.professional}
             selectedDate={state.fecha}
             selectedTime={state.hora}
             onSelect={(fecha, hora) => { update({ fecha, hora }); next() }}

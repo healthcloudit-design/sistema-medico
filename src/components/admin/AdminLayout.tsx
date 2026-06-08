@@ -15,7 +15,7 @@ const NAV: NavItem[] = [
   { label: 'Turnos', icon: Calendar, view: 'appointments' },
   { label: 'Disponibilidad', icon: Clock, view: 'availability' },
   { label: 'Servicios', icon: Stethoscope, view: 'services' },
-  { label: 'Consultorios', icon: Building2, view: 'professionals' },
+  { label: 'Profesionales', icon: Building2, view: 'professionals' },
 ]
 
 interface Props {

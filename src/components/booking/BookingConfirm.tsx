@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, Calendar, Clock, Building2, Stethoscope } from 'lucide-react'
+import { ChevronLeft, Calendar, Clock, UserCircle, Stethoscope } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -19,7 +19,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!state.servicio || !state.consultorio || !state.fecha || !state.hora) return
+    if (!state.service || !state.professional || !state.fecha || !state.hora) return
     if (!state.nombre.trim()) { setError('El nombre es obligatorio'); return }
     if (!state.telefono.trim()) { setError('El teléfono es obligatorio'); return }
     if (state.obra_social.trim() && !state.nro_socio.trim()) {
@@ -31,69 +31,45 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
     setError('')
 
     try {
-      // Buscar o crear paciente por teléfono
-      let pacienteId: string | undefined
-      const { data: existing } = await supabase
-        .from('pacientes')
-        .select('id')
-        .eq('telefono', state.telefono)
-        .maybeSingle()
-
-      if (existing) {
-        pacienteId = (existing as { id: string }).id
-        if (!pacienteId) throw new Error('ID de paciente inválido')
-        await supabase.from('pacientes').update({
-          nombre: state.nombre,
-          email: state.email || null,
-          obra_social: state.obra_social || null,
-          nro_socio: state.nro_socio || null,
-          observaciones: state.observaciones || null,
-        }).eq('id', pacienteId)
-      } else {
-        const { data: nuevo, error: errPaciente } = await supabase
-          .from('pacientes')
-          .insert({
-            nombre: state.nombre,
-            telefono: state.telefono,
-            email: state.email || null,
-            obra_social: state.obra_social || null,
-            nro_socio: state.nro_socio || null,
-            observaciones: state.observaciones || null,
-          })
-          .select('id')
-          .single()
-        if (errPaciente) throw errPaciente
-        pacienteId = (nuevo as { id: string } | null)?.id
-        if (!pacienteId) throw new Error('No se pudo crear el paciente')
-      }
-
-      const estadoTurno = state.obra_social.trim() ? 'pendiente' : 'confirmado'
+      // Construir TIMESTAMPTZ en Argentina (UTC-3)
+      const startsAt = `${state.fecha}T${state.hora}:00-03:00`
 
       const { data: rpcResult, error: rpcError } = await supabase.rpc('reservar_turno', {
-        p_paciente_id: pacienteId,
-        p_consultorio_id: state.consultorio.id,
-        p_servicio_id: state.servicio.id,
-        p_fecha: state.fecha,
-        p_hora: state.hora,
-        p_estado: estadoTurno,
+        p_professional_id:      state.professional.id,
+        p_service_id:           state.service.id,
+        p_starts_at:            startsAt,
+        p_patient_name:         state.nombre,
+        p_patient_phone:        state.telefono,
+        p_patient_email:        state.email        || undefined,
+        p_patient_obra_social:  state.obra_social  || undefined,
+        p_patient_nro_socio:    state.nro_socio    || undefined,
+        p_patient_notes:        state.observaciones || undefined,
       })
 
       if (rpcError) throw rpcError
-      if ((rpcResult as { error?: string })?.error === 'slot_taken') {
-        setError('Ese horario ya fue reservado por otra persona. Por favor elegí otro.')
+
+      const result = rpcResult as { id?: string; status?: string; error?: string }
+
+      if (result?.error === 'slot_taken') {
+        setError('Ese horario ya fue reservado. Por favor elegí otro.')
         setLoading(false)
         return
       }
+      if (result?.error) {
+        throw new Error(result.error)
+      }
 
-      const turnoId = (rpcResult as { id?: string })?.id
-      if (turnoId && state.email) {
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/confirm-appoiment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      // Disparar email de confirmación si hay email y turno creado
+      if (result?.id && state.email) {
+        supabase.functions.invoke('send-confirmation', {
+          body: {
+            appointment_id:    result.id,
+            patient_name:      state.nombre,
+            patient_email:     state.email,
+            professional_name: state.professional.full_name,
+            service_name:      state.service.name,
+            starts_at:         startsAt,
           },
-          body: JSON.stringify({ turno_id: turnoId }),
         }).catch(() => {})
       }
 
@@ -116,15 +92,19 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
       </button>
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Confirme su turno</h2>
 
+      {/* Resumen del turno */}
       <div className="bg-sky-50 rounded-2xl p-4 mb-5 space-y-2.5">
         <div className="flex items-center gap-3 text-sm">
           <Stethoscope className="w-4 h-4 text-sky-500 flex-shrink-0" />
-          <span className="font-medium text-gray-900">{state.servicio?.icono} {state.servicio?.nombre}</span>
-          <span className="text-gray-400 text-xs">{state.servicio?.duracion_minutos} min</span>
+          <span className="font-medium text-gray-900">{state.service?.name}</span>
+          <span className="text-gray-400 text-xs">{state.service?.duration_minutes} min</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <Building2 className="w-4 h-4 text-sky-500 flex-shrink-0" />
-          <span className="text-gray-900">{state.consultorio?.nombre}</span>
+          <UserCircle className="w-4 h-4 text-sky-500 flex-shrink-0" />
+          <span className="text-gray-900">{state.professional?.full_name}</span>
+          {state.professional?.specialty && (
+            <span className="text-gray-400 text-xs">{state.professional.specialty}</span>
+          )}
         </div>
         <div className="flex items-center gap-3 text-sm">
           <Calendar className="w-4 h-4 text-sky-500 flex-shrink-0" />
@@ -149,6 +129,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Teléfono / WhatsApp <span className="text-red-500">*</span>
@@ -161,6 +142,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Email <span className="text-gray-400 text-xs font-normal">(opcional)</span>
@@ -188,7 +170,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
         </div>
 
         {tieneObraSocial && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Nº de socio / carnet <span className="text-red-500">*</span>
             </label>
@@ -200,7 +182,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
             />
             <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-              ⏳ Tu turno quedará pendiente de confirmación hasta verificar la cobertura.
+              ⏳ Tu turno quedará pendiente hasta verificar la cobertura.
             </p>
           </div>
         )}

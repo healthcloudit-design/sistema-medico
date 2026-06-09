@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { BookingFlow } from './components/booking/BookingFlow'
 import { AdminPage } from './pages/AdminPage'
+import { CancelPage } from './pages/CancelPage'
 
 export default function App() {
   return (
@@ -8,6 +9,9 @@ export default function App() {
       <Routes>
         {/* Reserva pública */}
         <Route path="/" element={<BookingFlow />} />
+
+        {/* Cancelación pública por token */}
+        <Route path="/cancelar" element={<CancelPage />} />
 
         {/* Panel de administración */}
         <Route path="/admin" element={<AdminPage />} />

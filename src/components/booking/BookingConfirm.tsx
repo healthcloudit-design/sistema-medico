@@ -48,7 +48,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
 
       if (rpcError) throw rpcError
 
-      const result = rpcResult as { id?: string; status?: string; error?: string }
+      const result = rpcResult as { id?: string; status?: string; error?: string; cancellation_token?: string }
 
       if (result?.error === 'slot_taken') {
         setError('Ese horario ya fue reservado. Por favor elegí otro.')
@@ -63,12 +63,13 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
       if (result?.id && state.email) {
         supabase.functions.invoke('send-confirmation', {
           body: {
-            appointment_id:    result.id,
-            patient_name:      state.nombre,
-            patient_email:     state.email,
-            professional_name: state.professional.full_name,
-            service_name:      state.service.name,
-            starts_at:         startsAt,
+            appointment_id:      result.id,
+            patient_name:        state.nombre,
+            patient_email:       state.email,
+            professional_name:   state.professional.full_name,
+            service_name:        state.service.name,
+            starts_at:           startsAt,
+            cancellation_token:  result.cancellation_token,
           },
         }).catch(() => {})
       }

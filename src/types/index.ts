@@ -109,3 +109,15 @@ export interface TimeSlot {
   hora: string
   disponible: boolean
 }
+
+
+export type UserRole = 'paciente' | 'medico' | 'recepcion' | 'admin' | 'superadmin'
+
+export interface Profile {
+  id: string
+  role: UserRole
+  full_name: string | null
+  professional_id: string | null
+  created_at: string
+  updated_at: string
+}

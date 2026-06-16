@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS clinical_records (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- Un turno puede tener solo una evolución
-  UNIQUE(appointment_id)
+    UNIQUE(appointment_id)
+
 );
 
 -- Índices

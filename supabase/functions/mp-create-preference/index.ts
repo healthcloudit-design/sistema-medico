@@ -101,6 +101,7 @@ serve(async (req) => {
     })
 
   } catch (err) {
+    console.error('mp-create-preference error:', (err as Error).message)
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

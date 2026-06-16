@@ -151,7 +151,7 @@ export function MedicoDashboard() {
           appointmentId={selected.id}
           patientId={(selected.patient as { id?: string } | undefined)?.id ?? null}
           professionalId={profile.professional_id}
-          organizationId={profile.organization_id ?? ''}
+          organizationId={selected.organization_id}
           patientName={selected.patient_name}
           onClose={() => setShowHC(false)}
         />

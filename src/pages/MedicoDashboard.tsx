@@ -74,7 +74,7 @@ export function MedicoDashboard() {
     const to   = endOfDay(addDays(new Date(), 6)).toISOString()
     supabase
       .from('appointments')
-      .select('*, services(name, color, duration_minutes), patients(full_name, phone, email, obra_social)')
+      .select('*, services(name, color, duration_minutes), patients(id, full_name, phone, email, obra_social)')
       .eq('professional_id', profile.professional_id)
       .gte('starts_at', from)
       .lte('starts_at', to)

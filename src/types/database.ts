@@ -48,7 +48,6 @@ export type Database = {
         Insert: { professional_id: string; service_id: string; starts_at: string; ends_at: string; patient_name: string; [key: string]: unknown }
         Update: { [key: string]: unknown }
       }
-    }
       clinical_records: {
         Row: { id: string; organization_id: string; appointment_id: string; patient_id: string | null; professional_id: string; motivo: string; diagnostico: string | null; indicaciones: string | null; notas: string | null; created_at: string; updated_at: string }
         Insert: { organization_id: string; appointment_id: string; professional_id: string; motivo: string; [key: string]: unknown }

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Clock, UserCircle, LogOut, Stethoscope } from 'lucide-react'
+import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
+import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -27,7 +28,8 @@ export function MedicoDashboard() {
   const [authLoading, setAuthLoading] = useState(true)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loadingAppts, setLoadingAppts] = useState(true)
-  const [selected, setSelected]   = useState<Appointment | null>(null)
+  const [selected, setSelected]     = useState<Appointment | null>(null)
+  const [showHC, setShowHC]         = useState(false)
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -143,6 +145,18 @@ export function MedicoDashboard() {
         )}
       </main>
 
+      {/* Modal Historia Clínica */}
+      {selected && showHC && profile?.professional_id && (
+        <ClinicalRecordModal
+          appointmentId={selected.id}
+          patientId={(selected.patient as { id?: string } | undefined)?.id ?? null}
+          professionalId={profile.professional_id}
+          organizationId={profile.organization_id ?? ''}
+          patientName={selected.patient_name}
+          onClose={() => setShowHC(false)}
+        />
+      )}
+
       {/* Modal detalle */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
@@ -172,14 +186,23 @@ export function MedicoDashboard() {
                       {selected.patient_email && <InfoItem label="Email" value={selected.patient_email} />}
                       {patient?.obra_social && <InfoItem label="Obra social" value={patient.obra_social} />}
                     </div>
-                    {selected.status === 'confirmado' && (
+                    <div className="flex gap-2 mt-2">
                       <button
-                        onClick={() => markDone(selected.id)}
-                        className="w-full mt-2 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-2xl font-semibold text-sm transition-colors"
+                        onClick={() => setShowHC(true)}
+                        className="flex-1 flex items-center justify-center gap-2 border border-sky-200 text-sky-700 hover:bg-sky-50 py-3 rounded-2xl font-semibold text-sm transition-colors"
                       >
-                        Marcar como completado
+                        <FileText className="w-4 h-4" />
+                        Historia clínica
                       </button>
-                    )}
+                      {selected.status === 'confirmado' && (
+                        <button
+                          onClick={() => markDone(selected.id)}
+                          className="flex-1 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-2xl font-semibold text-sm transition-colors"
+                        >
+                          Completado
+                        </button>
+                      )}
+                    </div>
                   </>
                 )
               })()}

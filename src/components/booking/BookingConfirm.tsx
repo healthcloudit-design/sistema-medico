@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, Calendar, Clock, UserCircle, Stethoscope } from 'lucide-react'
+import { ChevronLeft, Calendar, Clock, UserCircle, Stethoscope, CreditCard, Building2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -14,8 +14,13 @@ interface Props {
 }
 
 export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState('')
+  const [pagoOnline, setPagoOnline] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
+
+  const servicePrice = state.service?.price ?? 0
+  const ofrecePago   = servicePrice > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,6 +77,20 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
             cancellation_token:  result.cancellation_token,
           },
         }).catch(() => {})
+      }
+
+      // Si eligió pagar online, redirigir a MercadoPago
+      if (pagoOnline && result?.id) {
+        setRedirecting(true)
+        const { data: mpData, error: mpError } = await supabase.functions.invoke('mp-create-preference', {
+          body: { appointment_id: result.id },
+        })
+        if (!mpError && mpData?.init_point) {
+          window.location.href = mpData.init_point
+          return
+        }
+        // Si falla MP, completar igual sin pago
+        setRedirecting(false)
       }
 
       onComplete()
@@ -201,10 +220,55 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
           />
         </div>
 
+        {/* Opción de pago online */}
+        {ofrecePago && !tieneObraSocial && (
+          <div className="border border-gray-200 rounded-2xl overflow-hidden">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-3 pb-2">
+              ¿Cómo querés abonar?
+            </p>
+            <div className="grid grid-cols-2 gap-0 divide-x divide-gray-200 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setPagoOnline(false)}
+                className={`flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors ${
+                  !pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Building2 className="w-5 h-5" />
+                En consultorio
+              </button>
+              <button
+                type="button"
+                onClick={() => setPagoOnline(true)}
+                className={`flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors ${
+                  pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <CreditCard className="w-5 h-5" />
+                Pagar online
+                <span className="text-xs font-normal text-gray-400">
+                  ${servicePrice.toLocaleString('es-AR')}
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
-        <Button type="submit" loading={loading} size="lg" className="w-full !bg-sky-600 hover:!bg-sky-700">
-          {tieneObraSocial ? 'Solicitar turno' : 'Confirmar turno'}
+        {redirecting && (
+          <div className="bg-sky-50 text-sky-700 text-sm px-4 py-3 rounded-xl text-center">
+            Redirigiendo a MercadoPago...
+          </div>
+        )}
+
+        <Button type="submit" loading={loading || redirecting} size="lg" className="w-full !bg-sky-600 hover:!bg-sky-700">
+          {pagoOnline && ofrecePago
+            ? `Reservar y pagar $${servicePrice.toLocaleString('es-AR')}`
+            : tieneObraSocial
+              ? 'Solicitar turno'
+              : 'Confirmar turno'
+          }
         </Button>
       </form>
     </div>

@@ -1,0 +1,247 @@
+{
+  "name": "Leads Centros Médicos GBA Norte",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "n1",
+      "name": "Inicio Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// ─── CONFIGURACIÓN ───────────────────────────────────────────\n// 1. Pegá tu Google Places API Key aquí:\nconst API_KEY = 'REEMPLAZAR_CON_TU_GOOGLE_API_KEY';\n\n// 2. Zonas a buscar (de Tigre a Vicente López)\nconst locations = [\n  'Tigre Buenos Aires Argentina',\n  'General Pacheco Buenos Aires Argentina',\n  'San Fernando Buenos Aires Argentina',\n  'San Isidro Buenos Aires Argentina',\n  'Acassuso Buenos Aires Argentina',\n  'Beccar Buenos Aires Argentina',\n  'Martinez Buenos Aires Argentina',\n  'Olivos Buenos Aires Argentina',\n  'La Lucila Buenos Aires Argentina',\n  'Florida Buenos Aires Argentina',\n  'Vicente Lopez Buenos Aires Argentina'\n];\n\n// 3. Categorías de búsqueda\nconst categories = [\n  'centro medico',\n  'clinica medica',\n  'consultorio medico',\n  'oftalmologia',\n  'consultorio oftalmologico',\n  'centro estetico',\n  'estetica',\n  'spa estetico'\n];\n// ─────────────────────────────────────────────────────────────\n\nconst combos = [];\nfor (const location of locations) {\n  for (const category of categories) {\n    combos.push({\n      json: {\n        query: `${category} ${location}`,\n        category,\n        location,\n        apiKey: API_KEY\n      }\n    });\n  }\n}\n\nreturn combos;"
+      },
+      "id": "n2",
+      "name": "Generar Combos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 340]
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/place/textsearch/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "query",    "value": "={{ $json.query }}" },
+            { "name": "key",      "value": "={{ $json.apiKey }}" },
+            { "name": "language", "value": "es" },
+            { "name": "region",   "value": "ar" }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": { "responseFormat": "json" }
+          }
+        }
+      },
+      "id": "n3",
+      "name": "Places Text Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Respuesta de Google Places Text Search\nconst response = $input.item.json;\nconst results = response.results || [];\n\n// Contexto original (category, location, apiKey) - lineage tracking\nconst ctx = $('Generar Combos').item.json;\n\nif (results.length === 0) return [];\n\nreturn results.map(place => ({\n  json: {\n    place_id:  place.place_id,\n    name:      place.name,\n    address:   place.formatted_address || '',\n    category:  ctx.category,\n    location:  ctx.location,\n    apiKey:    ctx.apiKey\n  }\n}));"
+      },
+      "id": "n4",
+      "name": "Extraer Lugares",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Deduplicar por place_id\nconst seen = new Set();\nconst unique = [];\nfor (const item of $input.all()) {\n  const id = item.json.place_id;\n  if (id && !seen.has(id)) {\n    seen.add(id);\n    unique.push(item);\n  }\n}\nreturn unique;"
+      },
+      "id": "n5",
+      "name": "Deduplicar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 340]
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/place/details/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "place_id", "value": "={{ $json.place_id }}" },
+            { "name": "fields",   "value": "name,formatted_address,formatted_phone_number,international_phone_number,website" },
+            { "name": "key",      "value": "={{ $json.apiKey }}" },
+            { "name": "language", "value": "es" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n6",
+      "name": "Place Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response  = $input.item.json;\nconst place     = response.result || {};\nconst ctx       = $('Deduplicar').item.json;\n\nconst website   = (place.website || '').trim();\nconst phone     = place.international_phone_number || place.formatted_phone_number || '';\n\n// Formatear número para WhatsApp Argentina (+54 9 11 XXXX-XXXX → 5491XXXXXXXX)\nconst digits    = phone.replace(/[^0-9]/g, '');\nlet waNumber    = '';\nif (digits.startsWith('549')) {\n  waNumber = digits;\n} else if (digits.startsWith('54')) {\n  // insertar 9 después del código de país\n  waNumber = '549' + digits.slice(2);\n} else if (digits.startsWith('0')) {\n  // número local: quitar 0, agregar 549\n  waNumber = '549' + digits.slice(1);\n} else {\n  waNumber = '549' + digits;\n}\nconst waLink    = phone ? `https://wa.me/${waNumber}` : '';\n\n// Clasificar: tiene web real (no redes sociales)?\nconst isRealWeb = website !== '' &&\n  !website.includes('facebook.com') &&\n  !website.includes('instagram.com') &&\n  !website.includes('google.com') &&\n  !website.includes('maps.google') &&\n  !website.includes('linktr.ee');\n\nconst tipo_lead = !website ? 'sin_web'\n  : !isRealWeb  ? 'solo_redes'\n  : 'tiene_web_propia';\n\nreturn [{\n  json: {\n    place_id:        ctx.place_id,\n    nombre:          place.name      || ctx.name,\n    direccion:       place.formatted_address || ctx.address,\n    telefono:        phone,\n    whatsapp:        waLink,\n    website:         website,\n    categoria:       ctx.category,\n    zona:            ctx.location,\n    tipo_lead,\n    isLead:          tipo_lead !== 'tiene_web_propia',\n    para_scraping:   tipo_lead === 'tiene_web_propia',\n    apiKey:          ctx.apiKey\n  }\n}];"
+      },
+      "id": "n7",
+      "name": "Clasificar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 340]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.para_scraping }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n8",
+      "name": "¿Tiene web propia?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1740, 340]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website }}",
+        "options": {
+          "timeout": 8000,
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": { "responseFormat": "text" }
+          }
+        }
+      },
+      "id": "n9",
+      "name": "Scrape Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 200],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const html = (typeof $input.item.json.data === 'string')\n  ? $input.item.json.data\n  : JSON.stringify($input.item.json);\n\nconst ctx = $('Clasificar Lead').item.json;\n\n// Regex para extraer emails visibles en el HTML\nconst emailRegex = /[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}/g;\nconst allEmails  = [...new Set(html.match(emailRegex) || [])];\n\n// Filtrar emails de dominio genérico\nconst genericDomains = [\n  'gmail.com', 'hotmail.com', 'hotmail.com.ar',\n  'yahoo.com', 'yahoo.com.ar', 'outlook.com',\n  'live.com', 'icloud.com'\n];\nconst genericEmails = allEmails.filter(e =>\n  genericDomains.some(d => e.toLowerCase().endsWith('@' + d))\n);\n\nconst tieneEmailGenerico = genericEmails.length > 0;\n\nreturn [{\n  json: {\n    ...ctx,\n    email:      genericEmails[0] || '',\n    tipo_lead:  tieneEmailGenerico ? 'mail_no_corporativo' : 'descartado',\n    isLead:     tieneEmailGenerico\n  }\n}];"
+      },
+      "id": "n10",
+      "name": "Extraer Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2180, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.isLead }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n11",
+      "name": "¿Email genérico?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2400, 200]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "n12",
+      "name": "Merge Leads",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2620, 340]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const d = $input.item.json;\nreturn [{\n  json: {\n    Nombre:     d.nombre     || '',\n    Dirección:  d.direccion  || '',\n    Teléfono:   d.telefono   || '',\n    WhatsApp:   d.whatsapp   || '',\n    Email:      d.email      || '',\n    Website:    d.website    || '',\n    Categoría:  d.categoria  || '',\n    Zona:       d.zona       || '',\n    Tipo:       d.tipo_lead  || '',\n    Fecha:      new Date().toLocaleDateString('es-AR')\n  }\n}];"
+      },
+      "id": "n13",
+      "name": "Formatear Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2840, 340]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "value": "REEMPLAZAR_CON_ID_DE_TU_GOOGLE_SHEET",
+          "__rl": true,
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Leads",
+          "__rl": true,
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "n14",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [3060, 340]
+    }
+  ],
+  "connections": {
+    "Inicio Manual":       { "main": [[{ "node": "Generar Combos",    "type": "main", "index": 0 }]] },
+    "Generar Combos":      { "main": [[{ "node": "Places Text Search", "type": "main", "index": 0 }]] },
+    "Places Text Search":  { "main": [[{ "node": "Extraer Lugares",   "type": "main", "index": 0 }]] },
+    "Extraer Lugares":     { "main": [[{ "node": "Deduplicar",        "type": "main", "index": 0 }]] },
+    "Deduplicar":          { "main": [[{ "node": "Place Details",     "type": "main", "index": 0 }]] },
+    "Place Details":       { "main": [[{ "node": "Clasificar Lead",   "type": "main", "index": 0 }]] },
+    "Clasificar Lead":     { "main": [[{ "node": "¿Tiene web propia?","type": "main", "index": 0 }]] },
+    "¿Tiene web propia?":  {
+      "main": [
+        [{ "node": "Scrape Website",  "type": "main", "index": 0 }],
+        [{ "node": "Merge Leads",     "type": "main", "index": 1 }]
+      ]
+    },
+    "Scrape Website":      { "main": [[{ "node": "Extraer Email",     "type": "main", "index": 0 }]] },
+    "Extraer Email":       { "main": [[{ "node": "¿Email genérico?",  "type": "main", "index": 0 }]] },
+    "¿Email genérico?": {
+      "main": [
+        [{ "node": "Merge Leads",     "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Merge Leads":         { "main": [[{ "node": "Formatear Output",  "type": "main", "index": 0 }]] },
+    "Formatear Output":    { "main": [[{ "node": "Google Sheets",     "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "pinData": {}
+}

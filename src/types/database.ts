@@ -49,6 +49,12 @@ export type Database = {
         Update: { [key: string]: unknown }
       }
     }
+      clinical_records: {
+        Row: { id: string; organization_id: string; appointment_id: string; patient_id: string | null; professional_id: string; motivo: string; diagnostico: string | null; indicaciones: string | null; notas: string | null; created_at: string; updated_at: string }
+        Insert: { organization_id: string; appointment_id: string; professional_id: string; motivo: string; [key: string]: unknown }
+        Update: { [key: string]: unknown }
+      }
+    }
     Views: Record<string, unknown>
     Functions: {
       reservar_turno: {

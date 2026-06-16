@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale'
 import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
+import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
@@ -33,6 +34,20 @@ export function MedicoDashboard() {
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
+
+  // Obtener org del médico desde su professional record
+  const [orgId, setOrgId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!profile?.professional_id) return
+    supabase
+      .from('professionals')
+      .select('organization_id')
+      .eq('id', profile.professional_id)
+      .single()
+      .then(({ data }) => setOrgId(data?.organization_id ?? null))
+  }, [profile?.professional_id])
+
+  const { featureHc } = useOrgFeatures(orgId)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -187,13 +202,15 @@ export function MedicoDashboard() {
                       {patient?.obra_social && <InfoItem label="Obra social" value={patient.obra_social} />}
                     </div>
                     <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => setShowHC(true)}
-                        className="flex-1 flex items-center justify-center gap-2 border border-sky-200 text-sky-700 hover:bg-sky-50 py-3 rounded-2xl font-semibold text-sm transition-colors"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Historia clínica
-                      </button>
+                      {featureHc && (
+                        <button
+                          onClick={() => setShowHC(true)}
+                          className="flex-1 flex items-center justify-center gap-2 border border-sky-200 text-sky-700 hover:bg-sky-50 py-3 rounded-2xl font-semibold text-sm transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Historia clínica
+                        </button>
+                      )}
                       {selected.status === 'confirmado' && (
                         <button
                           onClick={() => markDone(selected.id)}

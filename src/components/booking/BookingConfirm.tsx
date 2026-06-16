@@ -3,6 +3,7 @@ import { ChevronLeft, Calendar, Clock, UserCircle, Stethoscope, CreditCard, Buil
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
+import { useOrgFeatures } from '../../hooks/useOrgFeatures'
 import type { BookingState } from '../../types'
 import { Button } from '../ui/Button'
 
@@ -19,8 +20,11 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
   const [pagoOnline, setPagoOnline] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
 
+  const orgId        = state.professional?.organization_id ?? null
+  const { featureMp } = useOrgFeatures(orgId)
+
   const servicePrice = state.service?.price ?? 0
-  const ofrecePago   = servicePrice > 0
+  const ofrecePago   = featureMp && servicePrice > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -220,7 +224,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete }: Props) {
           />
         </div>
 
-        {/* Opción de pago online */}
+        {/* Opción de pago online — solo si feature_mp está activo y el servicio tiene precio */}
         {ofrecePago && !tieneObraSocial && (
           <div className="border border-gray-200 rounded-2xl overflow-hidden">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-3 pb-2">

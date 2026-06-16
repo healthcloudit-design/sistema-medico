@@ -10,6 +10,7 @@ import { AvailabilityManager } from '../components/admin/AvailabilityManager'
 import { ServicesManager } from '../components/admin/ServicesManager'
 import { ProfessionalsManager } from '../components/admin/ProfessionalsManager'
 import { UserManager } from '../components/admin/UserManager'
+import { ModulesManager } from '../components/admin/ModulesManager'
 import { Calendar } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 
@@ -102,6 +103,7 @@ export function AdminPage() {
       {view === 'services'      && <ServicesManager />}
       {view === 'professionals' && <ProfessionalsManager />}
       {view === 'users'         && <UserManager />}
+      {view === 'modules'       && <ModulesManager />}
     </AdminLayout>
   )
 }

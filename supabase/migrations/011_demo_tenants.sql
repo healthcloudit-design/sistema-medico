@@ -86,3 +86,50 @@ FROM (VALUES
 ) AS profs(prof_id)
 CROSS JOIN generate_series(1, 5) AS day
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- Tenants adicionales: Médico General y Pediatría
+-- ============================================================
+INSERT INTO organizations (id, name, slug, timezone, active, feature_mp, feature_hc, tenant_type)
+VALUES
+  ('c4000000-0000-0000-0000-000000000001', 'Centro Médico General', 'medico-general', 'America/Argentina/Buenos_Aires', true, false, true, 'medical'),
+  ('c5000000-0000-0000-0000-000000000001', 'Pediatría Integral',    'pediatria',      'America/Argentina/Buenos_Aires', true, false, true, 'medical')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO professionals (id, organization_id, full_name, specialty, active)
+VALUES
+  ('c4000000-0000-0000-0000-000000000011', 'c4000000-0000-0000-0000-000000000001', 'Dr. Roberto Vidal',   'Clínica Médica', true),
+  ('c5000000-0000-0000-0000-000000000011', 'c5000000-0000-0000-0000-000000000001', 'Dra. Cecilia Romero', 'Pediatría',      true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO services (id, organization_id, name, duration_minutes, price, color, active)
+VALUES
+  ('c4000000-0000-0000-0001-000000000001', 'c4000000-0000-0000-0000-000000000001', 'Consulta clínica',        30,  8000, '#0ea5e9', true),
+  ('c4000000-0000-0000-0001-000000000002', 'c4000000-0000-0000-0000-000000000001', 'Control de rutina',       20,  6000, '#38bdf8', true),
+  ('c4000000-0000-0000-0001-000000000003', 'c4000000-0000-0000-0000-000000000001', 'Certificado médico',      15,  4000, '#7dd3fc', true),
+  ('c4000000-0000-0000-0001-000000000004', 'c4000000-0000-0000-0000-000000000001', 'Electrocardiograma',      30, 12000, '#0369a1', true),
+  ('c5000000-0000-0000-0001-000000000001', 'c5000000-0000-0000-0000-000000000001', 'Consulta pediátrica',     30,  8000, '#a78bfa', true),
+  ('c5000000-0000-0000-0001-000000000002', 'c5000000-0000-0000-0000-000000000001', 'Control de crecimiento',  20,  6000, '#c4b5fd', true),
+  ('c5000000-0000-0000-0001-000000000003', 'c5000000-0000-0000-0000-000000000001', 'Vacunación',              15,  5000, '#ddd6fe', true),
+  ('c5000000-0000-0000-0001-000000000004', 'c5000000-0000-0000-0000-000000000001', 'Urgencia pediátrica',     30, 10000, '#7c3aed', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO professional_services (professional_id, service_id) VALUES
+  ('c4000000-0000-0000-0000-000000000011', 'c4000000-0000-0000-0001-000000000001'),
+  ('c4000000-0000-0000-0000-000000000011', 'c4000000-0000-0000-0001-000000000002'),
+  ('c4000000-0000-0000-0000-000000000011', 'c4000000-0000-0000-0001-000000000003'),
+  ('c4000000-0000-0000-0000-000000000011', 'c4000000-0000-0000-0001-000000000004'),
+  ('c5000000-0000-0000-0000-000000000011', 'c5000000-0000-0000-0001-000000000001'),
+  ('c5000000-0000-0000-0000-000000000011', 'c5000000-0000-0000-0001-000000000002'),
+  ('c5000000-0000-0000-0000-000000000011', 'c5000000-0000-0000-0001-000000000003'),
+  ('c5000000-0000-0000-0000-000000000011', 'c5000000-0000-0000-0001-000000000004')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO schedules (professional_id, day_of_week, start_time, end_time, interval_minutes, active)
+SELECT prof_id, day, '09:00', '18:00', 30, true
+FROM (VALUES
+  ('c4000000-0000-0000-0000-000000000011'::uuid),
+  ('c5000000-0000-0000-0000-000000000011'::uuid)
+) AS profs(prof_id)
+CROSS JOIN generate_series(1, 5) AS day
+ON CONFLICT DO NOTHING;

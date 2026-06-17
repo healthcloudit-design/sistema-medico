@@ -62,7 +62,7 @@ export function MedicoDashboard() {
 
   // Redirigir si no es médico
   useEffect(() => {
-    if (!user && !authLoading) { navigate('/admin', { replace: true }); return }
+    if (!user && !authLoading) { navigate("/", { replace: true }); return }
     if (!profile) return
     if (profile.role === 'admin' || profile.role === 'superadmin') navigate('/admin', { replace: true })
     if (profile.role === 'recepcion') navigate('/recepcion', { replace: true })

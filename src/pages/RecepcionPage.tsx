@@ -53,7 +53,7 @@ export function RecepcionPage() {
   }, [])
 
   useEffect(() => {
-    if (!user && !authLoading) { navigate('/admin', { replace: true }); return }
+    if (!user && !authLoading) { navigate('/', { replace: true }); return }
     if (!profile) return
     if (['admin','superadmin'].includes(profile.role)) navigate('/admin', { replace: true })
     if (profile.role === 'medico') navigate('/medico', { replace: true })

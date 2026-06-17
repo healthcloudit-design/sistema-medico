@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle, Calendar, UserCircle, Stethoscope } from 'lucide-react'
+import { CheckCircle, Calendar, UserCircle, Stethoscope, Sparkles } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../../lib/supabase'
 import type { BookingState, Organization } from '../../types'
@@ -9,8 +9,15 @@ import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
 
-const STEPS = [
+const STEPS_MEDICAL = [
   { label: 'Servicio',     icon: Stethoscope },
+  { label: 'Profesional',  icon: UserCircle },
+  { label: 'Fecha y hora', icon: Calendar },
+  { label: 'Confirmar',    icon: CheckCircle },
+]
+
+const STEPS_BEAUTY = [
+  { label: 'Servicio',     icon: Sparkles },
   { label: 'Profesional',  icon: UserCircle },
   { label: 'Fecha y hora', icon: Calendar },
   { label: 'Confirmar',    icon: CheckCircle },
@@ -78,6 +85,7 @@ export function BookingFlow() {
   }
 
   const isBeauty = org.tenant_type === 'beauty'
+  const STEPS = isBeauty ? STEPS_BEAUTY : STEPS_MEDICAL
 
   if (completed) {
     return (

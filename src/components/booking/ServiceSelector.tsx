@@ -11,15 +11,25 @@ interface Props {
 }
 
 const CATEGORY_META: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluqueria': { emoji: '✂️', gradient: 'from-pink-50 to-fuchsia-50', border: 'border-pink-200',  text: 'text-pink-700'  },
-  'Manos':      { emoji: '💅', gradient: 'from-rose-50 to-pink-50',    border: 'border-rose-200',  text: 'text-rose-700'  },
-  'Barberia':   { emoji: '🪒', gradient: 'from-slate-50 to-zinc-50',   border: 'border-slate-300', text: 'text-slate-700' },
+  'Peluqueria':  { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Manos':       { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Barberia':    { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
+  'Masajes':     { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
+  'Reflexologia':{ emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
+  'Drenaje':     { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
+  'Aparatologia':{ emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Facial':      { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
 }
 
 const CATEGORY_META_ES: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluquería': { emoji: '✂️', gradient: 'from-pink-50 to-fuchsia-50', border: 'border-pink-200',  text: 'text-pink-700'  },
-  'Manos':           { emoji: '💅', gradient: 'from-rose-50 to-pink-50',    border: 'border-rose-200',  text: 'text-rose-700'  },
-  'Barbería':   { emoji: '🪒', gradient: 'from-slate-50 to-zinc-50',   border: 'border-slate-300', text: 'text-slate-700' },
+  'Peluquería':   { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Manos':        { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Barbería':     { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
+  'Masajes':      { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
+  'Reflexología': { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
+  'Drenaje':      { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
+  'Aparatología': { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Facial':       { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
 }
 
 const DEFAULT_CAT_META = { emoji: '💈', gradient: 'from-sky-50 to-blue-50', border: 'border-sky-200', text: 'text-sky-700' }

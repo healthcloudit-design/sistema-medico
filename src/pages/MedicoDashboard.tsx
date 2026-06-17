@@ -288,6 +288,7 @@ function AppointmentCard({ appt, onClick }: { appt: Appointment; onClick: () => 
   )
 }
 
+
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>

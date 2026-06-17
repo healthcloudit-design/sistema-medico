@@ -6,8 +6,26 @@ export interface Service {
   duration_minutes: number
   price?: number
   color: string
+  category?: string | null
   active: boolean
   created_at: string
+}
+
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+  logo_url?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  timezone: string
+  active: boolean
+  feature_mp: boolean
+  feature_hc: boolean
+  tenant_type: 'medical' | 'beauty' | 'general'
+  created_at: string
+  updated_at: string
 }
 
 export interface Professional {
@@ -109,7 +127,6 @@ export interface TimeSlot {
   hora: string
   disponible: boolean
 }
-
 
 export type UserRole = 'paciente' | 'medico' | 'recepcion' | 'admin' | 'superadmin'
 

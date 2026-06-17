@@ -4,7 +4,7 @@ export type Database = {
   public: {
     Tables: {
       organizations: {
-        Row: { id: string; name: string; slug: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null; timezone: string; active: boolean; feature_mp: boolean; feature_hc: boolean; created_at: string; updated_at: string }
+        Row: { id: string; name: string; slug: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null; timezone: string; active: boolean; feature_mp: boolean; feature_hc: boolean; tenant_type: 'medical' | 'beauty' | 'general'; created_at: string; updated_at: string }
         Insert: { name: string; slug: string; [key: string]: unknown }
         Update: { [key: string]: unknown }
       }
@@ -19,7 +19,7 @@ export type Database = {
         Update: { [key: string]: unknown }
       }
       services: {
-        Row: { id: string; organization_id: string; name: string; description: string | null; duration_minutes: number; price: number | null; color: string; active: boolean; created_at: string; updated_at: string }
+        Row: { id: string; organization_id: string; name: string; description: string | null; duration_minutes: number; price: number | null; color: string; category: string | null; active: boolean; created_at: string; updated_at: string }
         Insert: { organization_id: string; name: string; [key: string]: unknown }
         Update: { [key: string]: unknown }
       }

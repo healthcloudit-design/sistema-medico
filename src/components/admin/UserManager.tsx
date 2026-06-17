@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Plus, UserCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Profile, Professional, UserRole } from '../../types'
+import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
 
 const ROLE_CONFIG: Record<UserRole, { label: string; className: string }> = {
   superadmin: { label: 'Superadmin',  className: 'bg-purple-100 text-purple-800' },
   admin:      { label: 'Admin',        className: 'bg-sky-100 text-sky-800' },
-  recepcion:  { label: 'Recepción',    className: 'bg-green-100 text-green-800' },
-  medico:     { label: 'Médico',       className: 'bg-amber-100 text-amber-800' },
+  recepcion:  { label: 'Recepcion',    className: 'bg-green-100 text-green-800' },
+  medico:     { label: 'Medico',       className: 'bg-amber-100 text-amber-800' },
   paciente:   { label: 'Paciente',     className: 'bg-gray-100 text-gray-600' },
 }
 
@@ -17,26 +18,34 @@ interface UserRow extends Profile {
 }
 
 export function UserManager() {
-  const [users, setUsers]             = useState<UserRow[]>([])
+  const [users, setUsers]                 = useState<UserRow[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [creating, setCreating]       = useState(false)
-  const [saving, setSaving]           = useState(false)
-  const [error, setError]             = useState('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [creating, setCreating]           = useState(false)
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '',
-    role: 'medico' as UserRole, professional_id: '',
+    role: 'medico' as UserRole,
+    professional_id: '',
+    organization_id: '',
   })
+
+  const needsOrg = form.role === 'recepcion' || form.role === 'admin'
+  const needsProfessional = form.role === 'medico'
 
   const load = async () => {
     setLoading(true)
-    const [pRes, profRes] = await Promise.all([
+    const [pRes, profRes, orgRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-      supabase.from('professionals').select('id, full_name').eq('active', true).order('full_name'),
+      supabase.from('professionals').select('id, full_name, organization_id').eq('active', true).order('full_name'),
+      supabase.from('organizations').select('id, name').eq('active', true).order('name'),
     ])
     setUsers((pRes.data ?? []) as UserRow[])
     setProfessionals((profRes.data ?? []) as Professional[])
+    setOrganizations((orgRes.data ?? []) as Organization[])
     setLoading(false)
   }
 
@@ -45,9 +54,12 @@ export function UserManager() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!form.email || !form.password) { setError('Email y contraseña son obligatorios'); return }
-    if (form.role === 'medico' && !form.professional_id) {
-      setError('Seleccioná el profesional asociado al médico'); return
+    if (!form.email || !form.password) { setError('Email y contrasena son obligatorios'); return }
+    if (needsProfessional && !form.professional_id) {
+      setError('Selecciona el profesional asociado'); return
+    }
+    if (needsOrg && !form.organization_id) {
+      setError('Selecciona el centro al que pertenece el usuario'); return
     }
     setSaving(true)
     const { error: fnErr } = await supabase.functions.invoke('admin-create-user', {
@@ -56,14 +68,15 @@ export function UserManager() {
         password:        form.password,
         full_name:       form.full_name,
         role:            form.role,
-        professional_id: form.role === 'medico' ? form.professional_id : null,
+        professional_id: needsProfessional ? form.professional_id : null,
+        organization_id: needsOrg ? form.organization_id : null,
       },
     })
     if (fnErr) {
       setError(fnErr.message ?? 'Error al crear el usuario')
     } else {
       setCreating(false)
-      setForm({ email: '', password: '', full_name: '', role: 'medico', professional_id: '' })
+      setForm({ email: '', password: '', full_name: '', role: 'medico', professional_id: '', organization_id: '' })
       await load()
     }
     setSaving(false)
@@ -74,12 +87,18 @@ export function UserManager() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
   }
 
+  // Org name for display
+  const orgName = (orgId: string | null | undefined) => {
+    if (!orgId) return null
+    return organizations.find(o => o.id === orgId)?.name ?? null
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
-          <p className="text-sm text-gray-500">Gestioná el acceso al sistema</p>
+          <p className="text-sm text-gray-500">Gestiona el acceso al sistema</p>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus className="w-4 h-4" /> Nuevo usuario
@@ -98,6 +117,7 @@ export function UserManager() {
             <div className="divide-y divide-gray-50">
               {users.map(u => {
                 const cfg = ROLE_CONFIG[u.role]
+                const org = orgName((u as any).organization_id)
                 return (
                   <div key={u.id} className="px-5 py-3.5 flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
@@ -105,7 +125,9 @@ export function UserManager() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 text-sm">{u.full_name ?? '—'}</div>
-                      <div className="text-xs text-gray-400">{u.id.slice(0,8)}…</div>
+                      <div className="text-xs text-gray-400">
+                        {org ? org : u.id.slice(0,8) + '…'}
+                      </div>
                     </div>
                     <select
                       value={u.role}
@@ -141,7 +163,7 @@ export function UserManager() {
                     value={form.full_name}
                     onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    placeholder="Ej: Dra. Laura Pérez"
+                    placeholder="Ej: Brenda Lopez"
                   />
                 </div>
                 <div>
@@ -156,13 +178,13 @@ export function UserManager() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Contraseña *</label>
+                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Contrasena *</label>
                   <input
                     type="password"
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Minimo 6 caracteres"
                     required
                   />
                 </div>
@@ -170,15 +192,16 @@ export function UserManager() {
                   <label className="text-sm font-medium text-gray-700 block mb-1.5">Rol *</label>
                   <select
                     value={form.role}
-                    onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole, professional_id: '' }))}
+                    onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole, professional_id: '', organization_id: '' }))}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="admin">Admin</option>
-                    <option value="recepcion">Recepción</option>
-                    <option value="medico">Médico</option>
+                    <option value="recepcion">Recepcion</option>
+                    <option value="medico">Medico / Profesional</option>
                   </select>
                 </div>
-                {form.role === 'medico' && (
+
+                {needsProfessional && (
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1.5">Profesional asociado *</label>
                     <select
@@ -186,14 +209,37 @@ export function UserManager() {
                       onChange={e => setForm(f => ({ ...f, professional_id: e.target.value }))}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                     >
-                      <option value="">Seleccioná un profesional</option>
-                      {professionals.map(p => (
-                        <option key={p.id} value={p.id}>{p.full_name}</option>
-                      ))}
+                      <option value="">Selecciona un profesional</option>
+                      {professionals.map(p => {
+                        const org = orgName(p.organization_id)
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.full_name}{org ? ` (${org})` : ''}
+                          </option>
+                        )
+                      })}
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">El médico solo verá sus propios turnos.</p>
+                    <p className="text-xs text-gray-400 mt-1">Solo vera sus propios turnos.</p>
                   </div>
                 )}
+
+                {needsOrg && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
+                    <select
+                      value={form.organization_id}
+                      onChange={e => setForm(f => ({ ...f, organization_id: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="">Selecciona el centro</option>
+                      {organizations.map(o => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">Solo vera los turnos de este centro.</p>
+                  </div>
+                )}
+
                 {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
               </div>
               <div className="px-5 pb-5 flex gap-3">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserCircle } from 'lucide-react'
+import { Plus, UserCircle, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Profile, Professional, UserRole } from '../../types'
 import type { Organization } from '../../types'
@@ -25,6 +25,8 @@ export function UserManager() {
   const [creating, setCreating]           = useState(false)
   const [saving, setSaving]               = useState(false)
   const [error, setError]                 = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting]           = useState(false)
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '',
@@ -80,6 +82,21 @@ export function UserManager() {
       await load()
     }
     setSaving(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
+      body: { user_id: confirmDelete.id },
+    })
+    if (fnErr) {
+      setError(fnErr.message ?? 'Error al eliminar el usuario')
+    } else {
+      setUsers(prev => prev.filter(u => u.id !== confirmDelete.id))
+    }
+    setConfirmDelete(null)
+    setDeleting(false)
   }
 
   const changeRole = async (id: string, role: UserRole) => {
@@ -141,11 +158,40 @@ export function UserManager() {
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.className}`}>
                       {cfg.label}
                     </span>
+                    <button
+                      onClick={() => setConfirmDelete({ id: u.id, name: u.full_name ?? u.id })}
+                      className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal confirmar borrado */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <h3 className="font-semibold text-gray-900 mb-2">Eliminar usuario</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Vas a eliminar a <span className="font-medium text-gray-900">{confirmDelete.name}</span>.
+              Esta accion no se puede deshacer.
+            </p>
+            {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl mb-4">{error}</div>}
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" className="flex-1" onClick={() => { setConfirmDelete(null); setError('') }}>
+                Cancelar
+              </Button>
+              <Button type="button" className="flex-1 !bg-red-600 hover:!bg-red-700" loading={deleting} onClick={handleDelete}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

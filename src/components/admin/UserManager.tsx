@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserCircle, Trash2 } from 'lucide-react'
+import { Plus, UserCircle, Trash2, KeyRound } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Profile, Professional, UserRole } from '../../types'
 import type { Organization } from '../../types'
@@ -25,8 +25,12 @@ export function UserManager() {
   const [creating, setCreating]           = useState(false)
   const [saving, setSaving]               = useState(false)
   const [error, setError]                 = useState('')
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
-  const [deleting, setDeleting]           = useState(false)
+  const [confirmDelete, setConfirmDelete]   = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting]             = useState(false)
+  const [resetTarget, setResetTarget]       = useState<{ id: string; name: string } | null>(null)
+  const [newPassword, setNewPassword]       = useState('')
+  const [resetting, setResetting]           = useState(false)
+  const [resetSuccess, setResetSuccess]     = useState(false)
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '',
@@ -99,6 +103,27 @@ export function UserManager() {
     setDeleting(false)
   }
 
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetTarget) return
+    setResetting(true)
+    setError('')
+    const { error: fnErr } = await supabase.functions.invoke('admin-reset-password', {
+      body: { user_id: resetTarget.id, new_password: newPassword },
+    })
+    if (fnErr) {
+      setError(fnErr.message ?? 'Error al resetear la contrasena')
+    } else {
+      setResetSuccess(true)
+      setTimeout(() => {
+        setResetTarget(null)
+        setNewPassword('')
+        setResetSuccess(false)
+      }, 1500)
+    }
+    setResetting(false)
+  }
+
   const changeRole = async (id: string, role: UserRole) => {
     await supabase.from('profiles').update({ role }).eq('id', id)
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
@@ -159,6 +184,13 @@ export function UserManager() {
                       {cfg.label}
                     </span>
                     <button
+                      onClick={() => { setResetTarget({ id: u.id, name: u.full_name ?? u.id }); setNewPassword(''); setResetSuccess(false) }}
+                      className="p-1.5 text-gray-300 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                      title="Resetear contrasena"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => setConfirmDelete({ id: u.id, name: u.full_name ?? u.id })}
                       className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Eliminar usuario"
@@ -170,6 +202,39 @@ export function UserManager() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal reset password */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <h3 className="font-semibold text-gray-900 mb-1">Resetear contrasena</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Nueva contrasena para <span className="font-medium text-gray-900">{resetTarget.name}</span>
+            </p>
+            <form onSubmit={handleReset} className="space-y-4">
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Nueva contrasena (min. 6 caracteres)"
+                minLength={6}
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
+              {resetSuccess && <div className="bg-green-50 text-green-700 text-sm px-4 py-3 rounded-xl">Contrasena actualizada</div>}
+              <div className="flex gap-3">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => { setResetTarget(null); setError('') }}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1" loading={resetting}>
+                  Guardar
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

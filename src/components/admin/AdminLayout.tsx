@@ -26,9 +26,17 @@ interface Props {
   activeView: AdminView
   onNavigate: (view: AdminView) => void
   userRole?: string
+  userName?: string
 }
 
-export function AdminLayout({ children, activeView, onNavigate, userRole = 'admin' }: Props) {
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 13) return 'Buen día'
+  if (h < 20) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
+export function AdminLayout({ children, activeView, onNavigate, userRole = 'admin', userName = '' }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const isSuperadmin = userRole === 'superadmin'
   const isAdmin      = ['admin', 'superadmin'].includes(userRole)
@@ -57,15 +65,6 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
             <NavButton key={item.view} item={item} active={activeView === item.view} onClick={() => onNavigate(item.view)} />
           ))}
         </nav>
-        <div className="p-3 border-t border-gray-100">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar sesion
-          </button>
-        </div>
       </aside>
 
       {mobileOpen && (
@@ -97,12 +96,40 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
       </aside>
 
       <div className="flex-1 lg:pl-60">
-        <header className="lg:hidden sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setMobileOpen(true)} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <Menu className="w-5 h-5 text-gray-600" />
+        {/* Header desktop */}
+        <header className="hidden lg:flex sticky top-0 z-10 bg-white border-b border-gray-100 px-6 py-3 items-center justify-between">
+          <div>
+            <span className="text-sm text-gray-500">{getGreeting()},</span>
+            <span className="ml-1.5 font-semibold text-gray-900">{userName || '—'}</span>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
           </button>
-          <span className="font-bold text-gray-900">TurnOS</span>
         </header>
+
+        {/* Header mobile */}
+        <header className="lg:hidden sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileOpen(true)} className="p-1.5 rounded-lg hover:bg-gray-100">
+              <Menu className="w-5 h-5 text-gray-600" />
+            </button>
+            <span className="font-bold text-gray-900">TurnOS</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 hidden sm:block">{userName}</span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
         <main className="p-4 lg:p-6 max-w-6xl mx-auto">
           {children}
         </main>

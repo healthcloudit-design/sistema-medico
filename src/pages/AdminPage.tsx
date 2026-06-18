@@ -50,7 +50,7 @@ export function AdminPage() {
   if (!user) return null
 
   return (
-    <AdminLayout activeView={view} onNavigate={setView} userRole={profile?.role ?? 'admin'}>
+    <AdminLayout activeView={view} onNavigate={setView} userRole={profile?.role ?? 'admin'} userName={profile?.full_name ?? ''}>
       {view === 'dashboard'     && <Dashboard />}
       {view === 'appointments'  && <AppointmentList />}
       {view === 'availability'  && <AvailabilityManager />}

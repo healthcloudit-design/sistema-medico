@@ -183,6 +183,8 @@ export function MedicoDashboard() {
             {upcoming.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
           </Section>
         )}
+        </>}
+
       </main>
 
       {/* Modal Historia Clínica */}
@@ -252,8 +254,6 @@ export function MedicoDashboard() {
           </div>
         </div>
       )}
-        </>}
-      </main>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserCircle, Trash2, KeyRound } from 'lucide-react'
+import { Plus, UserCircle, Trash2, KeyRound, Pencil, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Profile, Professional, UserRole } from '../../types'
 import type { Organization } from '../../types'
@@ -31,6 +31,10 @@ export function UserManager() {
   const [newPassword, setNewPassword]       = useState('')
   const [resetting, setResetting]           = useState(false)
   const [resetSuccess, setResetSuccess]     = useState(false)
+  const [editTarget, setEditTarget]         = useState<{ id: string; full_name: string } | null>(null)
+  const [editName, setEditName]             = useState('')
+  const [editSaving, setEditSaving]         = useState(false)
+  const [search, setSearch]                 = useState('')
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '',
@@ -129,6 +133,22 @@ export function UserManager() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
   }
 
+  const handleEditName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTarget) return
+    setEditSaving(true)
+    await supabase.from('profiles').update({ full_name: editName }).eq('id', editTarget.id)
+    setUsers(prev => prev.map(u => u.id === editTarget.id ? { ...u, full_name: editName } : u))
+    setEditTarget(null)
+    setEditSaving(false)
+  }
+
+  const filtered = users.filter(u =>
+    (u.full_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (u as any).email?.toLowerCase().includes(search.toLowerCase()) ||
+    u.role.toLowerCase().includes(search.toLowerCase())
+  )
+
   // Org name for display
   const orgName = (orgId: string | null | undefined) => {
     if (!orgId) return null
@@ -147,17 +167,28 @@ export function UserManager() {
         </Button>
       </div>
 
+      {/* Buscador */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nombre, email o rol…"
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+        />
+      </div>
+
       {loading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-2xl animate-pulse" />)}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {users.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">No hay usuarios registrados</div>
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">Sin resultados</div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {users.map(u => {
+              {filtered.map(u => {
                 const cfg = ROLE_CONFIG[u.role]
                 const org = orgName((u as any).organization_id)
                 return (
@@ -184,6 +215,13 @@ export function UserManager() {
                       {cfg.label}
                     </span>
                     <button
+                      onClick={() => { setEditTarget({ id: u.id, name: u.full_name ?? '' }); setEditName(u.full_name ?? '') }}
+                      className="p-1.5 text-gray-300 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
+                      title="Editar nombre"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => { setResetTarget({ id: u.id, name: u.full_name ?? u.id }); setNewPassword(''); setResetSuccess(false) }}
                       className="p-1.5 text-gray-300 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
                       title="Resetear contrasena"
@@ -202,6 +240,29 @@ export function UserManager() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal editar nombre */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <h3 className="font-semibold text-gray-900 mb-1">Editar usuario</h3>
+            <p className="text-sm text-gray-500 mb-4">Modificá el nombre de <span className="font-medium text-gray-900">{editTarget.name || 'este usuario'}</span></p>
+            <form onSubmit={handleEditName} className="space-y-4">
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="Nombre completo"
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+              <div className="flex gap-3">
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditTarget(null)}>Cancelar</Button>
+                <Button type="submit" className="flex-1" loading={editSaving}>Guardar</Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -330,7 +391,7 @@ export function UserManager() {
                         )
                       })}
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">Solo vera sus propios turnos.</p>
+                    <p className="text-xs text-gray-400 mt-1">El centro se asigna automáticamente según el profesional. Solo verá sus propios turnos.</p>
                   </div>
                 )}
 

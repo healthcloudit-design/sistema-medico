@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Power, UserCircle } from 'lucide-react'
+import { Plus, Pencil, Power, UserCircle, Trash2, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Professional } from '../../types'
 import type { Organization } from '../../types'
@@ -8,10 +8,13 @@ import { Button } from '../ui/Button'
 export function ProfessionalsManager() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Partial<Professional> | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState('')
+  const [loading, setLoading]             = useState(true)
+  const [editing, setEditing]             = useState<Partial<Professional> | null>(null)
+  const [saving, setSaving]               = useState(false)
+  const [formError, setFormError]         = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
+  const [deleting, setDeleting]           = useState(false)
+  const [search, setSearch]               = useState('')
 
   const load = async () => {
     const [profRes, orgRes] = await Promise.all([
@@ -24,6 +27,12 @@ export function ProfessionalsManager() {
   }
 
   useEffect(() => { load() }, [])
+
+  const filtered = professionals.filter(p =>
+    p.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.specialty ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    ((p as any).organizations?.name ?? '').toLowerCase().includes(search.toLowerCase())
+  )
 
   const save = async () => {
     if (!editing?.full_name) return
@@ -53,27 +62,50 @@ export function ProfessionalsManager() {
     setProfessionals(prev => prev.map(x => x.id === p.id ? { ...x, active: !p.active } : x))
   }
 
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    await supabase.from('professionals').delete().eq('id', confirmDelete.id)
+    setProfessionals(prev => prev.filter(p => p.id !== confirmDelete.id))
+    setConfirmDelete(null)
+    setDeleting(false)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Profesionales</h1>
-          <p className="text-sm text-gray-500">Administra el equipo medico</p>
+          <p className="text-sm text-gray-500">Administrá el equipo</p>
         </div>
-        <Button onClick={() => setEditing({ active: true })}>
+        <Button onClick={() => { setEditing({ active: true }); setFormError('') }}>
           <Plus className="w-4 h-4" /> Nuevo profesional
         </Button>
+      </div>
+
+      {/* Buscador */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nombre, especialidad o centro…"
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+        />
       </div>
 
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}</div>
       ) : (
         <div className="space-y-3">
-          {professionals.map(p => (
+          {filtered.length === 0 && (
+            <div className="text-center text-gray-400 py-10">Sin resultados</div>
+          )}
+          {filtered.map(p => (
             <div key={p.id} className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 ${p.active ? '' : 'opacity-60'}`}>
               <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {p.avatar_url
-                  ? <img src={p.avatar_url} alt={p.full_name} className="w-10 h-10 object-cover" />
+                  ? <img src={p.avatar_url} alt={p.full_name} className="w-10 h-10 object-cover rounded-full" />
                   : <UserCircle className="w-6 h-6 text-sky-600" />
                 }
               </div>
@@ -86,12 +118,27 @@ export function ProfessionalsManager() {
                 </div>
                 {p.bio && <div className="text-xs text-gray-400 mt-0.5 truncate">{p.bio}</div>}
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setEditing(p)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => { setEditing(p); setFormError('') }}
+                  className="p-2 rounded-xl hover:bg-sky-50 text-gray-400 hover:text-sky-600 transition-colors"
+                  title="Editar"
+                >
                   <Pencil className="w-4 h-4" />
                 </button>
-                <button onClick={() => toggle(p)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
+                <button
+                  onClick={() => toggle(p)}
+                  className={`p-2 rounded-xl transition-colors ${p.active ? 'hover:bg-amber-50 text-gray-400 hover:text-amber-500' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}
+                  title={p.active ? 'Desactivar' : 'Activar'}
+                >
                   <Power className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setConfirmDelete({ id: p.id, name: p.full_name })}
+                  className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Eliminar"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -99,6 +146,7 @@ export function ProfessionalsManager() {
         </div>
       )}
 
+      {/* Modal editar / crear */}
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
@@ -164,6 +212,22 @@ export function ProfessionalsManager() {
             <div className="px-5 pb-5 flex gap-3">
               <Button variant="secondary" className="flex-1" onClick={() => { setEditing(null); setFormError('') }}>Cancelar</Button>
               <Button className="flex-1" loading={saving} onClick={save}>Guardar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar borrado */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <h3 className="font-semibold text-gray-900 mb-2">Eliminar profesional</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Vas a eliminar a <span className="font-medium text-gray-900">{confirmDelete.name}</span>. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+              <Button className="flex-1 !bg-red-600 hover:!bg-red-700" loading={deleting} onClick={handleDelete}>Eliminar</Button>
             </div>
           </div>
         </div>

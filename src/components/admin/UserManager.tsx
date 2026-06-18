@@ -215,7 +215,7 @@ export function UserManager() {
                       {cfg.label}
                     </span>
                     <button
-                      onClick={() => { setEditTarget({ id: u.id, name: u.full_name ?? '' }); setEditName(u.full_name ?? '') }}
+                      onClick={() => { setEditTarget({ id: u.id, full_name: u.full_name ?? '' }); setEditName(u.full_name ?? '') }}
                       className="p-1.5 text-gray-300 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
                       title="Editar nombre"
                     >
@@ -248,7 +248,7 @@ export function UserManager() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
             <h3 className="font-semibold text-gray-900 mb-1">Editar usuario</h3>
-            <p className="text-sm text-gray-500 mb-4">Modificá el nombre de <span className="font-medium text-gray-900">{editTarget.name || 'este usuario'}</span></p>
+            <p className="text-sm text-gray-500 mb-4">Modificá el nombre de <span className="font-medium text-gray-900">{editTarget.full_name || 'este usuario'}</span></p>
             <form onSubmit={handleEditName} className="space-y-4">
               <input
                 value={editName}

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { CreditCard, FileText, Building2, CheckCircle2, XCircle } from 'lucide-react'
 
+type TenantType = 'medical' | 'beauty' | 'general'
+
 interface OrgRow {
   id: string
   name: string
@@ -9,7 +11,14 @@ interface OrgRow {
   active: boolean
   feature_mp: boolean
   feature_hc: boolean
+  tenant_type: TenantType
 }
+
+const TENANT_OPTIONS: { value: TenantType; label: string; emoji: string }[] = [
+  { value: 'medical', label: 'Médico',  emoji: '🩺' },
+  { value: 'beauty',  label: 'Beauty',  emoji: '✨' },
+  { value: 'general', label: 'General', emoji: '🏢' },
+]
 
 export function ModulesManager() {
   const [orgs, setOrgs]       = useState<OrgRow[]>([])
@@ -19,13 +28,20 @@ export function ModulesManager() {
   useEffect(() => {
     supabase
       .from('organizations')
-      .select('id, name, slug, active, feature_mp, feature_hc')
+      .select('id, name, slug, active, feature_mp, feature_hc, tenant_type')
       .order('name')
       .then(({ data }) => {
         setOrgs((data ?? []) as OrgRow[])
         setLoading(false)
       })
   }, [])
+
+  const changeTenantType = async (org: OrgRow, tenant_type: TenantType) => {
+    setSaving(`${org.id}-tenant_type`)
+    const { error } = await supabase.from('organizations').update({ tenant_type }).eq('id', org.id)
+    if (!error) setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, tenant_type } : o))
+    setSaving(null)
+  }
 
   const toggle = async (org: OrgRow, field: 'feature_mp' | 'feature_hc') => {
     const next = !org[field]
@@ -86,8 +102,9 @@ export function ModulesManager() {
       {/* Tabla */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
           <div>Organización</div>
+          <div className="w-28 text-center">Tipo</div>
           <div className="w-32 text-center flex items-center justify-center gap-1.5">
             <CreditCard className="w-3.5 h-3.5" /> MercadoPago
           </div>
@@ -105,7 +122,7 @@ export function ModulesManager() {
         {orgs.map(org => (
           <div
             key={org.id}
-            className="grid grid-cols-[1fr_auto_auto] gap-4 px-5 py-4 border-b border-gray-50 last:border-0 items-center hover:bg-gray-50 transition-colors"
+            className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-4 border-b border-gray-50 last:border-0 items-center hover:bg-gray-50 transition-colors"
           >
             {/* Org info */}
             <div className="flex items-center gap-3 min-w-0">
@@ -120,6 +137,25 @@ export function ModulesManager() {
                 <span className="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full flex-shrink-0">
                   inactiva
                 </span>
+              )}
+            </div>
+
+            {/* Tenant type selector */}
+            <div className="w-28 flex justify-center">
+              {saving === `${org.id}-tenant_type` ? (
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <select
+                  value={org.tenant_type ?? 'medical'}
+                  onChange={e => changeTenantType(org, e.target.value as TenantType)}
+                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                >
+                  {TENANT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 

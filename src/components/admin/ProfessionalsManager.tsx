@@ -2,19 +2,24 @@ import { useEffect, useState } from 'react'
 import { Plus, Pencil, Power, UserCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Professional } from '../../types'
+import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
-
-const DEFAULT_ORG_ID = 'a0000000-0000-0000-0000-000000000001'
 
 export function ProfessionalsManager() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Professional> | null>(null)
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const load = async () => {
-    const { data } = await supabase.from('professionals').select('*').order('full_name')
-    setProfessionals((data ?? []) as Professional[])
+    const [profRes, orgRes] = await Promise.all([
+      supabase.from('professionals').select('*, organizations(name)').order('full_name'),
+      supabase.from('organizations').select('id, name').eq('active', true).order('name'),
+    ])
+    setProfessionals((profRes.data ?? []) as Professional[])
+    setOrganizations((orgRes.data ?? []) as Organization[])
     setLoading(false)
   }
 
@@ -22,9 +27,11 @@ export function ProfessionalsManager() {
 
   const save = async () => {
     if (!editing?.full_name) return
+    if (!editing?.organization_id) { setFormError('Seleccioná el centro al que pertenece'); return }
+    setFormError('')
     setSaving(true)
     const payload = {
-      organization_id: DEFAULT_ORG_ID,
+      organization_id: editing.organization_id,
       full_name:  editing.full_name,
       specialty:  editing.specialty ?? null,
       bio:        editing.bio ?? null,
@@ -72,7 +79,11 @@ export function ProfessionalsManager() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900">{p.full_name}</div>
-                {p.specialty && <div className="text-sm text-gray-500">{p.specialty}</div>}
+                <div className="text-sm text-gray-500">
+                  {p.specialty ?? ''}
+                  {p.specialty && (p as any).organizations?.name ? ' · ' : ''}
+                  {(p as any).organizations?.name ?? ''}
+                </div>
                 {p.bio && <div className="text-xs text-gray-400 mt-0.5 truncate">{p.bio}</div>}
               </div>
               <div className="flex gap-2">
@@ -95,6 +106,19 @@ export function ProfessionalsManager() {
               <h3 className="font-semibold">{editing.id ? 'Editar profesional' : 'Nuevo profesional'}</h3>
             </div>
             <div className="p-5 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
+                <select
+                  value={editing.organization_id ?? ''}
+                  onChange={e => setEditing(p => ({ ...p, organization_id: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="">Seleccioná el centro</option>
+                  {organizations.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Nombre completo *</label>
                 <input
@@ -132,8 +156,13 @@ export function ProfessionalsManager() {
                 />
               </div>
             </div>
+            {formError && (
+              <div className="px-5 pb-2">
+                <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{formError}</div>
+              </div>
+            )}
             <div className="px-5 pb-5 flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={() => setEditing(null)}>Cancelar</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => { setEditing(null); setFormError('') }}>Cancelar</Button>
               <Button className="flex-1" loading={saving} onClick={save}>Guardar</Button>
             </div>
           </div>

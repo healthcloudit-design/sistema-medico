@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isToday } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX } from 'lucide-react'
+import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
+import { PatientSearch } from '../components/shared/PatientSearch'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
 
@@ -33,6 +34,7 @@ export function RecepcionPage() {
   const [authLoading, setAuthLoading] = useState(true)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading]       = useState(true)
+  const [tab, setTab]               = useState<'turnos' | 'pacientes'>('turnos')
   const [search, setSearch]         = useState('')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().slice(0,10))
   const [selected, setSelected]     = useState<Appointment | null>(null)
@@ -125,6 +127,28 @@ export function RecepcionPage() {
 
       <main className="max-w-3xl mx-auto p-4 space-y-4">
 
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          <button
+            onClick={() => setTab('turnos')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'turnos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Calendar className="w-4 h-4" /> Turnos
+          </button>
+          <button
+            onClick={() => setTab('pacientes')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'pacientes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Users className="w-4 h-4" /> Pacientes
+          </button>
+        </div>
+
+        {tab === 'pacientes' && (
+          <PatientSearch orgId={(profile as any)?.organization_id ?? null} />
+        )}
+
+        {tab === 'turnos' && <>
+
         {/* Stats del día */}
         {isFilterToday && (
           <div className="grid grid-cols-4 gap-3">
@@ -200,6 +224,7 @@ export function RecepcionPage() {
             </div>
           )}
         </div>
+        </>}
       </main>
 
       {/* Modal detalle */}

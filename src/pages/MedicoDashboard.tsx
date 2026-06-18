@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText } from 'lucide-react'
+import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
+import { PatientSearch } from '../components/shared/PatientSearch'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -31,6 +32,7 @@ export function MedicoDashboard() {
   const [loadingAppts, setLoadingAppts] = useState(true)
   const [selected, setSelected]     = useState<Appointment | null>(null)
   const [showHC, setShowHC]         = useState(false)
+  const [tab, setTab]               = useState<'agenda' | 'pacientes'>('agenda')
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -133,6 +135,29 @@ export function MedicoDashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          <button
+            onClick={() => setTab('agenda')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'agenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Calendar className="w-4 h-4" /> Mi agenda
+          </button>
+          <button
+            onClick={() => setTab('pacientes')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'pacientes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Users className="w-4 h-4" /> Pacientes
+          </button>
+        </div>
+
+        {tab === 'pacientes' && (
+          <PatientSearch orgId={orgId} professionalId={profile?.professional_id ?? null} />
+        )}
+
+        {tab === 'agenda' && <>
+
         {/* Stats rápidos */}
         <div className="grid grid-cols-3 gap-3">
           <StatCard label="Hoy"       value={today.length}    color="sky" />
@@ -227,6 +252,8 @@ export function MedicoDashboard() {
           </div>
         </div>
       )}
+        </>}
+      </main>
     </div>
   )
 }

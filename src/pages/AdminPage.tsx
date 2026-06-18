@@ -56,7 +56,12 @@ export function AdminPage() {
       {view === 'availability'  && <AvailabilityManager />}
       {view === 'services'      && <ServicesManager />}
       {view === 'professionals' && <ProfessionalsManager />}
-      {view === 'users'         && <UserManager />}
+      {view === 'users'         && (
+        <UserManager
+          isSuperAdmin={profile?.role === 'superadmin'}
+          currentOrgId={(profile as any)?.organization_id ?? null}
+        />
+      )}
       {view === 'modules'       && <ModulesManager />}
     </AdminLayout>
   )

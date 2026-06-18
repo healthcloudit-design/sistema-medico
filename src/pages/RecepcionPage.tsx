@@ -6,6 +6,7 @@ import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users } f
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { PatientSearch } from '../components/shared/PatientSearch'
+import { GreetingBanner } from '../components/shared/GreetingBanner'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
 
@@ -148,6 +149,11 @@ export function RecepcionPage() {
         )}
 
         {tab === 'turnos' && <>
+
+        <GreetingBanner
+          userName={profile?.full_name}
+          subtitle={`${filtered.length} turno${filtered.length !== 1 ? 's' : ''} · ${isFilterToday ? 'hoy' : dateFilter}`}
+        />
 
         {/* Stats del día */}
         {isFilterToday && (

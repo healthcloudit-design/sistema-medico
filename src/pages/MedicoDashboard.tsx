@@ -8,6 +8,7 @@ import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
+import { GreetingBanner } from '../components/shared/GreetingBanner'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -157,6 +158,11 @@ export function MedicoDashboard() {
         )}
 
         {tab === 'agenda' && <>
+
+        <GreetingBanner
+          userName={profile?.full_name}
+          subtitle={`${today.length} turno${today.length !== 1 ? 's' : ''} para hoy`}
+        />
 
         {/* Stats rápidos */}
         <div className="grid grid-cols-3 gap-3">

@@ -17,7 +17,14 @@ interface UserRow extends Profile {
   email?: string
 }
 
-export function UserManager() {
+interface Props {
+  /** true = usuario logueado es superadmin (ve todos los centros) */
+  isSuperAdmin?: boolean
+  /** organización del usuario logueado (para admin/recepción) */
+  currentOrgId?: string | null
+}
+
+export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props) {
   const [users, setUsers]                 = useState<UserRow[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -35,6 +42,8 @@ export function UserManager() {
   const [editName, setEditName]             = useState('')
   const [editSaving, setEditSaving]         = useState(false)
   const [search, setSearch]                 = useState('')
+  // Filtro de centro para el selector de profesional (solo superadmin + medico)
+  const [orgFilterForPro, setOrgFilterForPro] = useState('')
 
   const [form, setForm] = useState({
     email: '', password: '', full_name: '',
@@ -45,6 +54,14 @@ export function UserManager() {
 
   const needsOrg = form.role === 'recepcion' || form.role === 'admin'
   const needsProfessional = form.role === 'medico'
+
+  // Profesionales visibles según contexto:
+  // - superadmin: todos, o filtrados por orgFilterForPro si eligió un centro
+  // - admin/recepción: solo los de su propio centro
+  const availableProfessionals = professionals.filter(p => {
+    if (isSuperAdmin) return !orgFilterForPro || p.organization_id === orgFilterForPro
+    return p.organization_id === (currentOrgId ?? '')
+  })
 
   const load = async () => {
     setLoading(true)
@@ -364,7 +381,10 @@ export function UserManager() {
                   <label className="text-sm font-medium text-gray-700 block mb-1.5">Rol *</label>
                   <select
                     value={form.role}
-                    onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole, professional_id: '', organization_id: '' }))}
+                    onChange={e => {
+                      setOrgFilterForPro('')
+                      setForm(f => ({ ...f, role: e.target.value as UserRole, professional_id: '', organization_id: '' }))
+                    }}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="admin">Admin</option>
@@ -373,25 +393,47 @@ export function UserManager() {
                   </select>
                 </div>
 
+                {/* Superadmin: elige Centro primero → filtra profesionales */}
+                {needsProfessional && isSuperAdmin && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
+                    <select
+                      value={orgFilterForPro}
+                      onChange={e => {
+                        setOrgFilterForPro(e.target.value)
+                        setForm(f => ({ ...f, professional_id: '' }))
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="">Selecciona un centro</option>
+                      {organizations.map(o => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {needsProfessional && (
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1.5">Profesional asociado *</label>
                     <select
                       value={form.professional_id}
-                      onChange={e => setForm(f => ({ ...f, professional_id: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      onChange={e => {
+                        const profId = e.target.value
+                        const prof = professionals.find(p => p.id === profId)
+                        setForm(f => ({ ...f, professional_id: profId, organization_id: prof?.organization_id ?? '' }))
+                      }}
+                      disabled={isSuperAdmin && !orgFilterForPro}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <option value="">Selecciona un profesional</option>
-                      {professionals.map(p => {
-                        const org = orgName(p.organization_id)
-                        return (
-                          <option key={p.id} value={p.id}>
-                            {p.full_name}{org ? ` (${org})` : ''}
-                          </option>
-                        )
-                      })}
+                      <option value="">
+                        {isSuperAdmin && !orgFilterForPro ? 'Primero elegí un centro' : 'Selecciona un profesional'}
+                      </option>
+                      {availableProfessionals.map(p => (
+                        <option key={p.id} value={p.id}>{p.full_name}</option>
+                      ))}
                     </select>
-                    <p className="text-xs text-gray-400 mt-1">El centro se asigna automáticamente según el profesional. Solo verá sus propios turnos.</p>
+                    <p className="text-xs text-gray-400 mt-1">Solo verá sus propios turnos.</p>
                   </div>
                 )}
 

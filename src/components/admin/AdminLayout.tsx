@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LayoutDashboard, Calendar, Building2, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { GreetingBanner } from '../shared/GreetingBanner'
 
 interface NavItem {
   label: string
@@ -131,6 +132,11 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
         </header>
 
         <main className="p-4 lg:p-6 max-w-6xl mx-auto">
+          {activeView === 'dashboard' && (
+            <div className="mb-6">
+              <GreetingBanner userName={userName} />
+            </div>
+          )}
           {children}
         </main>
       </div>

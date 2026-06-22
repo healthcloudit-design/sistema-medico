@@ -33,41 +33,41 @@ export function PatientSearch({ orgId, professionalId }: Props) {
     setLoading(true)
     setSearched(true)
 
-    let query = supabase
+    // Si es vista de médico, primero obtenemos los patient_ids con turnos de ese profesional
+    let allowedPatientIds: string[] | null = null
+    if (professionalId) {
+      const { data: apptData } = await supabase
+        .from('appointments')
+        .select('patient_id')
+        .eq('professional_id', professionalId)
+        .not('patient_id', 'is', null)
+      allowedPatientIds = [...new Set((apptData ?? []).map((a: any) => a.patient_id as string))]
+    }
+
+    let baseQuery = supabase
       .from('patients')
-      .select(`
-        id, full_name, phone, email, dni, obra_social, nro_socio, notes,
-        appointments(
-          scheduled_at, status,
-          professionals(full_name)
-        )
-      `)
+      .select('id, full_name, phone, email, dni, obra_social, nro_socio, notes, appointments(starts_at, status)')
       .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,dni.ilike.%${q}%,obra_social.ilike.%${q}%,nro_socio.ilike.%${q}%`)
       .order('full_name')
       .limit(25)
 
-    if (orgId) query = query.eq('organization_id', orgId)
-
-    const { data } = await query
-
-    let patients = (data ?? []) as any[]
-
-    // Si es vista de médico, filtrar solo pacientes que tuvieron turnos con él
-    if (professionalId) {
-      patients = patients.filter((p: any) =>
-        p.appointments?.some((a: any) => a.professionals?.full_name && a.professionals)
-      )
+    if (orgId) baseQuery = baseQuery.eq('organization_id', orgId)
+    if (allowedPatientIds && allowedPatientIds.length > 0) {
+      baseQuery = baseQuery.in('id', allowedPatientIds)
+    } else if (allowedPatientIds !== null && allowedPatientIds.length === 0) {
+      // Médico sin pacientes aún
+      setResults([])
+      setLoading(false)
+      return
     }
 
-    // Adjuntar el último turno
-    const mapped: Patient[] = patients.map((p: any) => {
+    const { data } = await baseQuery
+
+    const mapped: Patient[] = (data ?? []).map((p: any) => {
       const appts = (p.appointments ?? []).sort(
-        (a: any, b: any) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+        (a: any, b: any) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
       )
-      return {
-        ...p,
-        last_appointment: appts[0] ?? null,
-      }
+      return { ...p, last_appointment: appts[0] ?? null }
     })
 
     setResults(mapped)
@@ -179,7 +179,7 @@ export function PatientSearch({ orgId, professionalId }: Props) {
                 {p.last_appointment && (
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-xs text-gray-400">
-                      Último turno: {formatDate(p.last_appointment.scheduled_at)}
+                      Último turno: {formatDate(p.last_appointment.starts_at)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[p.last_appointment.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {STATUS_LABEL[p.last_appointment.status] ?? p.last_appointment.status}

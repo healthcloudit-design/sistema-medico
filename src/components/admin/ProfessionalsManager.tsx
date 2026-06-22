@@ -117,12 +117,18 @@ export function ProfessionalsManager() {
     if (!confirmDelete) return
     setDeleting(true)
     const id = confirmDelete.id
-    // Borrar dependencias antes de borrar el profesional
-    await supabase.from('professional_services').delete().eq('professional_id', id)
-    await supabase.from('schedules').delete().eq('professional_id', id)
-    await supabase.from('blocked_days').delete().eq('professional_id', id)
-    // Los appointments se conservan (historial), solo nulleamos el professional_id
-    await supabase.from('appointments').update({ professional_id: null } as any).eq('professional_id', id)
+    // Verificar si tiene turnos (ON DELETE RESTRICT en DB)
+    const { count } = await supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('professional_id', id)
+    if ((count ?? 0) > 0) {
+      setFormError(`No se puede eliminar: tiene ${count} turno(s) registrado(s). Desactivalo usando el botón ⏻.`)
+      setConfirmDelete(null)
+      setDeleting(false)
+      return
+    }
+    // professional_services, schedules y availability_blocks tienen CASCADE → se borran solos
     await supabase.from('professionals').delete().eq('id', id)
     setProfessionals(prev => prev.filter(p => p.id !== confirmDelete.id))
     setConfirmDelete(null)

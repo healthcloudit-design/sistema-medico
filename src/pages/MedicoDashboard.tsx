@@ -201,7 +201,7 @@ export function MedicoDashboard() {
           professionalId={profile.professional_id}
           organizationId={selected.organization_id}
           patientName={selected.patient_name}
-          specialty={profile.specialty ?? null}
+          specialty={(profile as any).specialty ?? null}
           onClose={() => setShowHC(false)}
         />
       )}

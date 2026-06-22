@@ -11,6 +11,8 @@ export interface Service {
   created_at: string
 }
 
+export type TenantType = 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary'
+
 export interface Organization {
   id: string
   name: string
@@ -23,7 +25,7 @@ export interface Organization {
   active: boolean
   feature_mp: boolean
   feature_hc: boolean
-  tenant_type: 'medical' | 'beauty' | 'general'
+  tenant_type: TenantType
   created_at: string
   updated_at: string
 }
@@ -118,6 +120,7 @@ export interface BookingState {
   nombre: string
   telefono: string
   email: string
+  dni: string
   obra_social: string
   nro_socio: string
   observaciones: string

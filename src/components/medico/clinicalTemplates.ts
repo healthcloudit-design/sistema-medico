@@ -127,6 +127,22 @@ const TEMPLATES: Record<string, TemplateQuestion[]> = {
     { question_text: 'Resultado esperado',              question_type: 'text' },
   ],
 
+
+  veterinari: [
+    { question_text: 'Especie',                              question_type: 'text' },
+    { question_text: 'Raza',                                 question_type: 'text' },
+    { question_text: 'Edad (anos)',                          question_type: 'number' },
+    { question_text: 'Peso kg',                              question_type: 'number' },
+    { question_text: 'Sexo (M/H)',                           question_type: 'text' },
+    { question_text: 'Castrado / esterilizado',              question_type: 'boolean' },
+    { question_text: 'Vacunas al dia',                       question_type: 'boolean' },
+    { question_text: 'Antiparasitario al dia',               question_type: 'boolean' },
+    { question_text: 'Alergias conocidas',                   question_type: 'boolean' },
+    { question_text: 'Medicacion actual',                    question_type: 'text' },
+    { question_text: 'Antecedentes quirurgicos',             question_type: 'boolean' },
+    { question_text: 'Convive con otros animales',           question_type: 'boolean' },
+    { question_text: 'Dieta / alimentacion',                 question_type: 'text' },
+  ],
   masaj: [
     { question_text: 'Zona a trabajar',                 question_type: 'text' },
     { question_text: 'Contracturas / lesiones activas', question_type: 'boolean' },

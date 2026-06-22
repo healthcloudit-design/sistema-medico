@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle, Calendar, UserCircle, Stethoscope, Sparkles } from 'lucide-react'
+import { CheckCircle, Calendar, UserCircle, Stethoscope, Sparkles, PawPrint } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../../lib/supabase'
-import type { BookingState, Organization } from '../../types'
+import type { BookingState, Organization, TenantType } from '../../types'
 import { ServiceSelector } from './ServiceSelector'
 import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
@@ -23,11 +23,31 @@ const STEPS_BEAUTY = [
   { label: 'Confirmar',    icon: CheckCircle },
 ]
 
+const STEPS_PET = [
+  { label: 'Servicio',     icon: PawPrint },
+  { label: 'Profesional',  icon: UserCircle },
+  { label: 'Fecha y hora', icon: Calendar },
+  { label: 'Confirmar',    icon: CheckCircle },
+]
+
+function getSteps(tenantType: TenantType) {
+  if (tenantType === 'beauty') return STEPS_BEAUTY
+  if (tenantType === 'petshop' || tenantType === 'veterinary') return STEPS_PET
+  return STEPS_MEDICAL
+}
+
+function getSuccessMessage(tenantType: TenantType) {
+  if (tenantType === 'beauty') return 'Tu reserva fue registrada. Te vamos a contactar para confirmar.'
+  if (tenantType === 'petshop' || tenantType === 'veterinary') return 'La reserva para tu mascota fue registrada. Te contactaremos para confirmar.'
+  return 'Su turno fue registrado con exito. Lo contactaremos para confirmar.'
+}
+
 const INITIAL_STATE: BookingState = {
   step: 1,
   nombre: '',
   telefono: '',
   email: '',
+  dni: '',
   obra_social: '',
   nro_socio: '',
   observaciones: '',
@@ -35,25 +55,20 @@ const INITIAL_STATE: BookingState = {
 
 export function BookingFlow() {
   const { slug } = useParams<{ slug?: string }>()
-  const [state, setState]       = useState<BookingState>(INITIAL_STATE)
+  const [state, setState]         = useState<BookingState>(INITIAL_STATE)
   const [completed, setCompleted] = useState(false)
-  const [org, setOrg]           = useState<Organization | null>(null)
-  const [orgLoading, setOrgLoading] = useState(true)
+  const [org, setOrg]             = useState<Organization | null>(null)
+  const [orgLoading, setOrgLoading]   = useState(true)
   const [orgNotFound, setOrgNotFound] = useState(false)
 
   useEffect(() => {
     setOrgLoading(true)
     setOrgNotFound(false)
-
     const base = supabase.from('organizations').select('*').eq('active', true)
-    const run = slug ? base.eq('slug', slug).single() : base.order('created_at').limit(1).single()
-
+    const run  = slug ? base.eq('slug', slug).single() : base.order('created_at').limit(1).single()
     run.then(({ data, error }) => {
-      if (error || !data) {
-        setOrgNotFound(true)
-      } else {
-        setOrg(data as Organization)
-      }
+      if (error || !data) setOrgNotFound(true)
+      else setOrg(data as Organization)
       setOrgLoading(false)
     })
   }, [slug])
@@ -76,16 +91,14 @@ export function BookingFlow() {
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
           <div className="text-4xl mb-4">404</div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Centro no encontrado</h2>
-          <p className="text-gray-500 text-sm">
-            No existe un centro con esa URL. Verifique la direccion e intente de nuevo.
-          </p>
+          <p className="text-gray-500 text-sm">No existe un centro con esa URL. Verifique la direccion e intente de nuevo.</p>
         </div>
       </div>
     )
   }
 
-  const isBeauty = org.tenant_type === 'beauty'
-  const STEPS = isBeauty ? STEPS_BEAUTY : STEPS_MEDICAL
+  const tenantType = org.tenant_type ?? 'medical'
+  const STEPS = getSteps(tenantType)
 
   if (completed) {
     return (
@@ -95,11 +108,7 @@ export function BookingFlow() {
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Turno reservado!</h2>
-          <p className="text-gray-500 text-sm mb-5">
-            {isBeauty
-              ? 'Tu reserva fue registrada. Te vamos a contactar para confirmar.'
-              : 'Su turno fue registrado con exito. Lo contactaremos para confirmar.'}
-          </p>
+          <p className="text-gray-500 text-sm mb-5">{getSuccessMessage(tenantType)}</p>
           <div className="bg-sky-50 rounded-xl p-4 text-left space-y-2 text-sm text-gray-600 mb-6">
             <div><span className="font-medium">Servicio:</span> {state.service?.name}</div>
             <div><span className="font-medium">Profesional:</span> {state.professional?.full_name}</div>
@@ -152,7 +161,7 @@ export function BookingFlow() {
             selected={state.service}
             onSelect={s => { update({ service: s, professional: undefined, fecha: undefined, hora: undefined }); next() }}
             orgId={org.id}
-            tenantType={org.tenant_type}
+            tenantType={tenantType}
           />
         )}
         {state.step === 2 && state.service && (
@@ -179,7 +188,7 @@ export function BookingFlow() {
             onChange={update}
             onBack={back}
             onComplete={() => setCompleted(true)}
-            tenantType={org.tenant_type}
+            tenantType={tenantType}
           />
         )}
       </div>

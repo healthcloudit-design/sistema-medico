@@ -7,7 +7,7 @@ interface Props {
   selected?: Service
   onSelect: (service: Service) => void
   orgId: string
-  tenantType?: 'medical' | 'beauty' | 'general'
+  tenantType?: import('../../types').TenantType
 }
 
 const CATEGORY_META: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {

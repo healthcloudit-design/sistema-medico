@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import { useOrgFeatures } from '../../hooks/useOrgFeatures'
-import type { BookingState } from '../../types'
+import type { BookingState, TenantType } from '../../types'
 import { Button } from '../ui/Button'
 
 interface Props {
@@ -12,7 +12,32 @@ interface Props {
   onChange: (partial: Partial<BookingState>) => void
   onBack: () => void
   onComplete: () => void
-  tenantType?: 'medical' | 'beauty' | 'general'
+  tenantType?: TenantType
+}
+
+function getTenantLabels(tenantType: TenantType) {
+  const isPet    = tenantType === 'petshop' || tenantType === 'veterinary'
+  const isBeauty = tenantType === 'beauty'
+  return {
+    isPet,
+    isBeauty,
+    isMedical: !isPet && !isBeauty,
+    nombreLabel:       isPet ? 'Nombre de la mascota' : 'Nombre y apellido',
+    nombrePlaceholder: isPet ? 'Ej: Firulais' : 'Ej: Maria Gonzalez',
+    duenoProp:         isPet,
+    dniLabel:          tenantType === 'veterinary' ? 'DNI del dueno (opcional)' : 'DNI',
+    dniRequired:       tenantType === 'medical',
+    showDni:           tenantType === 'medical' || tenantType === 'veterinary',
+    showObraSocial:    tenantType === 'medical' || tenantType === 'veterinary',
+    confirmLabel:      isPet ? 'Confirmar reserva' : isBeauty ? 'Confirmar reserva' : 'Confirmar turno',
+    observLabel:       isBeauty ? 'Algo que quieras aclarar?' : isPet ? 'Algo mas sobre tu mascota?' : 'Observaciones',
+    observPlaceholder: isBeauty
+      ? 'Alergias, preferencias, largo de cabello...'
+      : isPet
+        ? 'Raza, edad, peso, comportamiento, medicacion...'
+        : 'Usa lentes? Tiene alguna condicion preexistente?',
+    headerLabel: isBeauty ? 'Confirma tu reserva' : 'Confirme su turno',
+  }
 }
 
 export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType = 'medical' }: Props) {
@@ -21,7 +46,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
   const [pagoOnline, setPagoOnline]   = useState(false)
   const [redirecting, setRedirecting] = useState(false)
 
-  const isBeauty = tenantType === 'beauty'
+  const labels = getTenantLabels(tenantType)
 
   const orgId        = state.professional?.organization_id ?? null
   const { featureMp } = useOrgFeatures(orgId)
@@ -29,14 +54,15 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
   const servicePrice = state.service?.price ?? 0
   const ofrecePago   = featureMp && servicePrice > 0
 
-  const tieneObraSocial = !isBeauty && state.obra_social.trim().length > 0
+  const tieneObraSocial = labels.showObraSocial && state.obra_social.trim().length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!state.service || !state.professional || !state.fecha || !state.hora) return
-    if (!state.nombre.trim()) { setError('El nombre es obligatorio'); return }
+    if (!state.nombre.trim()) { setError(`${labels.nombreLabel} es obligatorio`); return }
     if (!state.telefono.trim()) { setError('El telefono es obligatorio'); return }
-    if (!isBeauty && state.obra_social.trim() && !state.nro_socio.trim()) {
+    if (labels.dniRequired && !state.dni.trim()) { setError('El DNI es obligatorio'); return }
+    if (labels.showObraSocial && state.obra_social.trim() && !state.nro_socio.trim()) {
       setError('Ingresa el numero de socio / carnet de la obra social')
       return
     }
@@ -53,10 +79,11 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
         p_starts_at:            startsAt,
         p_patient_name:         state.nombre,
         p_patient_phone:        state.telefono,
-        p_patient_email:        state.email        || undefined,
-        p_patient_obra_social:  state.obra_social  || undefined,
-        p_patient_nro_socio:    state.nro_socio    || undefined,
-        p_patient_notes:        state.observaciones || undefined,
+        p_patient_email:        state.email         || undefined,
+        p_patient_dni:          state.dni            || undefined,
+        p_patient_obra_social:  state.obra_social    || undefined,
+        p_patient_nro_socio:    state.nro_socio      || undefined,
+        p_patient_notes:        state.observaciones  || undefined,
       })
 
       if (rpcError) throw rpcError
@@ -112,9 +139,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-2 rounded-xl transition-colors mb-4">
         <ChevronLeft className="w-4 h-4" /> Volver
       </button>
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        {isBeauty ? 'Confirma tu reserva' : 'Confirme su turno'}
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{labels.headerLabel}</h2>
 
       <div className="bg-sky-50 rounded-2xl p-4 mb-5 space-y-2.5">
         <div className="flex items-center gap-3 text-sm">
@@ -140,19 +165,38 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Nombre de la mascota / paciente */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Nombre y apellido <span className="text-red-500">*</span>
+            {labels.nombreLabel} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={state.nombre}
             onChange={e => onChange({ nombre: e.target.value })}
-            placeholder={isBeauty ? 'Ej: Maria Gonzalez' : 'Ej: Maria Gonzalez'}
+            placeholder={labels.nombrePlaceholder}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
           />
         </div>
 
+        {/* Nombre del dueno (pet tenants) */}
+        {labels.isPet && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Nombre del dueno <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={state.observaciones}
+              onChange={e => onChange({ observaciones: e.target.value })}
+              placeholder="Ej: Juan Perez"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
+            />
+          </div>
+        )}
+
+        {/* Telefono */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Telefono / WhatsApp <span className="text-red-500">*</span>
@@ -166,6 +210,30 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           />
         </div>
 
+        {/* DNI — obligatorio en medical, opcional en veterinary, oculto en beauty/petshop */}
+        {labels.showDni && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {labels.dniLabel}{' '}
+              {labels.dniRequired
+                ? <span className="text-red-500">*</span>
+                : <span className="text-gray-400 text-xs font-normal">(opcional)</span>
+              }
+            </label>
+            <input
+              type="text"
+              value={state.dni}
+              onChange={e => onChange({ dni: e.target.value })}
+              placeholder="Ej: 30123456"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
+            />
+            {labels.dniRequired && (
+              <p className="text-xs text-gray-400 mt-1">El DNI nos permite identificarlo correctamente en futuros turnos.</p>
+            )}
+          </div>
+        )}
+
+        {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Email <span className="text-gray-400 text-xs font-normal">(opcional)</span>
@@ -174,12 +242,13 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
             type="email"
             value={state.email}
             onChange={e => onChange({ email: e.target.value })}
-            placeholder="Ej: maria@email.com"
+            placeholder="Ej: juan@email.com"
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
           />
         </div>
 
-        {!isBeauty && (
+        {/* Obra social — solo medical / veterinary */}
+        {labels.showObraSocial && (
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -211,20 +280,40 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            {isBeauty ? 'Algo que quieras aclarar?' : 'Observaciones'}{' '}
-            <span className="text-gray-400 text-xs font-normal">(opcional)</span>
-          </label>
-          <textarea
-            value={state.observaciones}
-            onChange={e => onChange({ observaciones: e.target.value })}
-            placeholder={isBeauty ? 'Alergias, preferencias, largo de cabello...' : 'Usa lentes? Tiene alguna condicion preexistente?'}
-            rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm resize-none"
-          />
-        </div>
+        {/* Observaciones / info extra (no pet — pet usa este campo para nombre dueno) */}
+        {!labels.isPet && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {labels.observLabel}{' '}
+              <span className="text-gray-400 text-xs font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={state.observaciones}
+              onChange={e => onChange({ observaciones: e.target.value })}
+              placeholder={labels.observPlaceholder}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm resize-none"
+            />
+          </div>
+        )}
 
+        {/* Notas mascota (pet: campo extra para raza/edad/etc) */}
+        {labels.isPet && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Info de la mascota <span className="text-gray-400 text-xs font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={state.nro_socio}
+              onChange={e => onChange({ nro_socio: e.target.value })}
+              placeholder="Raza, edad, peso, medicacion, comportamiento..."
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm resize-none"
+            />
+          </div>
+        )}
+
+        {/* Pago online */}
         {ofrecePago && !tieneObraSocial && (
           <div className="border border-gray-200 rounded-2xl overflow-hidden">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-3 pb-2">
@@ -239,7 +328,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
                 }`}
               >
                 <Building2 className="w-5 h-5" />
-                En consultorio
+                En el lugar
               </button>
               <button
                 type="button"
@@ -268,9 +357,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
             ? `Reservar y pagar $${servicePrice.toLocaleString('es-AR')}`
             : tieneObraSocial
               ? 'Solicitar turno'
-              : isBeauty
-                ? 'Confirmar reserva'
-                : 'Confirmar turno'
+              : labels.confirmLabel
           }
         </Button>
       </form>

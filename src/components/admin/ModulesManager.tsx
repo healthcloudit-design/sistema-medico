@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { CreditCard, FileText, Building2, CheckCircle2, XCircle } from 'lucide-react'
 
-type TenantType = 'medical' | 'beauty' | 'general'
+import type { TenantType } from '../../types'
+// TenantType imported from types
 
 interface OrgRow {
   id: string
@@ -15,9 +16,11 @@ interface OrgRow {
 }
 
 const TENANT_OPTIONS: { value: TenantType; label: string; emoji: string }[] = [
-  { value: 'medical', label: 'Médico',  emoji: '🩺' },
-  { value: 'beauty',  label: 'Beauty',  emoji: '✨' },
-  { value: 'general', label: 'General', emoji: '🏢' },
+  { value: 'medical',    label: 'Médico',      emoji: '🩺' },
+  { value: 'beauty',     label: 'Beauty',      emoji: '✨' },
+  { value: 'petshop',    label: 'Pet Shop',    emoji: '🐾' },
+  { value: 'veterinary', label: 'Veterinaria', emoji: '🐕' },
+  { value: 'general',    label: 'General',     emoji: '🏢' },
 ]
 
 export function ModulesManager() {

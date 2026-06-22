@@ -5,6 +5,8 @@ import type { Professional } from '../../types'
 import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
 
+interface ServiceOption { id: string; name: string }
+
 export function ProfessionalsManager() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -15,6 +17,10 @@ export function ProfessionalsManager() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting]           = useState(false)
   const [search, setSearch]               = useState('')
+
+  // Services for current editing org
+  const [orgServices, setOrgServices]       = useState<ServiceOption[]>([])
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
 
   const load = async () => {
     const [profRes, orgRes] = await Promise.all([
@@ -28,11 +34,39 @@ export function ProfessionalsManager() {
 
   useEffect(() => { load() }, [])
 
+  // Load services when org changes in the form
+  useEffect(() => {
+    if (!editing?.organization_id) { setOrgServices([]); return }
+    supabase
+      .from('services')
+      .select('id, name')
+      .eq('organization_id', editing.organization_id)
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => setOrgServices((data ?? []) as ServiceOption[]))
+  }, [editing?.organization_id])
+
+  // Load existing services when editing an existing professional
+  useEffect(() => {
+    if (!editing?.id) { setSelectedServices([]); return }
+    supabase
+      .from('professional_services')
+      .select('service_id')
+      .eq('professional_id', editing.id)
+      .then(({ data }) => setSelectedServices((data ?? []).map((r: { service_id: string }) => r.service_id)))
+  }, [editing?.id])
+
   const filtered = professionals.filter(p =>
     p.full_name.toLowerCase().includes(search.toLowerCase()) ||
     (p.specialty ?? '').toLowerCase().includes(search.toLowerCase()) ||
     ((p as any).organizations?.name ?? '').toLowerCase().includes(search.toLowerCase())
   )
+
+  const toggleService = (id: string) => {
+    setSelectedServices(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    )
+  }
 
   const save = async () => {
     if (!editing?.full_name) return
@@ -47,13 +81,30 @@ export function ProfessionalsManager() {
       avatar_url: editing.avatar_url ?? null,
       active:     editing.active ?? true,
     }
+
+    let professionalId = editing.id ?? null
+
     if (editing.id) {
       await supabase.from('professionals').update(payload).eq('id', editing.id)
     } else {
-      await supabase.from('professionals').insert(payload)
+      const { data } = await supabase.from('professionals').insert(payload).select('id').single()
+      professionalId = data?.id ?? null
     }
+
+    // Sync professional_services
+    if (professionalId) {
+      // Delete existing links then re-insert selected
+      await supabase.from('professional_services').delete().eq('professional_id', professionalId)
+      if (selectedServices.length > 0) {
+        await supabase.from('professional_services').insert(
+          selectedServices.map(sid => ({ professional_id: professionalId!, service_id: sid }))
+        )
+      }
+    }
+
     await load()
     setEditing(null)
+    setSelectedServices([])
     setSaving(false)
   }
 
@@ -78,7 +129,7 @@ export function ProfessionalsManager() {
           <h1 className="text-2xl font-bold text-gray-900">Profesionales</h1>
           <p className="text-sm text-gray-500">Administrá el equipo</p>
         </div>
-        <Button onClick={() => { setEditing({ active: true }); setFormError('') }}>
+        <Button onClick={() => { setEditing({ active: true }); setFormError(''); setSelectedServices([]) }}>
           <Plus className="w-4 h-4" /> Nuevo profesional
         </Button>
       </div>
@@ -149,8 +200,8 @@ export function ProfessionalsManager() {
       {/* Modal editar / crear */}
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="px-5 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
               <h3 className="font-semibold">{editing.id ? 'Editar profesional' : 'Nuevo profesional'}</h3>
             </div>
             <div className="p-5 space-y-4">
@@ -158,7 +209,10 @@ export function ProfessionalsManager() {
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
                 <select
                   value={editing.organization_id ?? ''}
-                  onChange={e => setEditing(p => ({ ...p, organization_id: e.target.value }))}
+                  onChange={e => {
+                    setEditing(p => ({ ...p, organization_id: e.target.value }))
+                    setSelectedServices([])
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
                   <option value="">Seleccioná el centro</option>
@@ -182,9 +236,43 @@ export function ProfessionalsManager() {
                   value={editing.specialty ?? ''}
                   onChange={e => setEditing(p => ({ ...p, specialty: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  placeholder="Ej: Cardiologia"
+                  placeholder="Ej: Peluquería"
                 />
               </div>
+
+              {/* Servicios que ofrece */}
+              {editing.organization_id && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1.5">
+                    Servicios que ofrece
+                    <span className="ml-1 text-xs font-normal text-gray-400">(aparece en el flujo de reserva solo si tiene al menos uno)</span>
+                  </label>
+                  {orgServices.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-2">Este centro no tiene servicios activos.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {orgServices.map(s => {
+                        const on = selectedServices.includes(s.id)
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => toggleService(s.id)}
+                            className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-all ${
+                              on
+                                ? 'bg-sky-600 text-white border-sky-600'
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-sky-300'
+                            }`}
+                          >
+                            {s.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">Bio</label>
                 <textarea
@@ -210,7 +298,7 @@ export function ProfessionalsManager() {
               </div>
             )}
             <div className="px-5 pb-5 flex gap-3">
-              <Button variant="secondary" className="flex-1" onClick={() => { setEditing(null); setFormError('') }}>Cancelar</Button>
+              <Button variant="secondary" className="flex-1" onClick={() => { setEditing(null); setFormError(''); setSelectedServices([]) }}>Cancelar</Button>
               <Button className="flex-1" loading={saving} onClick={save}>Guardar</Button>
             </div>
           </div>

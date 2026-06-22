@@ -1,0 +1,132 @@
+{
+  "name": "TurnOS – Buscador de Leads v2",
+  "nodes": [
+    {
+      "id": "node-001",
+      "name": "Inicio Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "parameters": {}
+    },
+    {
+      "id": "node-002",
+      "name": "Configuracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300],
+      "parameters": {
+        "jsCode": "const localidades = [\n  'Palermo',\n  'Belgrano',\n  'San Isidro',\n  'Martínez',\n  'Vicente López',\n]\n\nconst categorias = [\n  { nombre: 'Clínica médica',         nicho: 'medico'  },\n  { nombre: 'Psicólogo',              nicho: 'medico'  },\n  { nombre: 'Kinesiólogo',            nicho: 'medico'  },\n  { nombre: 'Nutricionista',          nicho: 'medico'  },\n  { nombre: 'Dentista',               nicho: 'medico'  },\n  { nombre: 'Dermatólogo',            nicho: 'medico'  },\n  { nombre: 'Oftalmólogo',            nicho: 'medico'  },\n  { nombre: 'Fisioterapia',           nicho: 'medico'  },\n  { nombre: 'Traumatólogo',           nicho: 'medico'  },\n  { nombre: 'Centro de estética',     nicho: 'beauty'  },\n  { nombre: 'Spa y masajes',          nicho: 'beauty'  },\n  { nombre: 'Peluquería',             nicho: 'beauty'  },\n  { nombre: 'Barbería',               nicho: 'beauty'  },\n  { nombre: 'Manicuria pedicuria',    nicho: 'beauty'  },\n  { nombre: 'Depilación láser',       nicho: 'beauty'  },\n  { nombre: 'Yoga y pilates',         nicho: 'general' },\n  { nombre: 'Veterinaria',            nicho: 'general' },\n  { nombre: 'Entrenamiento personal', nicho: 'general' },\n]\n\nreturn [{ json: { localidades, categorias } }]"
+      }
+    },
+    {
+      "id": "node-003",
+      "name": "Generar Combos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "jsCode": "const { localidades, categorias } = $input.item.json\n\nconst combos = []\nfor (const localidad of localidades) {\n  for (const cat of categorias) {\n    combos.push({\n      json: {\n        localidad,\n        categoria: cat.nombre,\n        nicho:     cat.nicho,\n        query:     `${cat.nombre} ${localidad}`,\n      }\n    })\n  }\n}\nreturn combos"
+      }
+    },
+    {
+      "id": "node-004",
+      "name": "Buscar Google",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [760, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "q",        "value": "={{ $json.query }}" },
+            { "name": "location", "value": "={{ $json.localidad }}, Argentina" },
+            { "name": "hl",       "value": "es" },
+            { "name": "gl",       "value": "ar" },
+            { "name": "num",      "value": "10" },
+            { "name": "api_key",  "value": "daace09546491e8c8eb4de60f34f5bea3b9b7401ee4a8c21c9098bcdb7c85175" }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-005",
+      "name": "Extraer Resultados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [980, 300],
+      "parameters": {
+        "jsCode": "// Recuperar localidad/categoria/nicho del nodo fuente\nconst combo    = $('Generar Combos').item.json\nconst localidad = combo.localidad\nconst categoria = combo.categoria\nconst nicho     = combo.nicho\n\nconst response   = $input.item.json\nconst localesRaw = response.local_results ?? []\nconst locales    = Array.isArray(localesRaw) ? localesRaw : (localesRaw.places ?? [])\nconst organicos  = response.organic_results ?? []\n\nconst Fecha = new Date().toISOString().slice(0, 10)\n\nconst todos = [\n  ...locales.slice(0, 5).map(r => ({\n    Nombre:    r.title   ?? '',\n    Telefono:  r.phone   ?? '',\n    Direccion: r.address ?? '',\n    Sitio_Web: r.website ?? '',\n    Rating:    r.rating  ?? '',\n    Resenas:   r.reviews ?? '',\n    Tipo:      'local',\n    Localidad: localidad,\n    Categoria: categoria,\n    Nicho:     nicho,\n    Fecha,\n  })),\n  ...organicos.slice(0, 5).map(r => ({\n    Nombre:    r.title ?? '',\n    Telefono:  '',\n    Direccion: '',\n    Sitio_Web: r.link  ?? '',\n    Rating:    '',\n    Resenas:   '',\n    Tipo:      'organico',\n    Localidad: localidad,\n    Categoria: categoria,\n    Nicho:     nicho,\n    Fecha,\n  })),\n]\n\nif (todos.length === 0) return []\n\nreturn todos.map(neg => ({ json: neg }))"
+      }
+    },
+    {
+      "id": "node-006",
+      "name": "Escribir en Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1200, 300],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8wIMyyg-Wx58GgWUSqkry9jDl_QChaJkkM6Af0o30Q",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Nombre":    "={{ $json.Nombre }}",
+            "Telefono":  "={{ $json.Telefono }}",
+            "Direccion": "={{ $json.Direccion }}",
+            "Sitio_Web": "={{ $json.Sitio_Web }}",
+            "Rating":    "={{ $json.Rating }}",
+            "Resenas":   "={{ $json.Resenas }}",
+            "Tipo":      "={{ $json.Tipo }}",
+            "Localidad": "={{ $json.Localidad }}",
+            "Categoria": "={{ $json.Categoria }}",
+            "Nicho":     "={{ $json.Nicho }}",
+            "Fecha":     "={{ $json.Fecha }}"
+          }
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CONFIGURAR_CREDENCIAL",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Inicio Manual": {
+      "main": [[{ "node": "Configuracion",     "type": "main", "index": 0 }]]
+    },
+    "Configuracion": {
+      "main": [[{ "node": "Generar Combos",    "type": "main", "index": 0 }]]
+    },
+    "Generar Combos": {
+      "main": [[{ "node": "Buscar Google",      "type": "main", "index": 0 }]]
+    },
+    "Buscar Google": {
+      "main": [[{ "node": "Extraer Resultados", "type": "main", "index": 0 }]]
+    },
+    "Extraer Resultados": {
+      "main": [[{ "node": "Escribir en Sheets", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

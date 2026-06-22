@@ -11,13 +11,11 @@ interface Patient {
   obra_social?: string
   nro_socio?: string
   notes?: string
-  last_appointment?: { scheduled_at: string; status: string; professionals?: { full_name: string } }
+  last_appointment?: { starts_at: string; status: string; professionals?: { full_name: string } }
 }
 
 interface Props {
-  /** Si se pasa, filtra pacientes de esa org. Si no, busca en todas (superadmin). */
   orgId?: string | null
-  /** Si se pasa, filtra solo pacientes que tuvieron turnos con este profesional. */
   professionalId?: string | null
 }
 
@@ -33,7 +31,6 @@ export function PatientSearch({ orgId, professionalId }: Props) {
     setLoading(true)
     setSearched(true)
 
-    // Si es vista de médico, primero obtenemos los patient_ids con turnos de ese profesional
     let allowedPatientIds: string[] | null = null
     if (professionalId) {
       const { data: apptData } = await supabase
@@ -41,7 +38,7 @@ export function PatientSearch({ orgId, professionalId }: Props) {
         .select('patient_id')
         .eq('professional_id', professionalId)
         .not('patient_id', 'is', null)
-      allowedPatientIds = [...new Set((apptData ?? []).map((a: any) => a.patient_id as string))]
+      allowedPatientIds = Array.from(new Set((apptData ?? []).map((a: any) => String(a.patient_id)))) as string[]
     }
 
     let baseQuery = supabase
@@ -55,7 +52,6 @@ export function PatientSearch({ orgId, professionalId }: Props) {
     if (allowedPatientIds && allowedPatientIds.length > 0) {
       baseQuery = baseQuery.in('id', allowedPatientIds)
     } else if (allowedPatientIds !== null && allowedPatientIds.length === 0) {
-      // Médico sin pacientes aún
       setResults([])
       setLoading(false)
       return
@@ -90,7 +86,7 @@ export function PatientSearch({ orgId, professionalId }: Props) {
     pendiente:  'Pendiente',
     confirmado: 'Confirmado',
     cancelado:  'Cancelado',
-    no_asistio: 'No asistió',
+    no_asistio: 'No asistio',
     completado: 'Completado',
   }
 
@@ -104,7 +100,6 @@ export function PatientSearch({ orgId, professionalId }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Buscador */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         {loading && (
@@ -113,18 +108,16 @@ export function PatientSearch({ orgId, professionalId }: Props) {
         <input
           value={query}
           onChange={handleChange}
-          placeholder="Buscar por nombre, DNI, teléfono, email u obra social…"
+          placeholder="Buscar por nombre, DNI, telefono, email u obra social..."
           className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
           autoComplete="off"
         />
       </div>
 
-      {/* Hint */}
       {!searched && (
-        <p className="text-xs text-gray-400 text-center">Escribí al menos 2 caracteres para buscar</p>
+        <p className="text-xs text-gray-400 text-center">Escribi al menos 2 caracteres para buscar</p>
       )}
 
-      {/* Sin resultados */}
       {searched && !loading && results.length === 0 && (
         <div className="text-center py-10 text-gray-400">
           <UserCircle className="w-10 h-10 mx-auto mb-2 opacity-40" />
@@ -132,7 +125,6 @@ export function PatientSearch({ orgId, professionalId }: Props) {
         </div>
       )}
 
-      {/* Resultados */}
       <div className="space-y-3">
         {results.map(p => (
           <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -142,7 +134,6 @@ export function PatientSearch({ orgId, professionalId }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900">{p.full_name}</div>
-
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                   {p.dni && (
                     <span className="flex items-center gap-1 text-xs text-gray-500">
@@ -171,15 +162,13 @@ export function PatientSearch({ orgId, professionalId }: Props) {
                     </span>
                   )}
                 </div>
-
                 {p.notes && (
                   <p className="mt-1 text-xs text-gray-400 truncate">{p.notes}</p>
                 )}
-
                 {p.last_appointment && (
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-xs text-gray-400">
-                      Último turno: {formatDate(p.last_appointment.starts_at)}
+                      Ultimo turno: {formatDate(p.last_appointment.starts_at)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[p.last_appointment.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {STATUS_LABEL[p.last_appointment.status] ?? p.last_appointment.status}

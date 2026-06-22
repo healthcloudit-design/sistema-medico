@@ -16,6 +16,7 @@ export function ProfessionalsManager() {
   const [formError, setFormError]         = useState('')
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting]           = useState(false)
+  const [deleteError, setDeleteError]     = useState('')
   const [search, setSearch]               = useState('')
 
   // Services for current editing org
@@ -123,7 +124,7 @@ export function ProfessionalsManager() {
       .select('id', { count: 'exact', head: true })
       .eq('professional_id', id)
     if ((count ?? 0) > 0) {
-      setFormError(`No se puede eliminar: tiene ${count} turno(s) registrado(s). Desactivalo usando el botón ⏻.`)
+      setDeleteError(`No se puede eliminar: tiene ${count} turno(s) registrado(s). Desactivalo con el botón ⏻.`)
       setConfirmDelete(null)
       setDeleting(false)
       return
@@ -157,6 +158,13 @@ export function ProfessionalsManager() {
           className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
         />
       </div>
+
+      {deleteError && (
+        <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl mb-4 flex items-center justify-between">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="ml-3 text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />)}</div>
@@ -198,7 +206,7 @@ export function ProfessionalsManager() {
                   <Power className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setConfirmDelete({ id: p.id, name: p.full_name })}
+                  onClick={() => { setDeleteError(''); setConfirmDelete({ id: p.id, name: p.full_name }) }}
                   className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
                   title="Eliminar"
                 >

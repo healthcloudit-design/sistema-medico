@@ -118,17 +118,20 @@ export function ProfessionalsManager() {
     if (!confirmDelete) return
     setDeleting(true)
     const id = confirmDelete.id
-    // Verificar si tiene turnos (ON DELETE RESTRICT en DB)
-    const { count } = await supabase
+    // Bloquear solo si hay turnos activos (pendiente/confirmado)
+    const { count: activeCount } = await supabase
       .from('appointments')
       .select('id', { count: 'exact', head: true })
       .eq('professional_id', id)
-    if ((count ?? 0) > 0) {
-      setDeleteError(`No se puede eliminar: tiene ${count} turno(s) registrado(s). Desactivalo con el botón ⏻.`)
+      .in('status', ['pendiente', 'confirmado'])
+    if ((activeCount ?? 0) > 0) {
+      setDeleteError(`No se puede eliminar: tiene ${activeCount} turno(s) activo(s). Cancelalos primero o desactivá el profesional con ⏻.`)
       setConfirmDelete(null)
       setDeleting(false)
       return
     }
+    // Borrar turnos cancelados/completados/no_asistio para liberar la FK
+    await supabase.from('appointments').delete().eq('professional_id', id)
     // professional_services, schedules y availability_blocks tienen CASCADE → se borran solos
     await supabase.from('professionals').delete().eq('id', id)
     setProfessionals(prev => prev.filter(p => p.id !== confirmDelete.id))

@@ -11,11 +11,12 @@ import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  confirmado: { label: 'Confirmado', className: 'bg-green-100 text-green-800' },
-  pendiente:  { label: 'Pendiente',  className: 'bg-yellow-100 text-yellow-800' },
-  cancelado:  { label: 'Cancelado',  className: 'bg-red-100 text-red-800' },
-  no_asistio: { label: 'No asistió', className: 'bg-gray-100 text-gray-600' },
-  completado: { label: 'Completado', className: 'bg-blue-100 text-blue-800' },
+  confirmado:  { label: 'Confirmado',  className: 'bg-green-100 text-green-800' },
+  pendiente:   { label: 'Pendiente',   className: 'bg-yellow-100 text-yellow-800' },
+  cancelado:   { label: 'Cancelado',   className: 'bg-red-100 text-red-800' },
+  no_asistio:  { label: 'No asistio',  className: 'bg-gray-100 text-gray-600' },
+  completado:  { label: 'Completado',  className: 'bg-blue-100 text-blue-800' },
+  en_atencion: { label: 'En atencion', className: 'bg-sky-100 text-sky-800' },
 }
 
 function toArgTime(iso: string) {
@@ -31,15 +32,15 @@ function toArgDate(iso: string) {
 }
 
 export function RecepcionPage() {
-  const [user, setUser]             = useState<User | null>(null)
+  const [user, setUser]               = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [tab, setTab]               = useState<'turnos' | 'pacientes'>('turnos')
-  const [search, setSearch]         = useState('')
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().slice(0,10))
-  const [selected, setSelected]     = useState<Appointment | null>(null)
-  const [updating, setUpdating]     = useState(false)
+  const [loading, setLoading]         = useState(true)
+  const [tab, setTab]                 = useState<'turnos' | 'pacientes'>('turnos')
+  const [search, setSearch]           = useState('')
+  const [dateFilter, setDateFilter]   = useState(new Date().toISOString().slice(0,10))
+  const [selected, setSelected]       = useState<Appointment | null>(null)
+  const [updating, setUpdating]       = useState(false)
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -107,7 +108,6 @@ export function RecepcionPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
@@ -115,7 +115,7 @@ export function RecepcionPage() {
           </div>
           <div>
             <span className="font-bold text-gray-900 text-sm">TurnOS</span>
-            <span className="text-xs text-gray-400 ml-2">Recepción</span>
+            <span className="text-xs text-gray-400 ml-2">Recepcion</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -127,8 +127,6 @@ export function RecepcionPage() {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-4">
-
-        {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           <button
             onClick={() => setTab('turnos')}
@@ -149,97 +147,92 @@ export function RecepcionPage() {
         )}
 
         {tab === 'turnos' && <>
-
-        <GreetingBanner
-          userName={profile?.full_name}
-          subtitle={`${filtered.length} turno${filtered.length !== 1 ? 's' : ''} · ${isFilterToday ? 'hoy' : dateFilter}`}
-        />
-
-        {/* Stats del día */}
-        {isFilterToday && (
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: 'Total',      count: filtered.length,                          color: 'sky' },
-              { label: 'Confirmados', count: filtered.filter(a => a.status==='confirmado').length, color: 'green' },
-              { label: 'Pendientes', count: filtered.filter(a => a.status==='pendiente').length,  color: 'amber' },
-              { label: 'Cancelados', count: filtered.filter(a => a.status==='cancelado').length,  color: 'red' },
-            ].map(s => (
-              <div key={s.label} className={`bg-white rounded-2xl border border-gray-100 p-3 text-center`}>
-                <div className="text-xl font-bold text-gray-900">{s.count}</div>
-                <div className="text-xs text-gray-400">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Filtros */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <GreetingBanner
+            userName={profile?.full_name}
+            subtitle={`${filtered.length} turno${filtered.length !== 1 ? 's' : ''} - ${isFilterToday ? 'hoy' : dateFilter}`}
           />
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o teléfono..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-        </div>
 
-        {/* Lista */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-5 space-y-3">
-              {[1,2,3,4].map(i => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse" />)}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
-              {search ? 'Sin resultados para esa búsqueda' : 'Sin turnos para este día'}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {filtered.map(a => {
-                const prof    = a.professional as { full_name: string } | undefined
-                const service = a.service      as { name: string }      | undefined
-                const cfg = STATUS_CONFIG[a.status]
-                return (
-                  <div
-                    key={a.id}
-                    onClick={() => setSelected(a)}
-                    className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 w-14 flex-shrink-0">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-xs font-mono text-gray-600">{toArgTime(a.starts_at)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 text-sm">{a.patient_name}</div>
-                      <div className="text-xs text-gray-400 truncate">{service?.name} · {prof?.full_name}</div>
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${cfg?.className}`}>
-                      {cfg?.label}
-                    </span>
-                  </div>
-                )
-              })}
+          {isFilterToday && (
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'Total',      count: filtered.length },
+                { label: 'Confirmados', count: filtered.filter(a => a.status==='confirmado').length },
+                { label: 'Pendientes', count: filtered.filter(a => a.status==='pendiente').length },
+                { label: 'Cancelados', count: filtered.filter(a => a.status==='cancelado').length },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-3 text-center">
+                  <div className="text-xl font-bold text-gray-900">{s.count}</div>
+                  <div className="text-xs text-gray-400">{s.label}</div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row gap-3">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nombre o telefono..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {loading ? (
+              <div className="p-5 space-y-3">
+                {[1,2,3,4].map(i => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">
+                {search ? 'Sin resultados para esa busqueda' : 'Sin turnos para este dia'}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {filtered.map(a => {
+                  const prof    = a.professional as { full_name: string } | undefined
+                  const service = a.service      as { name: string }      | undefined
+                  const cfg = STATUS_CONFIG[a.status]
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => setSelected(a)}
+                      className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5 w-14 flex-shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-xs font-mono text-gray-600">{toArgTime(a.starts_at)}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 text-sm">{a.patient_name}</div>
+                        <div className="text-xs text-gray-400 truncate">{service?.name} - {prof?.full_name}</div>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${cfg?.className}`}>
+                        {cfg?.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </>}
       </main>
 
-      {/* Modal detalle */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Detalle del turno</h3>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">x</button>
             </div>
             <div className="p-5 space-y-4">
               {(() => {
@@ -253,7 +246,7 @@ export function RecepcionPage() {
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg?.className}`}>{cfg?.label}</span>
                       <span className="text-sm text-gray-500">
-                        {format(parseISO(toArgDate(selected.starts_at)), "dd/MM/yy")} · {toArgTime(selected.starts_at)}hs
+                        {format(parseISO(toArgDate(selected.starts_at)), "dd/MM/yy")} - {toArgTime(selected.starts_at)}hs
                       </span>
                     </div>
 
@@ -261,18 +254,18 @@ export function RecepcionPage() {
                       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-1">
                         <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Verificar cobertura</p>
                         <p className="text-sm font-medium text-amber-900">{patient.obra_social}</p>
-                        {patient.nro_socio && <p className="text-sm text-amber-700">N° socio: <span className="font-mono font-semibold">{patient.nro_socio}</span></p>}
+                        {patient.nro_socio && <p className="text-sm text-amber-700">N socio: <span className="font-mono font-semibold">{patient.nro_socio}</span></p>}
                       </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <InfoItem label="Paciente"    value={selected.patient_name} />
-                      <InfoItem label="Teléfono"    value={selected.patient_phone ?? '—'} />
-                      <InfoItem label="Servicio"    value={service?.name ?? '—'} />
-                      <InfoItem label="Profesional" value={prof?.full_name ?? '—'} />
+                      <InfoItem label="Telefono"    value={selected.patient_phone ?? '-'} />
+                      <InfoItem label="Servicio"    value={service?.name ?? '-'} />
+                      <InfoItem label="Profesional" value={prof?.full_name ?? '-'} />
                       {selected.patient_email && <InfoItem label="Email" value={selected.patient_email} />}
                       {patient?.obra_social && !isPendiente && (
-                        <InfoItem label="Obra social" value={`${patient.obra_social}${patient.nro_socio ? ` – ${patient.nro_socio}` : ''}`} />
+                        <InfoItem label="Obra social" value={`${patient.obra_social}${patient.nro_socio ? ` - ${patient.nro_socio}` : ''}`} />
                       )}
                     </div>
 
@@ -281,12 +274,16 @@ export function RecepcionPage() {
                         <ActionBtn icon={CheckCircle} label="Confirmar" color="sky"
                           onClick={() => updateStatus(selected.id, 'confirmado')} loading={updating} />
                       )}
-                      {selected.status === 'confirmado' && (
+                      {(selected.status === 'confirmado' || selected.status === 'pendiente') && (
+                        <ActionBtn icon={CheckCircle} label="Llamar" color="teal"
+                          onClick={() => updateStatus(selected.id, 'en_atencion')} loading={updating} />
+                      )}
+                      {selected.status === 'en_atencion' && (
                         <ActionBtn icon={CheckCircle} label="Completado" color="sky"
                           onClick={() => updateStatus(selected.id, 'completado')} loading={updating} />
                       )}
                       {!['no_asistio','completado','cancelado'].includes(selected.status) && (
-                        <ActionBtn icon={UserX} label="No asistió" color="gray"
+                        <ActionBtn icon={UserX} label="No asistio" color="gray"
                           onClick={() => updateStatus(selected.id, 'no_asistio')} loading={updating} />
                       )}
                       {!['cancelado','completado'].includes(selected.status) && (
@@ -319,6 +316,7 @@ function ActionBtn({ icon: Icon, label, color, onClick, loading }: {
 }) {
   const colors: Record<string, string> = {
     sky:  'bg-sky-600 hover:bg-sky-700 text-white',
+    teal: 'bg-teal-500 hover:bg-teal-600 text-white',
     gray: 'bg-gray-100 hover:bg-gray-200 text-gray-700',
     red:  'bg-red-100 hover:bg-red-200 text-red-700',
   }

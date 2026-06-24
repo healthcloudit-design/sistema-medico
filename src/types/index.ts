@@ -84,6 +84,7 @@ export type AppointmentStatus =
   | 'cancelado'
   | 'no_asistio'
   | 'completado'
+  | 'en_atencion'
 
 export interface Appointment {
   id: string

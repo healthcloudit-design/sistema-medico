@@ -13,11 +13,12 @@ import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  confirmado: { label: 'Confirmado', className: 'bg-green-100 text-green-800' },
-  pendiente:  { label: 'Pendiente',  className: 'bg-yellow-100 text-yellow-800' },
-  cancelado:  { label: 'Cancelado',  className: 'bg-red-100 text-red-800' },
-  no_asistio: { label: 'No asistió', className: 'bg-gray-100 text-gray-600' },
-  completado: { label: 'Completado', className: 'bg-blue-100 text-blue-800' },
+  confirmado:  { label: 'Confirmado',  className: 'bg-green-100 text-green-800' },
+  pendiente:   { label: 'Pendiente',   className: 'bg-yellow-100 text-yellow-800' },
+  cancelado:   { label: 'Cancelado',   className: 'bg-red-100 text-red-800' },
+  no_asistio:  { label: 'No asistio',  className: 'bg-gray-100 text-gray-600' },
+  completado:  { label: 'Completado',  className: 'bg-blue-100 text-blue-800' },
+  en_atencion: { label: 'En atencion', className: 'bg-sky-100 text-sky-800' },
 }
 
 function toArgTime(iso: string) {
@@ -27,19 +28,18 @@ function toArgTime(iso: string) {
 }
 
 export function MedicoDashboard() {
-  const [user, setUser]           = useState<User | null>(null)
+  const [user, setUser]               = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loadingAppts, setLoadingAppts] = useState(true)
-  const [selected, setSelected]     = useState<Appointment | null>(null)
-  const [showHC, setShowHC]         = useState(false)
-  const [tab, setTab]               = useState<'agenda' | 'pacientes'>('agenda')
+  const [selected, setSelected]       = useState<Appointment | null>(null)
+  const [showHC, setShowHC]           = useState(false)
+  const [tab, setTab]                 = useState<'agenda' | 'pacientes'>('agenda')
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
-
-  // Obtener org del médico desde su professional record
   const [orgId, setOrgId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!profile?.professional_id) return
     supabase
@@ -63,7 +63,6 @@ export function MedicoDashboard() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Redirigir si no es médico
   useEffect(() => {
     if (!user && !authLoading) { navigate("/", { replace: true }); return }
     if (!profile) return
@@ -101,19 +100,18 @@ export function MedicoDashboard() {
 
   if (!user) return null
 
-  const today     = appointments.filter(a => isToday(parseISO(a.starts_at)))
-  const tomorrow  = appointments.filter(a => isTomorrow(parseISO(a.starts_at)))
-  const upcoming  = appointments.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
+  const today    = appointments.filter(a => isToday(parseISO(a.starts_at)))
+  const tomorrow = appointments.filter(a => isTomorrow(parseISO(a.starts_at)))
+  const upcoming = appointments.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
 
-  const markDone = async (id: string) => {
-    await supabase.from('appointments').update({ status: 'completado' }).eq('id', id)
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'completado' } : a))
-    setSelected(prev => prev?.id === id ? { ...prev, status: 'completado' } : prev)
+  const changeStatus = async (id: string, newStatus: string) => {
+    await supabase.from('appointments').update({ status: newStatus }).eq('id', id)
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus as any } : a))
+    setSelected(prev => prev?.id === id ? { ...prev, status: newStatus as any } : prev)
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center">
@@ -121,7 +119,7 @@ export function MedicoDashboard() {
           </div>
           <div>
             <span className="font-bold text-gray-900 text-sm">TurnOS</span>
-            <span className="text-xs text-gray-400 ml-2">Médico</span>
+            <span className="text-xs text-gray-400 ml-2">Medico</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -136,8 +134,6 @@ export function MedicoDashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
-
-        {/* Tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           <button
             onClick={() => setTab('agenda')}
@@ -158,42 +154,35 @@ export function MedicoDashboard() {
         )}
 
         {tab === 'agenda' && <>
+          <GreetingBanner
+            userName={profile?.full_name}
+            subtitle={`${today.length} turno${today.length !== 1 ? 's' : ''} para hoy`}
+          />
 
-        <GreetingBanner
-          userName={profile?.full_name}
-          subtitle={`${today.length} turno${today.length !== 1 ? 's' : ''} para hoy`}
-        />
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard label="Hoy"    value={today.length}       color="sky" />
+            <StatCard label="Manana" value={tomorrow.length}    color="amber" />
+            <StatCard label="Semana" value={appointments.length} color="purple" />
+          </div>
 
-        {/* Stats rápidos */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Hoy"       value={today.length}    color="sky" />
-          <StatCard label="Mañana"    value={tomorrow.length} color="amber" />
-          <StatCard label="Semana"    value={appointments.length} color="purple" />
-        </div>
-
-        {/* Turnos de hoy */}
-        <Section title="Hoy" empty={today.length === 0} emptyText="Sin turnos para hoy">
-          {today.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
-        </Section>
-
-        {/* Mañana */}
-        {tomorrow.length > 0 && (
-          <Section title="Mañana" empty={false}>
-            {tomorrow.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
+          <Section title="Hoy" empty={today.length === 0} emptyText="Sin turnos para hoy">
+            {today.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
           </Section>
-        )}
 
-        {/* Próximos días */}
-        {upcoming.length > 0 && (
-          <Section title="Próximos días" empty={false}>
-            {upcoming.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
-          </Section>
-        )}
+          {tomorrow.length > 0 && (
+            <Section title="Manana" empty={false}>
+              {tomorrow.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
+            </Section>
+          )}
+
+          {upcoming.length > 0 && (
+            <Section title="Proximos dias" empty={false}>
+              {upcoming.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
+            </Section>
+          )}
         </>}
-
       </main>
 
-      {/* Modal Historia Clínica */}
       {selected && showHC && profile?.professional_id && (
         <ClinicalRecordModal
           appointmentId={selected.id}
@@ -206,17 +195,16 @@ export function MedicoDashboard() {
         />
       )}
 
-      {/* Modal detalle */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Detalle del turno</h3>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">x</button>
             </div>
             <div className="p-5 space-y-3">
               {(() => {
-                const cfg = STATUS_CONFIG[selected.status]
+                const cfg     = STATUS_CONFIG[selected.status]
                 const patient = selected.patient as { full_name: string; phone?: string; email?: string; obra_social?: string } | undefined
                 const service = selected.service as { name: string; duration_minutes: number } | undefined
                 return (
@@ -224,14 +212,14 @@ export function MedicoDashboard() {
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg?.className}`}>{cfg?.label}</span>
                       <span className="text-sm text-gray-500">
-                        {format(parseISO(selected.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })} · {toArgTime(selected.starts_at)}hs
+                        {format(parseISO(selected.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })} - {toArgTime(selected.starts_at)}hs
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <InfoItem label="Paciente"  value={selected.patient_name} />
-                      <InfoItem label="Teléfono"  value={selected.patient_phone ?? '—'} />
-                      <InfoItem label="Servicio"  value={service?.name ?? '—'} />
-                      <InfoItem label="Duración"  value={service ? `${service.duration_minutes} min` : '—'} />
+                      <InfoItem label="Telefono"  value={selected.patient_phone ?? '-'} />
+                      <InfoItem label="Servicio"  value={service?.name ?? '-'} />
+                      <InfoItem label="Duracion"  value={service ? `${service.duration_minutes} min` : '-'} />
                       {selected.patient_email && <InfoItem label="Email" value={selected.patient_email} />}
                       {patient?.obra_social && <InfoItem label="Obra social" value={patient.obra_social} />}
                     </div>
@@ -242,13 +230,21 @@ export function MedicoDashboard() {
                           className="flex-1 flex items-center justify-center gap-2 border border-sky-200 text-sky-700 hover:bg-sky-50 py-3 rounded-2xl font-semibold text-sm transition-colors"
                         >
                           <FileText className="w-4 h-4" />
-                          Historia clínica
+                          Historia clinica
                         </button>
                       )}
-                      {selected.status === 'confirmado' && (
+                      {(selected.status === 'confirmado' || selected.status === 'pendiente') && (
                         <button
-                          onClick={() => markDone(selected.id)}
-                          className="flex-1 bg-sky-600 hover:bg-sky-700 text-white py-3 rounded-2xl font-semibold text-sm transition-colors"
+                          onClick={() => changeStatus(selected.id, 'en_atencion')}
+                          className="flex-1 bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-2xl font-semibold text-sm transition-colors"
+                        >
+                          Llamar
+                        </button>
+                      )}
+                      {selected.status === 'en_atencion' && (
+                        <button
+                          onClick={() => changeStatus(selected.id, 'completado')}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-semibold text-sm transition-colors"
                         >
                           Completado
                         </button>
@@ -321,7 +317,6 @@ function AppointmentCard({ appt, onClick }: { appt: Appointment; onClick: () => 
     </div>
   )
 }
-
 
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (

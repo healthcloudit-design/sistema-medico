@@ -90,6 +90,29 @@ export function MedicoDashboard() {
       })
   }, [profile?.professional_id])
 
+  // Realtime: escucha cambios en turnos de este profesional
+  useEffect(() => {
+    if (!profile?.professional_id) return
+    const channel = supabase
+      .channel(`medico-appts-${profile.professional_id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `professional_id=eq.${profile.professional_id}` },
+        (payload) => {
+          const updated = payload.new as any
+          if (updated.status === 'cancelado') {
+            setAppointments(prev => prev.filter(a => a.id !== updated.id))
+            setSelected(prev => prev?.id === updated.id ? null : prev)
+          } else {
+            setAppointments(prev => prev.map(a => a.id === updated.id ? { ...a, ...updated } : a))
+            setSelected(prev => prev?.id === updated.id ? { ...prev, ...updated } as any : prev)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [profile?.professional_id])
+
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -137,13 +160,13 @@ export function MedicoDashboard() {
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           <button
             onClick={() => setTab('agenda')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'agenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={['flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors', tab === 'agenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}
           >
             <Calendar className="w-4 h-4" /> Mi agenda
           </button>
           <button
             onClick={() => setTab('pacientes')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'pacientes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={['flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors', tab === 'pacientes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}
           >
             <Users className="w-4 h-4" /> Pacientes
           </button>
@@ -210,7 +233,7 @@ export function MedicoDashboard() {
                 return (
                   <>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg?.className}`}>{cfg?.label}</span>
+                      <span className={['text-xs font-medium px-2.5 py-1 rounded-full', cfg?.className].join(' ')}>{cfg?.label}</span>
                       <span className="text-sm text-gray-500">
                         {format(parseISO(selected.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })} - {toArgTime(selected.starts_at)}hs
                       </span>
@@ -268,7 +291,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     purple: 'bg-purple-50 text-purple-700',
   }
   return (
-    <div className={`rounded-2xl p-4 ${colors[color]}`}>
+    <div className={['rounded-2xl p-4', colors[color]].join(' ')}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs font-medium mt-0.5 opacity-70">{label}</div>
     </div>
@@ -311,7 +334,7 @@ function AppointmentCard({ appt, onClick }: { appt: Appointment; onClick: () => 
           <span className="text-xs text-gray-500 truncate">{service?.name}</span>
         </div>
       </div>
-      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${cfg?.className}`}>
+      <span className={['text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0', cfg?.className].join(' ')}>
         {cfg?.label}
       </span>
     </div>

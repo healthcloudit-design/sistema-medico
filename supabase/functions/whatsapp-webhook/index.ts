@@ -1,6 +1,24 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+async function sendTwilioMessage(to: string, body: string) {
+  const sid   = Deno.env.get('TWILIO_ACCOUNT_SID')!
+  const token = Deno.env.get('TWILIO_AUTH_TOKEN')!
+  const from  = Deno.env.get('TWILIO_WA_FROM')!
+  const toNum = to.startsWith('+') ? to : `+549${to.replace(/^0/, '').replace(/^9/, '')}`
+  await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(`${sid}:${token}`),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ From: from, To: `whatsapp:${toNum}`, Body: body }).toString(),
+    }
+  )
+}
+
 serve(async (req) => {
   try {
     const supabase = createClient(
@@ -8,36 +26,46 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Twilio envia form-urlencoded
-    const text = await req.text()
+    const text   = await req.text()
     const params = new URLSearchParams(text)
-    const from  = params.get('From') ?? ''   // whatsapp:+541112345678
-    const body  = (params.get('Body') ?? '').trim().toUpperCase()
+    const from   = params.get('From') ?? ''
+    const body   = (params.get('Body') ?? '').trim().toUpperCase()
 
     const phone = from.replace('whatsapp:', '')
+    const phoneStripped = phone.startsWith('+549')
+      ? phone.slice(4)
+      : phone.startsWith('+54')
+      ? phone.slice(3)
+      : phone.startsWith('+')
+      ? phone.slice(1)
+      : phone
 
-    // Buscar turno activo de hoy para ese numero
-    const today = new Date()
-    const from_dt = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
-    const to_dt   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString()
+    const now = new Date().toISOString()
 
     const { data: appts } = await supabase
       .from('appointments')
-      .select('id, patient_name, organization_id, status, organizations(whatsapp_number, name)')
-      .eq('patient_phone', phone)
-      .gte('starts_at', from_dt)
-      .lte('starts_at', to_dt)
+      .select('id, patient_name, patient_phone, organization_id, status, starts_at, professionals(full_name), services(name), organizations(whatsapp_number, name)')
+      .or(`patient_phone.eq.${phone},patient_phone.eq.${phoneStripped}`)
+      .gte('starts_at', now)
       .in('status', ['pendiente', 'confirmado'])
       .order('starts_at')
       .limit(1)
 
     const appt = appts?.[0]
     if (!appt) {
-      return new Response('<Response><Message>No encontramos un turno activo para hoy con este numero.</Message></Response>',
+      return new Response('<Response><Message>No encontramos un turno proximo con este numero.</Message></Response>',
         { headers: { 'Content-Type': 'text/xml' } })
     }
 
-    const org = appt.organizations as any
+    const org  = appt.organizations as any
+    const prof = appt.professionals as any
+    const svc  = appt.services      as any
+
+    // Hora del turno en ARG
+    const ms   = new Date(appt.starts_at).getTime() - 3 * 60 * 60 * 1000
+    const dt   = new Date(ms)
+    const hora = `${dt.getUTCHours().toString().padStart(2,'0')}:${dt.getUTCMinutes().toString().padStart(2,'0')}`
+    const fecha = dt.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
     if (body.includes('CANCELAR')) {
       await supabase.from('appointments').update({ status: 'cancelado' }).eq('id', appt.id)
@@ -49,6 +77,15 @@ serve(async (req) => {
         body:            body,
         status:          'received',
       })
+
+      // Notificar a la organizacion
+      if (org.whatsapp_number) {
+        await sendTwilioMessage(
+          org.whatsapp_number,
+          `❌ Turno cancelado por WhatsApp\n\n👤 ${appt.patient_name}\n📅 ${fecha} ${hora}hs\n💼 ${svc?.name ?? ''} — ${prof?.full_name ?? ''}\n\nEl paciente cancelo su turno desde el recordatorio de WhatsApp.`
+        ).catch(() => {})
+      }
+
       return new Response(
         `<Response><Message>Tu turno fue cancelado. Si fue un error, comunicate con ${org.name} directamente.</Message></Response>`,
         { headers: { 'Content-Type': 'text/xml' } }
@@ -64,24 +101,11 @@ serve(async (req) => {
         body:            body,
         status:          'received',
       })
-      // Notificar al numero de la org si tiene whatsapp_number
-      if (org.whatsapp_number && Deno.env.get('TWILIO_ACCOUNT_SID')) {
-        const orgPhone = org.whatsapp_number.startsWith('+') ? org.whatsapp_number : `+54${org.whatsapp_number}`
-        await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${Deno.env.get('TWILIO_ACCOUNT_SID')}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${Deno.env.get('TWILIO_ACCOUNT_SID')}:${Deno.env.get('TWILIO_AUTH_TOKEN')}`),
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              From: Deno.env.get('TWILIO_WA_FROM')!,
-              To:   `whatsapp:${orgPhone}`,
-              Body: `Aviso de tardanza: ${appt.patient_name} dice que llega tarde. Esperan hasta 15 min.`,
-            }).toString(),
-          }
-        )
+      if (org.whatsapp_number) {
+        await sendTwilioMessage(
+          org.whatsapp_number,
+          `⏰ Aviso de tardanza\n\n👤 ${appt.patient_name}\n🕐 Turno a las ${hora}hs — ${svc?.name ?? ''} — ${prof?.full_name ?? ''}\n\nDice que llega tarde. Esperan hasta 15 minutos.`
+        ).catch(() => {})
       }
       return new Response(
         '<Response><Message>Avisamos que vas a llegar un poco tarde. Te esperamos hasta 15 minutos.</Message></Response>',

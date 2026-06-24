@@ -53,7 +53,10 @@ serve(async (req) => {
       ? `Recordatorio 📅\n\nHola ${appt.patient_name}, mañana tenés turno en *${org.name}*.\n\n🕐 ${hora}hs\n💼 ${service?.name ?? ''}\n👤 ${prof?.full_name ?? ''}${footer}`
       : `Hola ${appt.patient_name} ⏰\n\nEn 2 horas tenés turno en *${org.name}* — ${hora}hs ${service?.name ?? ''}${footer}`
 
-    const toNumber = phone.startsWith('+') ? phone : `+54${phone.replace(/^0/, '')}`
+    // Numeros argentinos: +549 + numero sin 0 inicial ni 9 duplicado
+    const toNumber = phone.startsWith('+')
+      ? phone
+      : `+549${phone.replace(/^0/, '').replace(/^9/, '')}`
 
     const twilioRes = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,

@@ -11,7 +11,7 @@ export interface Service {
   created_at: string
 }
 
-export type TenantType = 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary'
+export type TenantType = 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary' | 'estetica'
 
 export interface Organization {
   id: string

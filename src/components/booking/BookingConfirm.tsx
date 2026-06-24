@@ -17,7 +17,7 @@ interface Props {
 
 function getTenantLabels(tenantType: TenantType) {
   const isPet    = tenantType === 'petshop' || tenantType === 'veterinary'
-  const isBeauty = tenantType === 'beauty'
+  const isBeauty = tenantType === 'beauty' || tenantType === 'estetica'
   return {
     isPet,
     isBeauty,
@@ -47,13 +47,10 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
   const [redirecting, setRedirecting] = useState(false)
 
   const labels = getTenantLabels(tenantType)
-
   const orgId        = state.professional?.organization_id ?? null
   const { featureMp } = useOrgFeatures(orgId)
-
   const servicePrice = state.service?.price ?? 0
   const ofrecePago   = featureMp && servicePrice > 0
-
   const tieneObraSocial = labels.showObraSocial && state.obra_social.trim().length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +94,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
       }
       if (result?.error) throw new Error(result.error)
 
+      // Confirmacion por email
       if (result?.id && state.email) {
         supabase.functions.invoke('send-confirmation', {
           body: {
@@ -108,6 +106,13 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
             starts_at:           startsAt,
             cancellation_token:  result.cancellation_token,
           },
+        }).catch(() => {})
+      }
+
+      // Confirmacion por WhatsApp
+      if (result?.id && state.telefono) {
+        supabase.functions.invoke('send-whatsapp', {
+          body: { appointment_id: result.id, message_type: 'confirmation' },
         }).catch(() => {})
       }
 
@@ -166,7 +171,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* Nombre de la mascota / paciente */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             {labels.nombreLabel} <span className="text-red-500">*</span>
@@ -180,7 +184,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           />
         </div>
 
-        {/* Nombre del dueno (pet tenants) */}
         {labels.isPet && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -196,7 +199,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </div>
         )}
 
-        {/* Telefono */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Telefono / WhatsApp <span className="text-red-500">*</span>
@@ -210,7 +212,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           />
         </div>
 
-        {/* DNI — obligatorio en medical, opcional en veterinary, oculto en beauty/petshop */}
         {labels.showDni && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -233,7 +234,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </div>
         )}
 
-        {/* Email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Email <span className="text-gray-400 text-xs font-normal">(opcional)</span>
@@ -247,7 +247,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           />
         </div>
 
-        {/* Obra social — solo medical / veterinary */}
         {labels.showObraSocial && (
           <>
             <div>
@@ -280,7 +279,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </>
         )}
 
-        {/* Observaciones / info extra (no pet — pet usa este campo para nombre dueno) */}
         {!labels.isPet && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -297,7 +295,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </div>
         )}
 
-        {/* Notas mascota (pet: campo extra para raza/edad/etc) */}
         {labels.isPet && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -313,7 +310,6 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </div>
         )}
 
-        {/* Pago online */}
         {ofrecePago && !tieneObraSocial && (
           <div className="border border-gray-200 rounded-2xl overflow-hidden">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-3 pb-2">
@@ -323,9 +319,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
               <button
                 type="button"
                 onClick={() => setPagoOnline(false)}
-                className={`flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors ${
-                  !pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
-                }`}
+                className={['flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors', !pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'].join(' ')}
               >
                 <Building2 className="w-5 h-5" />
                 En el lugar
@@ -333,9 +327,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
               <button
                 type="button"
                 onClick={() => setPagoOnline(true)}
-                className={`flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors ${
-                  pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'
-                }`}
+                className={['flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors', pagoOnline ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'].join(' ')}
               >
                 <CreditCard className="w-5 h-5" />
                 Pagar online
@@ -355,11 +347,9 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
         <Button type="submit" loading={loading || redirecting} size="lg" className="w-full !bg-sky-600 hover:!bg-sky-700">
           {pagoOnline && ofrecePago
             ? `Reservar y pagar $${servicePrice.toLocaleString('es-AR')}`
-            : tieneObraSocial
-              ? 'Solicitar turno'
-              : labels.confirmLabel
-          }
+            : labels.confirmLabel}
         </Button>
+
       </form>
     </div>
   )

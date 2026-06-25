@@ -6,23 +6,21 @@ import { CancelPage } from './pages/CancelPage'
 import { MedicoDashboard } from './pages/MedicoDashboard'
 import { RecepcionPage } from './pages/RecepcionPage'
 import { WaitingRoomScreen } from './pages/WaitingRoomScreen'
+import { TotemPage } from './pages/TotemPage'
 
 export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
-        {/* Landing con login unificado */}
-        <Route path="/" element={<LandingPage />} />
-        {/* Rutas de sistema */}
-        <Route path="/cancelar"  element={<CancelPage />} />
-        <Route path="/admin"     element={<AdminPage />} />
-        <Route path="/medico"    element={<MedicoDashboard />} />
-        <Route path="/recepcion" element={<RecepcionPage />} />
-        {/* Pantalla sala de espera — publica, sin login */}
+        <Route path="/"           element={<LandingPage />} />
+        <Route path="/cancelar"   element={<CancelPage />} />
+        <Route path="/admin"      element={<AdminPage />} />
+        <Route path="/medico"     element={<MedicoDashboard />} />
+        <Route path="/recepcion"  element={<RecepcionPage />} />
         <Route path="/pantalla/:slug" element={<WaitingRoomScreen />} />
-        {/* Booking publico por slug */}
-        <Route path="/:slug" element={<BookingFlow />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/totem/:slug"    element={<TotemPage />} />
+        <Route path="/:slug"      element={<BookingFlow />} />
+        <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

@@ -389,9 +389,11 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
                     }}
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="recepcion">Recepcion</option>
-                    <option value="medico">Medico / Profesional</option>
+                    {isSuperAdmin && <option value="globaladmin">Global Admin (Cofundador)</option>}
+                    {isSuperAdmin && <option value="comercial">Comercial (Sales)</option>}
+                    <option value="admin">Admin de centro</option>
+                    <option value="recepcion">Recepción</option>
+                    <option value="medico">Profesional</option>
                   </select>
                 </div>
 

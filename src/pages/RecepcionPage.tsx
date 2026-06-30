@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isToday, startOfWeek, addWeeks, startOfDay, endOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users, LayoutList } from 'lucide-react'
+import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users, LayoutList, CalendarX, UserPlus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { GreetingBanner } from '../components/shared/GreetingBanner'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
+import { RecepcionBloqueos } from '../components/recepcion/RecepcionBloqueos'
+import { NuevoTurnoRecepcion } from '../components/recepcion/NuevoTurnoRecepcion'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
 
@@ -37,7 +39,7 @@ export function RecepcionPage() {
   const [authLoading, setAuthLoading] = useState(true)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading]         = useState(true)
-  const [tab, setTab]                 = useState<'turnos' | 'pacientes'>('turnos')
+  const [tab, setTab]                 = useState<'turnos' | 'pacientes' | 'bloqueos' | 'nuevo'>('turnos')
   const [search, setSearch]           = useState('')
   const [dateFilter, setDateFilter]   = useState(new Date().toISOString().slice(0,10))
   const [selected, setSelected]       = useState<Appointment | null>(null)
@@ -162,6 +164,18 @@ export function RecepcionPage() {
           >
             <Users className="w-4 h-4" /> Pacientes
           </button>
+          <button
+            onClick={() => setTab('bloqueos')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'bloqueos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <CalendarX className="w-4 h-4" /> Bloqueos
+          </button>
+          <button
+            onClick={() => setTab('nuevo')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'nuevo' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <UserPlus className="w-4 h-4" /> Nuevo
+          </button>
           {tab === 'turnos' && (
             <button
               onClick={() => setCalendarView(v => !v)}
@@ -265,6 +279,12 @@ export function RecepcionPage() {
           </div>
         </>)}
         </>}
+        {tab === 'bloqueos' && (
+          <RecepcionBloqueos organizationId={(profile as any)?.organization_id ?? ''} />
+        )}
+        {tab === 'nuevo' && (
+          <NuevoTurnoRecepcion organizationId={(profile as any)?.organization_id ?? ''} />
+        )}
       </main>
 
       {selected && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle, Calendar, UserCircle, Stethoscope, Sparkles, PawPrint, Scissors, Dumbbell } from 'lucide-react'
+import { CheckCircle, Calendar, UserCircle, Stethoscope, Sparkles, PawPrint, Scissors, Dumbbell, MapPin, MessageCircle, Instagram } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../../lib/supabase'
 import { alpha } from '../../lib/color'
@@ -114,9 +114,12 @@ export function BookingFlow() {
     </div>
   )
 
-  const tenantType  = org.tenant_type ?? 'medical'
-  const accentColor = org.primary_color ?? '#0ea5e9'
-  const logoUrl     = org.logo_url ?? null
+  const tenantType       = org.tenant_type ?? 'medical'
+  const accentColor      = org.primary_color ?? '#0ea5e9'
+  const logoUrl          = org.logo_url ?? null
+  const whatsappNumber   = org.whatsapp_number ?? null
+  const instagramHandle  = org.instagram_handle ?? null
+  const orgAddress       = org.address ?? null
   const STEPS       = getSteps(tenantType)
 
   if (completed) return (
@@ -158,20 +161,58 @@ export function BookingFlow() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          {/* Logo + nombre */}
-          <div className="flex items-center justify-center gap-3 mb-1">
+          {/* Logo + nombre + redes */}
+          <div className="flex flex-col items-center mb-3">
             {logoUrl && (
               <img
                 src={logoUrl}
                 alt={org.name}
-                className="h-10 w-10 rounded-full object-cover shadow-sm flex-shrink-0"
+                className="h-16 w-16 rounded-2xl object-cover shadow-md mb-2 flex-shrink-0"
               />
             )}
             <h1 className="text-xl font-bold text-gray-900">{org.name}</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {tenantType === 'cancha' ? 'Reservar cancha online' : 'Reservar turno online'}
+            </p>
+            {/* Social links */}
+            <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
+              {orgAddress && (
+                <a
+                  href={'https://maps.google.com/?q=' + encodeURIComponent(orgAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  {orgAddress}
+                </a>
+              )}
+              {whatsappNumber && (
+                <a
+                  href={'https://wa.me/' + whatsappNumber.replace(/\D/g, '')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
+                  style={{ color: '#16a34a', backgroundColor: '#f0fdf4' }}
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  WhatsApp
+                </a>
+              )}
+              {instagramHandle && (
+                <a
+                  href={'https://instagram.com/' + instagramHandle}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
+                  style={{ color: '#c2185b', backgroundColor: '#fdf2f8' }}
+                >
+                  <Instagram className="w-3.5 h-3.5" />
+                  @{instagramHandle}
+                </a>
+              )}
+            </div>
           </div>
-          <p className="text-sm text-gray-400 text-center mb-3">
-            {tenantType === 'cancha' ? 'Reservar cancha online' : 'Reservar turno online'}
-          </p>
           {/* Steps */}
           <div className="flex items-center justify-between">
             {STEPS.map((step, i) => {

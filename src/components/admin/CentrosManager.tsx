@@ -16,6 +16,7 @@ interface Org {
   phone: string | null
   email: string | null
   active: boolean
+  instagram_handle: string | null
 }
 
 const TENANT_LABELS: Record<string, { label: string; emoji: string }> = {
@@ -62,6 +63,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
     address:          org.address ?? '',
     phone:            org.phone ?? '',
     email:            org.email ?? '',
+    instagram_handle: org.instagram_handle ?? '',
     active:           org.active,
   })
   const [saving, setSaving]       = useState(false)
@@ -98,11 +100,12 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
       address:         form.address || null,
       phone:           form.phone || null,
       email:           form.email || null,
+      instagram_handle: form.instagram_handle || null,
       active:          form.active,
       updated_at:      new Date().toISOString(),
     }).eq('id', org.id)
     if (err) { setError(err.message); setSaving(false); return }
-    onSaved({ ...org, ...form, logo_url: logoPreview, primary_color: form.primary_color })
+    onSaved({ ...org, ...form, logo_url: logoPreview, primary_color: form.primary_color, instagram_handle: form.instagram_handle || null })
     onClose()
   }
 
@@ -219,6 +222,17 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2"
               />
             </div>
+          </div>
+
+          {/* Instagram */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Instagram (sin @)</label>
+            <input
+              value={form.instagram_handle}
+              onChange={e => set('instagram_handle', e.target.value)}
+              placeholder="nombre_del_negocio"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2"
+            />
           </div>
 
           {/* Activo */}

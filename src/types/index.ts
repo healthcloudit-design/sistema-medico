@@ -28,6 +28,7 @@ export interface Organization {
   tenant_type: TenantType
   primary_color?: string | null
   whatsapp_number?: string | null
+  instagram_handle?: string | null
   created_at: string
   updated_at: string
 }

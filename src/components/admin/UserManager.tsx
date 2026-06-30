@@ -6,7 +6,9 @@ import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
 
 const ROLE_CONFIG: Record<UserRole, { label: string; className: string }> = {
-  superadmin: { label: 'Superadmin',  className: 'bg-purple-100 text-purple-800' },
+  superadmin:  { label: 'Superadmin',   className: 'bg-purple-100 text-purple-800' },
+  globaladmin: { label: 'Global Admin', className: 'bg-indigo-100 text-indigo-800' },
+  comercial:   { label: 'Comercial',    className: 'bg-cyan-100 text-cyan-800'    },
   admin:      { label: 'Admin',        className: 'bg-sky-100 text-sky-800' },
   recepcion:  { label: 'Recepcion',    className: 'bg-green-100 text-green-800' },
   medico:     { label: 'Medico',       className: 'bg-amber-100 text-amber-800' },

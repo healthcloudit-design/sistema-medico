@@ -38,9 +38,10 @@ export function LandingPage() {
   useEffect(() => {
     if (!profile) return
     const role = profile.role
-    if (role === 'superadmin' || role === 'admin') navigate('/admin',    { replace: true })
-    if (role === 'recepcion')                       navigate('/recepcion', { replace: true })
-    if (role === 'medico')                          navigate('/medico',    { replace: true })
+    if (role === 'superadmin' || role === 'globaladmin' || role === 'admin') navigate('/admin',     { replace: true })
+    if (role === 'comercial')                                                   navigate('/admin',     { replace: true })
+    if (role === 'recepcion')                                                   navigate('/recepcion', { replace: true })
+    if (role === 'medico')                                                      navigate('/medico',    { replace: true })
   }, [profile])
 
   const handleLogin = async (e: React.FormEvent) => {

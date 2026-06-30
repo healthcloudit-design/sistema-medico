@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, Clock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { alpha } from '../../lib/color'
 import type { Service } from '../../types'
 
 interface Props {
@@ -8,36 +9,47 @@ interface Props {
   onSelect: (service: Service) => void
   orgId: string
   tenantType?: import('../../types').TenantType
+  accentColor?: string
 }
 
 const CATEGORY_META: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluqueria':  { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Manos':       { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Barberia':    { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
-  'Masajes':       { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
-  'Reflexologia':  { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  'Drenaje':       { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
-  'Aparatologia':  { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
-  'Facial':        { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Consultas':     { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
-  'Diagnostico':   { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
-  'Procedimientos':{ emoji: '🧬',  gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
-  'Tratamientos':  { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Peluqueria':   { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Manos':        { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Barberia':     { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
+  'Masajes':      { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
+  'Reflexologia': { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
+  'Drenaje':      { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
+  'Aparatologia': { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Facial':       { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Consultas':    { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
+  'Diagnostico':  { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
+  'Procedimientos':{ emoji: '🧬', gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
+  'Tratamientos': { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
 }
 
 const CATEGORY_META_ES: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluquería':   { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Manos':        { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Barbería':     { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
-  'Masajes':        { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
-  'Reflexología':   { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  'Drenaje':        { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
-  'Aparatología':   { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
-  'Facial':         { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Consultas':      { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
-  'Diagnóstico':    { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
-  'Procedimientos': { emoji: '🧬',  gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
-  'Tratamientos':   { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Peluquería':    { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Manicuría':     { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Pedicuría':     { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
+  'Manos':         { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Barbería':      { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
+  'Masajes':       { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
+  'Reflexología':  { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
+  'Drenaje':       { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
+  'Aparatología':  { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Facial':        { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
+  'Semi':          { emoji: '💅',  gradient: 'from-pink-50 to-rose-50',      border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Kapping':       { emoji: '💎',  gradient: 'from-fuchsia-50 to-purple-50', border: 'border-fuchsia-200', text: 'text-fuchsia-700' },
+  'Esculpidas':    { emoji: '🪄',  gradient: 'from-purple-50 to-violet-50',  border: 'border-purple-200',  text: 'text-purple-700'  },
+  'Nail Art':      { emoji: '🎨',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
+  'Otros':         { emoji: '✦',   gradient: 'from-gray-50 to-slate-50',     border: 'border-gray-200',    text: 'text-gray-700'    },
+  'Consultas':     { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
+  'Diagnóstico':   { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
+  'Procedimientos':{ emoji: '🧬',  gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
+  'Tratamientos':  { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+  'Fútbol':        { emoji: '⚽',  gradient: 'from-green-50 to-emerald-50',  border: 'border-green-200',   text: 'text-green-700'   },
+  'Pádel':         { emoji: '🎾',  gradient: 'from-teal-50 to-cyan-50',      border: 'border-teal-200',    text: 'text-teal-700'    },
+  'Tenis':         { emoji: '🎾',  gradient: 'from-yellow-50 to-amber-50',   border: 'border-yellow-200',  text: 'text-yellow-700'  },
 }
 
 const DEFAULT_CAT_META = { emoji: '💈', gradient: 'from-sky-50 to-blue-50', border: 'border-sky-200', text: 'text-sky-700' }
@@ -46,13 +58,13 @@ function getCatMeta(cat: string) {
   return CATEGORY_META_ES[cat] ?? CATEGORY_META[cat] ?? DEFAULT_CAT_META
 }
 
-export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medical' }: Props) {
-  const [services, setServices]     = useState<Service[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState('')
+export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medical', accentColor = '#0ea5e9' }: Props) {
+  const [services, setServices]       = useState<Service[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState('')
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
 
-  const isBeauty = tenantType === 'beauty'
+  const isBeauty = tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'cancha'
 
   useEffect(() => {
     setLoading(true)
@@ -92,8 +104,12 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
   if (isBeauty && !selectedCat) {
     return (
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Que servicio buscas?</h2>
-        <p className="text-sm text-gray-500 mb-5">Elegi una categoria para comenzar</p>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">
+          {tenantType === 'cancha' ? 'Que deporte queres jugar?' : 'Que servicio buscas?'}
+        </h2>
+        <p className="text-sm text-gray-500 mb-5">
+          {tenantType === 'cancha' ? 'Elegí el deporte para ver las canchas disponibles' : 'Elegi una categoria para comenzar'}
+        </p>
         <div className="grid grid-cols-2 gap-4">
           {categories.map(cat => {
             const meta  = getCatMeta(cat)
@@ -107,7 +123,7 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
                 <span className="text-5xl leading-none">{meta.emoji}</span>
                 <div className="text-center">
                   <div className={`font-semibold text-base ${meta.text}`}>{cat}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{count} {count === 1 ? 'servicio' : 'servicios'}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{count} {count === 1 ? 'opción' : 'opciones'}</div>
                 </div>
               </button>
             )
@@ -122,16 +138,21 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
       {isBeauty && selectedCat && (
         <button
           onClick={() => setSelectedCat(null)}
-          className="flex items-center gap-1.5 text-sm font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-2 rounded-xl transition-colors mb-4"
+          className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition-colors mb-4"
+          style={{ color: accentColor, backgroundColor: alpha(accentColor, 0.08) }}
         >
           <ChevronLeft className="w-4 h-4" /> {selectedCat}
         </button>
       )}
       <h2 className="text-lg font-semibold text-gray-900 mb-1">
-        {isBeauty ? `Servicios de ${selectedCat}` : 'Que servicio necesita?'}
+        {isBeauty
+          ? (tenantType === 'cancha' ? `Turnos de ${selectedCat}` : `Servicios de ${selectedCat}`)
+          : 'Que servicio necesita?'}
       </h2>
       <p className="text-sm text-gray-500 mb-4">
-        {isBeauty ? 'Toca el servicio para continuar' : 'Seleccione el tipo de consulta'}
+        {tenantType === 'cancha'
+          ? 'Elegí la duración del turno'
+          : isBeauty ? 'Toca el servicio para continuar' : 'Seleccione el tipo de consulta'}
       </p>
       {filteredServices.length === 0 ? (
         <div className="bg-amber-50 text-amber-700 text-sm px-4 py-3 rounded-xl">
@@ -143,13 +164,15 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
             <button
               key={s.id}
               onClick={() => onSelect(s)}
-              className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-200
-                ${selected?.id === s.id
-                  ? 'border-sky-500 bg-sky-50'
-                  : 'border-gray-100 bg-white hover:border-sky-200 hover:bg-sky-50/50 shadow-sm'}`}
+              className="w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 shadow-sm"
+              style={
+                selected?.id === s.id
+                  ? { borderColor: accentColor, backgroundColor: alpha(accentColor, 0.06) }
+                  : { borderColor: '#f3f4f6', backgroundColor: '#fff' }
+              }
             >
               <div className="flex items-start gap-3">
-                <span className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: s.color ?? '#0ea5e9' }} />
+                <span className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: s.color ?? accentColor }} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900">{s.name}</div>
                   {s.description && <div className="text-sm text-gray-500 mt-0.5">{s.description}</div>}

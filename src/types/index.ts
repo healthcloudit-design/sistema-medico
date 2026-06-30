@@ -134,7 +134,7 @@ export interface TimeSlot {
   disponible: boolean
 }
 
-export type UserRole = 'paciente' | 'medico' | 'recepcion' | 'admin' | 'superadmin'
+export type UserRole = 'paciente' | 'medico' | 'recepcion' | 'admin' | 'superadmin' | 'globaladmin' | 'comercial'
 
 export interface Profile {
   id: string

@@ -3,6 +3,7 @@ import { ChevronLeft, Calendar, Clock, UserCircle, Stethoscope, Scissors, Sparkl
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
+import { alpha } from '../../lib/color'
 import { useOrgFeatures } from '../../hooks/useOrgFeatures'
 import type { BookingState, TenantType } from '../../types'
 import { Button } from '../ui/Button'
@@ -13,6 +14,7 @@ interface Props {
   onBack: () => void
   onComplete: () => void
   tenantType?: TenantType
+  accentColor?: string
 }
 
 type PaymentMethod = 'presencial' | 'mercadopago' | 'modo'
@@ -50,7 +52,7 @@ function ServiceIcon({ tenantType, className }: { tenantType: TenantType; classN
   return <Stethoscope className={className} />
 }
 
-export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType = 'medical' }: Props) {
+export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType = 'medical', accentColor = '#0ea5e9' }: Props) {
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState('')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('presencial')
@@ -202,31 +204,31 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 px-3 py-2 rounded-xl transition-colors mb-4">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition-colors mb-4" style={{ color: accentColor, backgroundColor: alpha(accentColor, 0.08) }}>
         <ChevronLeft className="w-4 h-4" /> Volver
       </button>
       <h2 className="text-lg font-semibold text-gray-900 mb-4">{labels.headerLabel}</h2>
 
       {/* Resumen del turno */}
-      <div className="bg-sky-50 rounded-2xl p-4 mb-5 space-y-2.5">
+      <div className="rounded-2xl p-4 mb-5 space-y-2.5" style={{ backgroundColor: alpha(accentColor, 0.07) }}>
         <div className="flex items-center gap-3 text-sm">
-          <ServiceIcon tenantType={tenantType} className="w-4 h-4 text-sky-500 flex-shrink-0" />
+          <span style={{ color: accentColor }} className="flex-shrink-0"><ServiceIcon tenantType={tenantType} className="w-4 h-4" /></span>
           <span className="font-medium text-gray-900">{state.service?.name}</span>
           <span className="text-gray-400 text-xs">{state.service?.duration_minutes} min</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <UserCircle className="w-4 h-4 text-sky-500 flex-shrink-0" />
+          <UserCircle className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
           <span className="text-gray-900">{state.professional?.full_name}</span>
           {!labels.isCancha && state.professional?.specialty && (
             <span className="text-gray-400 text-xs">{state.professional.specialty}</span>
           )}
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <Calendar className="w-4 h-4 text-sky-500 flex-shrink-0" />
+          <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
           <span className="capitalize text-gray-900">{dateLabel}</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <Clock className="w-4 h-4 text-sky-500 flex-shrink-0" />
+          <Clock className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
           <span className="text-gray-900">{state.hora}hs</span>
         </div>
       </div>
@@ -352,7 +354,8 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
               {/* Presencial */}
               <button type="button" onClick={() => setPaymentMethod('presencial')}
                 className={['flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors',
-                  paymentMethod === 'presencial' ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'].join(' ')}>
+                  paymentMethod === 'presencial' ? '' : 'text-gray-500 hover:bg-gray-50'].join(' ')}
+                style={paymentMethod === 'presencial' ? { backgroundColor: alpha(accentColor, 0.08), color: accentColor } : {}}>
                 <Building2 className="w-5 h-5" />
                 En el lugar
               </button>
@@ -361,7 +364,8 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
               {featureMp && (
                 <button type="button" onClick={() => setPaymentMethod('mercadopago')}
                   className={['flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors',
-                    paymentMethod === 'mercadopago' ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'].join(' ')}>
+                    paymentMethod === 'mercadopago' ? '' : 'text-gray-500 hover:bg-gray-50'].join(' ')}
+                  style={paymentMethod === 'mercadopago' ? { backgroundColor: alpha(accentColor, 0.08), color: accentColor } : {}}>
                   <CreditCard className="w-5 h-5" />
                   MercadoPago
                   <span className="text-xs font-normal text-gray-400">${servicePrice.toLocaleString('es-AR')}</span>
@@ -372,7 +376,8 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
               {featureModo && (
                 <button type="button" onClick={() => setPaymentMethod('modo')}
                   className={['flex flex-col items-center gap-1.5 py-4 text-sm font-medium transition-colors',
-                    paymentMethod === 'modo' ? 'bg-sky-50 text-sky-700' : 'text-gray-500 hover:bg-gray-50'].join(' ')}>
+                    paymentMethod === 'modo' ? '' : 'text-gray-500 hover:bg-gray-50'].join(' ')}
+                  style={paymentMethod === 'modo' ? { backgroundColor: alpha(accentColor, 0.08), color: accentColor } : {}}>
                   <QrCode className="w-5 h-5" />
                   MODO
                   <span className="text-xs font-normal text-gray-400">${servicePrice.toLocaleString('es-AR')}</span>
@@ -384,12 +389,12 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
 
         {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
         {redirecting && (
-          <div className="bg-sky-50 text-sky-700 text-sm px-4 py-3 rounded-xl text-center">
+          <div className="text-sm px-4 py-3 rounded-xl text-center" style={{ backgroundColor: alpha(accentColor, 0.08), color: accentColor }}>
             Redirigiendo a MercadoPago...
           </div>
         )}
 
-        <Button type="submit" loading={loading || redirecting} size="lg" className="w-full !bg-sky-600 hover:!bg-sky-700">
+        <Button type="submit" loading={loading || redirecting} size="lg" className="w-full" style={{ backgroundColor: accentColor }}>
           {paymentMethod === 'mercadopago'
             ? 'Reservar y pagar con MercadoPago'
             : paymentMethod === 'modo'

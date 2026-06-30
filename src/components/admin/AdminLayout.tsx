@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, Calendar, Building2, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle } from 'lucide-react'
+import { LayoutDashboard, Calendar, Building2, Store, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { GreetingBanner } from '../shared/GreetingBanner'
 
@@ -10,7 +10,7 @@ interface NavItem {
   superadminOnly?: boolean
 }
 
-export type AdminView = 'dashboard' | 'appointments' | 'availability' | 'services' | 'professionals' | 'users' | 'modules'
+export type AdminView = 'dashboard' | 'appointments' | 'availability' | 'services' | 'professionals' | 'users' | 'modules' | 'centros'
 
 const NAV: NavItem[] = [
   { label: 'Dashboard',      icon: LayoutDashboard, view: 'dashboard' },
@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { label: 'Servicios',      icon: Stethoscope,     view: 'services' },
   { label: 'Profesionales',  icon: Building2,       view: 'professionals' },
   { label: 'Usuarios',       icon: Users,           view: 'users' },
+  { label: 'Centros',         icon: Store,           view: 'centros',       superadminOnly: true },
   { label: 'Módulos',        icon: Puzzle,          view: 'modules',       superadminOnly: true },
 ]
 
@@ -43,7 +44,7 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
   const isAdmin      = ['admin', 'superadmin'].includes(userRole)
 
   const visibleNav = NAV.filter(item => {
-    if (item.superadminOnly) return isSuperadmin
+    if (item.superadminOnly) return isSuperadmin || userRole === 'globaladmin'
     if (item.view === 'users') return isAdmin
     return true
   })

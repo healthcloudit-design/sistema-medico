@@ -12,6 +12,7 @@ import { ProfessionalsManager } from '../components/admin/ProfessionalsManager'
 import { UserManager } from '../components/admin/UserManager'
 import { ModulesManager } from '../components/admin/ModulesManager'
 import { CentrosManager } from '../components/admin/CentrosManager'
+import { ReportsView }   from '../components/admin/ReportsView'
 
 export function AdminPage() {
   const [user, setUser]               = useState<User | null>(null)
@@ -65,6 +66,7 @@ export function AdminPage() {
       )}
       {view === 'modules'       && <ModulesManager />}
       {view === 'centros'       && <CentrosManager userRole={profile?.role} />}
+      {view === 'reportes'      && <ReportsView />}
     </AdminLayout>
   )
 }

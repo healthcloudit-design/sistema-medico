@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LayoutDashboard, Calendar, Building2, Store, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle } from 'lucide-react'
+import { LayoutDashboard, Calendar, Building2, Store, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { GreetingBanner } from '../shared/GreetingBanner'
 
@@ -10,7 +10,7 @@ interface NavItem {
   superadminOnly?: boolean
 }
 
-export type AdminView = 'dashboard' | 'appointments' | 'availability' | 'services' | 'professionals' | 'users' | 'modules' | 'centros'
+export type AdminView = 'dashboard' | 'appointments' | 'availability' | 'services' | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes'
 
 const NAV: NavItem[] = [
   { label: 'Dashboard',      icon: LayoutDashboard, view: 'dashboard' },
@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { label: 'Profesionales',  icon: Building2,       view: 'professionals' },
   { label: 'Usuarios',       icon: Users,           view: 'users' },
   { label: 'Centros',         icon: Store,           view: 'centros',       superadminOnly: true },
+  { label: 'Reportes',        icon: BarChart2,       view: 'reportes',      superadminOnly: true },
   { label: 'Módulos',        icon: Puzzle,          view: 'modules',       superadminOnly: true },
 ]
 

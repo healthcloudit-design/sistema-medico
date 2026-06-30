@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays, startOfWeek, addWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText, Users, LayoutList } from 'lucide-react'
+import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText, Users, LayoutList, CalendarX } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
@@ -10,6 +10,7 @@ import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { GreetingBanner } from '../components/shared/GreetingBanner'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
+import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -35,7 +36,7 @@ export function MedicoDashboard() {
   const [loadingAppts, setLoadingAppts] = useState(true)
   const [selected, setSelected]       = useState<Appointment | null>(null)
   const [showHC, setShowHC]           = useState(false)
-  const [tab, setTab]                 = useState<'agenda' | 'pacientes'>('agenda')
+  const [tab, setTab]                 = useState<'agenda' | 'pacientes' | 'bloqueos'>('agenda')
   const [calendarView, setCalendarView] = useState(false)
   const [currentWeek, setCurrentWeek]   = useState(new Date())
   const navigate = useNavigate()
@@ -146,7 +147,7 @@ export function MedicoDashboard() {
           </div>
           <div>
             <span className="font-bold text-gray-900 text-sm">TurnOS</span>
-            <span className="text-xs text-gray-400 ml-2">Medico</span>
+            <span className="text-xs text-gray-400 ml-2">Profesional</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -174,6 +175,12 @@ export function MedicoDashboard() {
           >
             <Users className="w-4 h-4" /> Pacientes
           </button>
+          <button
+            onClick={() => setTab('bloqueos')}
+            className={['flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors', tab === 'bloqueos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}
+          >
+            <CalendarX className="w-4 h-4" /> Bloqueos
+          </button>
           {tab === 'agenda' && (
             <button
               onClick={() => setCalendarView(v => !v)}
@@ -184,6 +191,10 @@ export function MedicoDashboard() {
             </button>
           )}
         </div>
+
+        {tab === 'bloqueos' && profile?.professional_id && (
+          <MiAgendaBloqueos professionalId={profile.professional_id} />
+        )}
 
         {tab === 'pacientes' && (
           <PatientSearch orgId={orgId} professionalId={profile?.professional_id ?? null} />

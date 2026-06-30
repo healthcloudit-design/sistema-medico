@@ -11,7 +11,7 @@ export interface Service {
   created_at: string
 }
 
-export type TenantType = 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary' | 'estetica'
+export type TenantType = 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary' | 'estetica' | 'cancha'
 
 export interface Organization {
   id: string
@@ -26,6 +26,8 @@ export interface Organization {
   feature_mp: boolean
   feature_hc: boolean
   tenant_type: TenantType
+  primary_color?: string | null
+  whatsapp_number?: string | null
   created_at: string
   updated_at: string
 }
@@ -139,6 +141,7 @@ export interface Profile {
   role: UserRole
   full_name: string | null
   professional_id: string | null
+  organization_id?: string | null
   created_at: string
   updated_at: string
 }

@@ -4,7 +4,7 @@ export type Database = {
   public: {
     Tables: {
       organizations: {
-        Row: { id: string; name: string; slug: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null; timezone: string; active: boolean; feature_mp: boolean; feature_hc: boolean; tenant_type: 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary' | 'estetica'; created_at: string; updated_at: string }
+        Row: { id: string; name: string; slug: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null; timezone: string; active: boolean; feature_mp: boolean; feature_hc: boolean; tenant_type: 'medical' | 'beauty' | 'general' | 'petshop' | 'veterinary' | 'estetica' | 'cancha'; created_at: string; updated_at: string }
         Insert: { name: string; slug: string; [key: string]: unknown }
         Update: { [key: string]: unknown }
       }

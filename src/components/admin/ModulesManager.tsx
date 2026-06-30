@@ -19,6 +19,7 @@ const TENANT_OPTIONS: { value: TenantType; label: string; emoji: string }[] = [
   { value: 'estetica',   label: 'Centro Estetico',  emoji: '💆' },
   { value: 'petshop',    label: 'Pet Shop',         emoji: '🐾' },
   { value: 'veterinary', label: 'Veterinaria',      emoji: '🐕' },
+  { value: 'cancha',     label: 'Canchas',          emoji: '⚽' },
   { value: 'general',    label: 'General',          emoji: '🏢' },
 ]
 
@@ -39,7 +40,7 @@ export function ModulesManager() {
   }, [])
 
   const changeTenantType = async (org: OrgRow, tenant_type: TenantType) => {
-    setSaving(`${org.id}-tenant_type`)
+    setSaving(org.id + '-tenant_type')
     const { error } = await supabase.from('organizations').update({ tenant_type }).eq('id', org.id)
     if (!error) setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, tenant_type } : o))
     setSaving(null)
@@ -47,7 +48,7 @@ export function ModulesManager() {
 
   const toggle = async (org: OrgRow, field: 'feature_mp' | 'feature_hc') => {
     const next = !org[field]
-    setSaving(`${org.id}-${field}`)
+    setSaving(org.id + '-' + field)
     const { error } = await supabase.from('organizations').update({ [field]: next }).eq('id', org.id)
     if (!error) setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, [field]: next } : o))
     setSaving(null)
@@ -113,7 +114,7 @@ export function ModulesManager() {
             </div>
 
             <div className="w-36 flex justify-center">
-              {saving === `${org.id}-tenant_type` ? (
+              {saving === (org.id + '-tenant_type') ? (
                 <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <select
@@ -129,11 +130,11 @@ export function ModulesManager() {
             </div>
 
             <div className="w-32 flex justify-center">
-              <Toggle enabled={org.feature_mp} loading={saving === `${org.id}-feature_mp`} onChange={() => toggle(org, 'feature_mp')} activeColor="bg-purple-600" />
+              <Toggle enabled={org.feature_mp} loading={saving === (org.id + '-feature_mp')} onChange={() => toggle(org, 'feature_mp')} activeColor="bg-purple-600" />
             </div>
 
             <div className="w-32 flex justify-center">
-              <Toggle enabled={org.feature_hc} loading={saving === `${org.id}-feature_hc`} onChange={() => toggle(org, 'feature_hc')} activeColor="bg-teal-600" />
+              <Toggle enabled={org.feature_hc} loading={saving === (org.id + '-feature_hc')} onChange={() => toggle(org, 'feature_hc')} activeColor="bg-teal-600" />
             </div>
           </div>
         ))}
@@ -157,12 +158,13 @@ function Toggle({ enabled, loading, onChange, activeColor }: {
       </div>
     )
   }
+  const baseClass = 'relative inline-flex items-center w-11 h-6 rounded-full transition-colors focus:outline-none'
+  const colorClass = enabled ? activeColor : 'bg-gray-200'
+  const knobBase = 'inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform'
+  const knobPos = enabled ? 'translate-x-6' : 'translate-x-1'
   return (
-    <button
-      onClick={onChange}
-      className={['relative inline-flex items-center w-11 h-6 rounded-full transition-colors focus:outline-none', enabled ? activeColor : 'bg-gray-200'].join(' ')}
-    >
-      <span className={['inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform', enabled ? 'translate-x-6' : 'translate-x-1'].join(' ')} />
+    <button onClick={onChange} className={[baseClass, colorClass].join(' ')}>
+      <span className={[knobBase, knobPos].join(' ')} />
     </button>
   )
 }

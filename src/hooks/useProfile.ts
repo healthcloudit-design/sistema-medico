@@ -15,7 +15,7 @@ export function useProfile(user: User | null) {
     }
     supabase
       .from('profiles')
-      .select('id, role, full_name, professional_id, created_at, updated_at')
+      .select('id, role, full_name, professional_id, organization_id, created_at, updated_at')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {

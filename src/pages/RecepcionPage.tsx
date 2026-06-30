@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, isToday } from 'date-fns'
+import { format, parseISO, isToday, startOfWeek, addWeeks, startOfDay, endOfDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users } from 'lucide-react'
+import { Calendar, Search, LogOut, Clock, CheckCircle, XCircle, UserX, Users, LayoutList } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { GreetingBanner } from '../components/shared/GreetingBanner'
+import { WeekCalendar } from '../components/shared/WeekCalendar'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
 
@@ -41,6 +42,9 @@ export function RecepcionPage() {
   const [dateFilter, setDateFilter]   = useState(new Date().toISOString().slice(0,10))
   const [selected, setSelected]       = useState<Appointment | null>(null)
   const [updating, setUpdating]       = useState(false)
+  const [calendarView, setCalendarView] = useState(false)
+  const [currentWeek, setCurrentWeek]   = useState(new Date())
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -80,6 +84,24 @@ export function RecepcionPage() {
   }
 
   useEffect(() => { if (profile) load() }, [dateFilter, profile])
+
+  useEffect(() => {
+    if (!profile) return
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
+    const from = startOfDay(weekStart).toISOString()
+    const to   = endOfDay(addDays(weekStart, 27)).toISOString()
+    supabase
+      .from('appointments')
+      .select('*, professionals(full_name), services(name, color, duration_minutes), patients(full_name)')
+      .gte('starts_at', from)
+      .lte('starts_at', to)
+      .order('starts_at')
+      .then(({ data }) => {
+        setAllAppointments((data ?? []).map((r: Record<string, unknown>) => ({
+          ...r, professional: r.professionals, service: r.services, patient: r.patients,
+        })) as Appointment[])
+      })
+  }, [profile, currentWeek])
 
   const filtered = appointments.filter(a => {
     if (!search) return true
@@ -140,6 +162,15 @@ export function RecepcionPage() {
           >
             <Users className="w-4 h-4" /> Pacientes
           </button>
+          {tab === 'turnos' && (
+            <button
+              onClick={() => setCalendarView(v => !v)}
+              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${calendarView ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              title={calendarView ? 'Vista lista' : 'Vista calendario'}
+            >
+              {calendarView ? <LayoutList className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
         {tab === 'pacientes' && (
@@ -147,6 +178,14 @@ export function RecepcionPage() {
         )}
 
         {tab === 'turnos' && <>
+          {calendarView ? (
+            <WeekCalendar
+              appointments={allAppointments}
+              currentWeek={currentWeek}
+              onWeekChange={setCurrentWeek}
+              onSelect={setSelected}
+            />
+          ) : (<>
           <GreetingBanner
             userName={profile?.full_name}
             subtitle={`${filtered.length} turno${filtered.length !== 1 ? 's' : ''} - ${isFilterToday ? 'hoy' : dateFilter}`}
@@ -224,6 +263,7 @@ export function RecepcionPage() {
               </div>
             )}
           </div>
+        </>)}
         </>}
       </main>
 

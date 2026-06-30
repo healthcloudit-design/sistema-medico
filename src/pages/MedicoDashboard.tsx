@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays } from 'date-fns'
+import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays, startOfWeek, addWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText, Users } from 'lucide-react'
+import { Calendar, Clock, UserCircle, LogOut, Stethoscope, FileText, Users, LayoutList } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { GreetingBanner } from '../components/shared/GreetingBanner'
+import { WeekCalendar } from '../components/shared/WeekCalendar'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -35,6 +36,8 @@ export function MedicoDashboard() {
   const [selected, setSelected]       = useState<Appointment | null>(null)
   const [showHC, setShowHC]           = useState(false)
   const [tab, setTab]                 = useState<'agenda' | 'pacientes'>('agenda')
+  const [calendarView, setCalendarView] = useState(false)
+  const [currentWeek, setCurrentWeek]   = useState(new Date())
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -72,8 +75,9 @@ export function MedicoDashboard() {
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    const from = startOfDay(new Date()).toISOString()
-    const to   = endOfDay(addDays(new Date(), 6)).toISOString()
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const from = startOfDay(weekStart).toISOString()
+    const to   = endOfDay(addDays(weekStart, 27)).toISOString() // 4 semanas
     supabase
       .from('appointments')
       .select('*, services(name, color, duration_minutes), patients(id, full_name, phone, email, obra_social)')
@@ -170,6 +174,15 @@ export function MedicoDashboard() {
           >
             <Users className="w-4 h-4" /> Pacientes
           </button>
+          {tab === 'agenda' && (
+            <button
+              onClick={() => setCalendarView(v => !v)}
+              className={['flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors', calendarView ? 'bg-white text-sky-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}
+              title={calendarView ? 'Vista lista' : 'Vista calendario'}
+            >
+              {calendarView ? <LayoutList className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
         {tab === 'pacientes' && (
@@ -188,6 +201,14 @@ export function MedicoDashboard() {
             <StatCard label="Semana" value={appointments.length} color="purple" />
           </div>
 
+          {calendarView ? (
+            <WeekCalendar
+              appointments={appointments}
+              currentWeek={currentWeek}
+              onWeekChange={setCurrentWeek}
+              onSelect={setSelected}
+            />
+          ) : (<>
           <Section title="Hoy" empty={today.length === 0} emptyText="Sin turnos para hoy">
             {today.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
           </Section>
@@ -203,6 +224,7 @@ export function MedicoDashboard() {
               {upcoming.map(a => <AppointmentCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
             </Section>
           )}
+          </>)}
         </>}
       </main>
 

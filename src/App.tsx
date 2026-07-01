@@ -17,6 +17,7 @@ export default function App() {
         <Route path="/cancelar"                element={<CancelPage />} />
         <Route path="/admin"                   element={<AdminPage />} />
         <Route path="/medico"                  element={<MedicoDashboard />} />
+        <Route path="/profesional"             element={<MedicoDashboard />} />
         <Route path="/recepcion"               element={<RecepcionPage />} />
         <Route path="/pantalla/:slug"          element={<WaitingRoomScreen />} />
         <Route path="/totem/:slug"             element={<TotemPage />} />

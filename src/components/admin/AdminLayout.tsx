@@ -46,7 +46,7 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
 
   const visibleNav = NAV.filter(item => {
     if (item.superadminOnly) return isSuperadmin || userRole === 'globaladmin'
-    if (item.view === 'users') return isAdmin
+    if (item.view === 'users') return isAdmin || userRole === 'globaladmin'
     return true
   })
 

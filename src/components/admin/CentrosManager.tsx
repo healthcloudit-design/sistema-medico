@@ -79,6 +79,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
+    setError('')
     const ext  = file.name.split('.').pop()
     const path = org.slug + '.' + ext
     const { error: upErr } = await supabase.storage
@@ -86,9 +87,12 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
       .upload(path, file, { upsert: true, contentType: file.type })
     if (upErr) { setError('Error subiendo logo: ' + upErr.message); setUploading(false); return }
     const { data } = supabase.storage.from('logos').getPublicUrl(path)
-    const url = data.publicUrl + '?t=' + Date.now()
+    // Guardamos sin cache-buster para que la URL sea estable
+    const url = data.publicUrl
     setLogoPreview(url)
-    await supabase.from('organizations').update({ logo_url: url }).eq('id', org.id)
+    // Persistir inmediatamente en la DB
+    const { error: dbErr } = await supabase.from('organizations').update({ logo_url: url, updated_at: new Date().toISOString() }).eq('id', org.id)
+    if (dbErr) setError('Logo subido pero no se pudo guardar: ' + dbErr.message)
     setUploading(false)
   }
 
@@ -103,6 +107,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
       phone:           form.phone || null,
       email:           form.email || null,
       instagram_handle: form.instagram_handle || null,
+      logo_url:        logoPreview,
       active:          form.active,
       updated_at:      new Date().toISOString(),
     }).eq('id', org.id)

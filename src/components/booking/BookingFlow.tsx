@@ -167,7 +167,7 @@ export function BookingFlow() {
               <img
                 src={logoUrl}
                 alt={org.name}
-                className="h-16 w-16 rounded-2xl object-cover shadow-md mb-2 flex-shrink-0"
+                className="h-20 w-auto max-w-[200px] rounded-2xl object-contain shadow-md mb-2 flex-shrink-0 bg-white p-1"
               />
             )}
             <h1 className="text-xl font-bold text-gray-900">{org.name}</h1>

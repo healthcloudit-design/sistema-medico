@@ -10,17 +10,18 @@ interface Props {
   professional: Professional
   selectedDate?: string
   selectedTime?: string
+  serviceDurationMinutes?: number
   onSelect: (fecha: string, hora: string) => void
   onBack: () => void
   accentColor?: string
 }
 
-export function DateTimeSelector({ professional, selectedDate, selectedTime, onSelect, onBack, accentColor = '#0ea5e9' }: Props) {
+export function DateTimeSelector({ professional, selectedDate, selectedTime, serviceDurationMinutes = 30, onSelect, onBack, accentColor = '#0ea5e9' }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [localDate, setLocalDate]       = useState(selectedDate)
   const [localTime, setLocalTime]       = useState(selectedTime)
 
-  const { slots, loading, availableDates } = useAvailability(professional.id, localDate)
+  const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes)
 
   const today    = startOfDay(new Date())
   const days     = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) })

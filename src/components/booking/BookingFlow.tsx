@@ -272,6 +272,7 @@ export function BookingFlow() {
             professional={state.professional}
             selectedDate={state.fecha}
             selectedTime={state.hora}
+            serviceDurationMinutes={state.service?.duration_minutes ?? 30}
             onSelect={(fecha, hora) => { update({ fecha, hora }); next() }}
             onBack={back}
             accentColor={accentColor}

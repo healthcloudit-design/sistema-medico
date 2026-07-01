@@ -15,6 +15,7 @@ function toArgTime(iso: string): string {
 export function useAvailability(
   professionalId: string | undefined,
   selectedDate: string | undefined,
+  serviceDurationMinutes: number = 30,
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
@@ -47,7 +48,7 @@ export function useAvailability(
             .or(`blocked_date.eq.${selectedDate},and(blocked_start.lte.${dayEnd},blocked_end.gte.${dayStart})`),
           supabase
             .from('appointments')
-            .select('starts_at')
+            .select('starts_at, ends_at')
             .eq('professional_id', professionalId)
             .gte('starts_at', dayStart)
             .lte('starts_at', dayEnd)
@@ -66,9 +67,24 @@ export function useAvailability(
         }
 
         const schedules = (scheduleRes.data ?? []) as Schedule[]
-        const takenTimes = new Set(
-          (apptRes.data ?? []).map((a: { starts_at: string }) => toArgTime(a.starts_at)),
-        )
+        // Cada turno existente ocupa [starts_at, ends_at) — marcamos todos los slots dentro de ese rango
+        const bookedRanges = (apptRes.data ?? []).map((a: { starts_at: string; ends_at: string | null }) => ({
+          startMin: (() => { const t = toArgTime(a.starts_at); const [h,m] = t.split(':').map(Number); return h*60+m })(),
+          endMin:   a.ends_at
+            ? (() => { const t = toArgTime(a.ends_at!); const [h,m] = t.split(':').map(Number); return h*60+m })()
+            : (() => { const t = toArgTime(a.starts_at); const [h,m] = t.split(':').map(Number); return h*60+m+30 })(),
+        }))
+
+        // Un slot (hora) está tomado si cae dentro de algún rango existente
+        // O si los próximos N slots necesarios para el servicio nuevo no están todos libres
+        const isSlotConflict = (slotMin: number) => {
+          // ¿El slot cae dentro de un turno existente?
+          if (bookedRanges.some(r => slotMin >= r.startMin && slotMin < r.endMin)) return true
+          // ¿El nuevo turno (slotMin + duration) se superpondría con algún turno existente?
+          const newEnd = slotMin + serviceDurationMinutes
+          if (bookedRanges.some(r => slotMin < r.endMin && newEnd > r.startMin)) return true
+          return false
+        }
 
         const blockedRanges = blocks
           .filter(b => b.blocked_start && b.blocked_end)
@@ -97,7 +113,8 @@ export function useAvailability(
 
             const slotDt    = new Date(`${selectedDate}T${hora}:00-03:00`)
             const isPast    = isBefore(slotDt, now)
-            const isTaken   = takenTimes.has(hora)
+            const slotMin   = Math.floor(m)
+            const isTaken   = isSlotConflict(slotMin)
             const isBlocked = isBlockedByRange(hora)
 
             if (!slotMap.has(hora)) {

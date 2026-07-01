@@ -43,18 +43,24 @@ export function MedicoDashboard() {
 
   const { profile, loading: profileLoading } = useProfile(user)
   const [orgId, setOrgId] = useState<string | null>(null)
+  const [tenantType, setTenantType] = useState<string>('medical')
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    supabase
+supabase
       .from('professionals')
-      .select('organization_id')
+      .select('organization_id, organizations(tenant_type)')
       .eq('id', profile.professional_id)
       .single()
-      .then(({ data }) => setOrgId(data?.organization_id ?? null))
+      .then(({ data }) => {
+        setOrgId(data?.organization_id ?? null)
+        const tt = (data?.organizations as { tenant_type?: string } | null)?.tenant_type ?? 'medical'
+        setTenantType(tt)
+      })
   }, [profile?.professional_id])
 
   const { featureHc } = useOrgFeatures(orgId)
+  const clientesLabel = tenantType === 'cancha' ? 'Reservas' : ['medical', 'estetica'].includes(tenantType) ? 'Pacientes' : 'Clientes'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -173,7 +179,7 @@ export function MedicoDashboard() {
             onClick={() => setTab('pacientes')}
             className={['flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors', tab === 'pacientes' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}
           >
-            <Users className="w-4 h-4" /> Pacientes
+            <Users className="w-4 h-4" /> {clientesLabel}
           </button>
           <button
             onClick={() => setTab('bloqueos')}

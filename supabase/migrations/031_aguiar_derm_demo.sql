@@ -1,7 +1,7 @@
 -- ============================================================
--- Migración 031: Tenant demo — Aguiar Dermatología Estética
--- Dra. Déborah Aguiar · Núñez, CABA
--- 2 médicas, servicios estéticos y dermatológicos
+-- Migración 031: Tenant — DA Dermatología Estética y LASER
+-- Dra. Déborah Aguiar · Av. Cabildo 3073, Núñez, CABA
+-- MN 154557 · @dra.debaguiar
 -- ============================================================
 
 DO $$
@@ -9,60 +9,63 @@ DECLARE
   v_org_id       UUID;
   v_dra_aguiar   UUID;
   v_dra_colab    UUID;
-  days            INT[];
   d               INT;
 BEGIN
 
 -- ── 1. Organización ──────────────────────────────────────────
 INSERT INTO organizations (
   name, slug, tenant_type,
-  primary_color, address, phone, email,
-  whatsapp_number, active
+  primary_color,
+  address, phone, email,
+  whatsapp_number,
+  instagram_handle,
+  active
 ) VALUES (
-  'Aguiar Dermatología Estética',
-  'aguiar-derm',
-  'medical',
-  '#7C5C8A',                              -- mauve elegante
-  'Núñez, Ciudad Autónoma de Buenos Aires',
+  'DA Dermatología Estética y LASER',
+  'da-derm',
+  'estetica',
+  '#9E7560',                                    -- nude cálido, estética médica
+  'Av. Cabildo 3073, Núñez, CABA 1429',
   '11-0000-0000',
-  'turno@aguiarderm.com.ar',
-  '5491100000000',
+  'turno@daderm.com.ar',
+  '5492615781357',                              -- WhatsApp real
+  'dra.debaguiar',                              -- Instagram
   true
 )
 ON CONFLICT (slug) DO UPDATE SET
-  name          = EXCLUDED.name,
-  primary_color = EXCLUDED.primary_color,
-  active        = true
+  name             = EXCLUDED.name,
+  primary_color    = EXCLUDED.primary_color,
+  address          = EXCLUDED.address,
+  whatsapp_number  = EXCLUDED.whatsapp_number,
+  instagram_handle = EXCLUDED.instagram_handle,
+  active           = true
 RETURNING id INTO v_org_id;
 
 -- ── 2. Profesionales ─────────────────────────────────────────
 INSERT INTO professionals (
-  organization_id, full_name, specialty,
-  bio, active
+  organization_id, full_name, specialty, bio, active
 ) VALUES (
   v_org_id,
   'Dra. Déborah Aguiar',
   'Dermatología Estética y Láser',
-  'Especialista en dermatología estética, tratamientos con láser y medicina anti-aging. Más de 15 años de experiencia en Núñez, CABA.',
+  'Directora Médica de DA. Especialista en láser Candela, toxina botulínica, rellenos y bioestimulación. MN 154557.',
   true
 )
 ON CONFLICT DO NOTHING
 RETURNING id INTO v_dra_aguiar;
 
--- Si ya existía, obtener el id
 IF v_dra_aguiar IS NULL THEN
   SELECT id INTO v_dra_aguiar FROM professionals
   WHERE organization_id = v_org_id AND full_name = 'Dra. Déborah Aguiar';
 END IF;
 
 INSERT INTO professionals (
-  organization_id, full_name, specialty,
-  bio, active
+  organization_id, full_name, specialty, bio, active
 ) VALUES (
   v_org_id,
-  'Dra. Colaboradora',
+  'Dra. Médica Asociada',
   'Dermatología Clínica',
-  'Médica dermatóloga con orientación clínica y tratamientos de patologías de piel.',
+  'Dermatóloga clínica del equipo DA.',
   true
 )
 ON CONFLICT DO NOTHING
@@ -70,46 +73,41 @@ RETURNING id INTO v_dra_colab;
 
 IF v_dra_colab IS NULL THEN
   SELECT id INTO v_dra_colab FROM professionals
-  WHERE organization_id = v_org_id AND full_name = 'Dra. Colaboradora';
+  WHERE organization_id = v_org_id AND full_name = 'Dra. Médica Asociada';
 END IF;
 
--- ── 3. Servicios ──────────────────────────────────────────────
+-- ── 3. Servicios reales del consultorio ──────────────────────
 INSERT INTO services (
-  organization_id, name, duration_minutes,
-  color, description, active
+  organization_id, name, duration_minutes, color, description, active
 ) VALUES
-  (v_org_id, 'Consulta dermatológica',       30, '#7C5C8A', 'Primera consulta o revisión general de piel',                            true),
-  (v_org_id, 'Consulta de seguimiento',       20, '#9B7FAA', 'Control de tratamiento en curso',                                        true),
-  (v_org_id, 'Toxina botulínica (Botox)',     45, '#C9A97E', 'Aplicación de toxina botulínica para arrugas dinámicas',                 true),
-  (v_org_id, 'Relleno de ácido hialurónico', 45, '#D4A5B5', 'Restauración de volumen y contorno facial',                              true),
-  (v_org_id, 'Láser CO₂ fraccionado',        60, '#5C8A7C', 'Rejuvenecimiento y textura de piel con láser ablativo fraccionado',      true),
-  (v_org_id, 'Láser vascular',               30, '#5C8A7C', 'Tratamiento de manchas vasculares, rosácea y arañas vasculares',         true),
-  (v_org_id, 'Peeling químico',              45, '#8A7C5C', 'Renovación celular con ácidos de grado médico',                          true),
-  (v_org_id, 'Microdermoabrasión',           30, '#8A7C5C', 'Exfoliación mecánica para textura y luminosidad',                        true),
-  (v_org_id, 'PRP (Plasma Rico en Plaquetas)', 60, '#A07B8A', 'Bioestimulación capilar y facial con plasma autólogo',                 true),
-  (v_org_id, 'Extracción de lesiones',       20, '#7C5C8A', 'Extirpación de lunares, quistes sebáceos y lesiones benignas',           true)
+  (v_org_id, 'Consulta dermatológica',        30, '#9E7560', 'Primera consulta o revisión dermatológica general',                                    true),
+  (v_org_id, 'Control de tratamiento',         20, '#B8946A', 'Seguimiento de tratamiento en curso',                                                  true),
+  (v_org_id, 'Toxina botulínica (Botox)',      45, '#C4A882', 'Tratamiento de arrugas dinámicas con toxina botulínica',                               true),
+  (v_org_id, 'Relleno de ácido hialurónico',  45, '#D4B896', 'Restauración de volumen y contorno facial con HA',                                     true),
+  (v_org_id, 'Láser Candela',                 60, '#7C6B5A', 'Tratamiento con tecnología Candela: manchas, vascular, rejuvenecimiento',               true),
+  (v_org_id, 'Bioestimulación',               60, '#8A7A6A', 'Estimulación del colágeno con biostimuladores (Sculptra, Radiesse)',                    true),
+  (v_org_id, 'F-Cells',                       60, '#6B5A4A', 'Terapia regenerativa con células adiposas y factores de crecimiento',                   true),
+  (v_org_id, 'Tratamiento de nariz',          45, '#9E8070', 'Rinoplastia médica no quirúrgica con rellenos',                                         true),
+  (v_org_id, 'Peeling químico',               45, '#B09080', 'Renovación celular con ácidos de grado médico',                                         true),
+  (v_org_id, 'Consulta online',               20, '#C4A882', 'Videoconsulta dermatológica por plataforma digital',                                    true)
 ON CONFLICT DO NOTHING;
 
--- ── 4. Disponibilidad: Lun–Vie 09:00–18:00, cada 30 min ─────
-days := ARRAY[1, 2, 3, 4, 5];  -- Lunes a Viernes
-
-FOREACH d IN ARRAY days LOOP
+-- ── 4. Agenda: Lun–Vie 09:00–18:00, Sab 09:00–13:00 ─────────
+FOREACH d IN ARRAY ARRAY[1,2,3,4,5] LOOP
   INSERT INTO schedules (
-    professional_id, day_of_week,
-    start_time, end_time, interval_minutes, active
+    professional_id, day_of_week, start_time, end_time, interval_minutes, active
   ) VALUES
     (v_dra_aguiar, d, '09:00', '18:00', 30, true),
     (v_dra_colab,  d, '09:00', '17:00', 30, true)
   ON CONFLICT DO NOTHING;
 END LOOP;
 
--- Dra. Aguiar también atiende sábados 09:00–13:00
+-- Dra. Aguiar atiende también sábados
 INSERT INTO schedules (
-  professional_id, day_of_week,
-  start_time, end_time, interval_minutes, active
+  professional_id, day_of_week, start_time, end_time, interval_minutes, active
 ) VALUES (v_dra_aguiar, 6, '09:00', '13:00', 30, true)
 ON CONFLICT DO NOTHING;
 
-RAISE NOTICE 'Tenant Aguiar Dermatología Estética creado — org_id: %', v_org_id;
+RAISE NOTICE 'Tenant DA Dermatología Estética y LASER creado — id: %', v_org_id;
 
 END $$;

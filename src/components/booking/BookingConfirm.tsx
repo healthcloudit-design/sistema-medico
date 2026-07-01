@@ -80,9 +80,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
     if (!state.nombre.trim())   { setError(labels.nombreLabel + ' es obligatorio'); return }
     if (!state.telefono.trim()) { setError('El telefono es obligatorio'); return }
     if (labels.dniRequired && !state.dni.trim()) { setError('El DNI es obligatorio'); return }
-    if (labels.showObraSocial && state.obra_social.trim() && !state.nro_socio.trim()) {
-      setError('Ingresa el numero de socio / carnet de la obra social'); return
-    }
+    // nro_socio es opcional — no bloqueamos si falta
 
     setLoading(true); setError('')
     try {
@@ -307,7 +305,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
             {tieneObraSocial && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  No de socio / carnet <span className="text-red-500">*</span>
+                  No de socio / carnet <span className="text-gray-400 font-normal">(opcional)</span>
                 </label>
                 <input type="text" value={state.nro_socio} onChange={e => onChange({ nro_socio: e.target.value })}
                   placeholder="Ej: 0012345678"

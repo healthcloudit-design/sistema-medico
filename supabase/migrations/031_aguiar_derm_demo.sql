@@ -4,6 +4,8 @@
 -- MN 154557 · @dra.debaguiar
 -- ============================================================
 
+SET LOCAL row_security = off;
+
 DO $$
 DECLARE
   v_org_id       UUID;

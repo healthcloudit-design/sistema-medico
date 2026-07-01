@@ -59,6 +59,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
   const [form, setForm] = useState({
     name:             org.name,
     primary_color:    org.primary_color ?? '#0ea5e9',
+    tenant_type:      org.tenant_type ?? 'medical',
     whatsapp_number:  org.whatsapp_number ?? '',
     address:          org.address ?? '',
     phone:            org.phone ?? '',
@@ -96,6 +97,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
     const { error: err } = await supabase.from('organizations').update({
       name:            form.name,
       primary_color:   form.primary_color,
+      tenant_type:     form.tenant_type,
       whatsapp_number: form.whatsapp_number || null,
       address:         form.address || null,
       phone:           form.phone || null,
@@ -105,7 +107,7 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
       updated_at:      new Date().toISOString(),
     }).eq('id', org.id)
     if (err) { setError(err.message); setSaving(false); return }
-    onSaved({ ...org, ...form, logo_url: logoPreview, primary_color: form.primary_color, instagram_handle: form.instagram_handle || null })
+    onSaved({ ...org, ...form, logo_url: logoPreview, primary_color: form.primary_color, tenant_type: form.tenant_type as import('../../types').TenantType, instagram_handle: form.instagram_handle || null })
     onClose()
   }
 
@@ -163,6 +165,26 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2"
               style={{ ['--tw-ring-color' as string]: accent }}
             />
+          </div>
+
+
+          {/* Tipo de centro */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de centro</label>
+            <select
+              value={form.tenant_type}
+              onChange={e => set('tenant_type', e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-white"
+              style={{ ['--tw-ring-color' as string]: accent }}
+            >
+              <option value="medical">🏥 Salud / Médico</option>
+              <option value="estetica">✨ Estética Médica</option>
+              <option value="beauty">✂️ Belleza / Salón</option>
+              <option value="veterinary">🐾 Veterinaria</option>
+              <option value="petshop">🐶 Petshop</option>
+              <option value="cancha">⚽ Canchas deportivas</option>
+              <option value="general">🏢 General</option>
+            </select>
           </div>
 
           {/* Color */}

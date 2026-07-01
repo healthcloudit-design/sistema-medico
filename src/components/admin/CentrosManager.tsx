@@ -310,7 +310,7 @@ export function CentrosManager({ userRole }: { userRole?: string }) {
   useEffect(() => {
     supabase
       .from('organizations')
-      .select('id,name,slug,tenant_type,primary_color,logo_url,whatsapp_number,address,phone,email,active')
+      .select('id,name,slug,tenant_type,primary_color,logo_url,whatsapp_number,address,phone,email,instagram_handle,active')
       .order('name')
       .then(({ data }) => {
         setOrgs((data ?? []) as Org[])

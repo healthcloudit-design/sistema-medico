@@ -99,13 +99,13 @@ export function BookingFlow() {
   const back   = () => update({ step: Math.max(state.step - 1, 1) as BookingState['step'] })
 
   if (orgLoading) return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   if (orgNotFound || !org) return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
         <div className="text-4xl mb-4">404</div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Centro no encontrado</h2>
@@ -120,13 +120,10 @@ export function BookingFlow() {
   const whatsappNumber   = org.whatsapp_number ?? null
   const instagramHandle  = org.instagram_handle ?? null
   const orgAddress       = org.address ?? null
-  const STEPS       = getSteps(tenantType)
+  const STEPS            = getSteps(tenantType)
 
   if (completed) return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: `linear-gradient(135deg, ${alpha(accentColor, 0.08)} 0%, #ffffff 60%)` }}
-    >
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
         <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
              style={{ backgroundColor: alpha(accentColor, 0.12) }}>
@@ -136,14 +133,14 @@ export function BookingFlow() {
         <p className="text-gray-500 text-sm mb-5">{getSuccessMessage(tenantType)}</p>
         <div className="rounded-xl p-4 text-left space-y-2 text-sm text-gray-600 mb-6"
              style={{ backgroundColor: alpha(accentColor, 0.07) }}>
-          <div><span className="font-medium">Deporte / Servicio:</span> {state.service?.name}</div>
+          <div><span className="font-medium">Servicio:</span> {state.service?.name}</div>
           <div><span className="font-medium">{getProfesionalLabel(tenantType)}:</span> {state.professional?.full_name}</div>
           <div><span className="font-medium">Fecha:</span> {state.fecha ? format(parseISO(state.fecha), 'dd/MM/yy') : ''}</div>
           <div><span className="font-medium">Hora:</span> {state.hora}hs</div>
         </div>
         <button
           onClick={() => { setState(INITIAL_STATE); setCompleted(false) }}
-          className="w-full text-white py-3 rounded-xl font-medium transition-colors"
+          className="w-full text-white py-3 rounded-xl font-medium transition-opacity hover:opacity-90"
           style={{ backgroundColor: accentColor }}
         >
           {tenantType === 'cancha' ? 'Reservar otra cancha' : 'Reservar otro turno'}
@@ -154,66 +151,75 @@ export function BookingFlow() {
   )
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ ['--accent' as string]: accentColor, background: `linear-gradient(135deg, ${alpha(accentColor, 0.06)} 0%, #ffffff 50%)` }}
-    >
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          {/* Logo + nombre + redes */}
-          <div className="flex flex-col items-center mb-3">
-            {logoUrl && (
+    <div className="min-h-screen bg-gray-50" style={{ ['--accent' as string]: accentColor }}>
+
+      {/* ── Brand header (scrollable) ── */}
+      <div style={{ backgroundColor: accentColor }}>
+        <div className="bg-gradient-to-b from-transparent to-black/20">
+          <div className="max-w-2xl mx-auto px-4 pt-10 pb-8 flex flex-col items-center">
+
+            {/* Logo */}
+            {logoUrl ? (
               <img
                 src={logoUrl}
                 alt={org.name}
-                className="h-20 w-auto max-w-[200px] rounded-2xl object-contain shadow-md mb-2 flex-shrink-0 bg-white p-1"
+                className="w-28 h-28 rounded-2xl object-contain bg-white shadow-xl p-2 mb-4"
               />
+            ) : (
+              <div className="w-24 h-24 rounded-2xl bg-white/20 flex items-center justify-center mb-4 shadow-lg">
+                <span className="text-white text-4xl font-bold">{org.name.charAt(0)}</span>
+              </div>
             )}
-            <h1 className="text-xl font-bold text-gray-900">{org.name}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
+
+            {/* Name */}
+            <h1 className="text-2xl font-bold text-white text-center drop-shadow">{org.name}</h1>
+            <p className="text-white/70 text-sm text-center mt-1">
               {tenantType === 'cancha' ? 'Reservar cancha online' : 'Reservar turno online'}
             </p>
+
             {/* Social links */}
-            <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
-              {orgAddress && (
-                <a
-                  href={'https://maps.google.com/?q=' + encodeURIComponent(orgAddress)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors"
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  {orgAddress}
-                </a>
-              )}
-              {whatsappNumber && (
-                <a
-                  href={'https://wa.me/' + whatsappNumber.replace(/\D/g, '')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
-                  style={{ color: '#16a34a', backgroundColor: '#f0fdf4' }}
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  WhatsApp
-                </a>
-              )}
-              {instagramHandle && (
-                <a
-                  href={'https://instagram.com/' + instagramHandle}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
-                  style={{ color: '#c2185b', backgroundColor: '#fdf2f8' }}
-                >
-                  <Instagram className="w-3.5 h-3.5" />
-                  @{instagramHandle}
-                </a>
-              )}
-            </div>
+            {(orgAddress || whatsappNumber || instagramHandle) && (
+              <div className="flex items-center gap-2 mt-4 flex-wrap justify-center">
+                {orgAddress && (
+                  <a
+                    href={'https://maps.google.com/?q=' + encodeURIComponent(orgAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-white/80 hover:text-white bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full transition-all"
+                  >
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate max-w-[160px]">{orgAddress}</span>
+                  </a>
+                )}
+                {whatsappNumber && (
+                  <a
+                    href={'https://wa.me/' + whatsappNumber.replace(/\D/g, '')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-white font-medium bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-all"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />WhatsApp
+                  </a>
+                )}
+                {instagramHandle && (
+                  <a
+                    href={'https://instagram.com/' + instagramHandle.replace(/^@/, '')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-white font-medium bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full transition-all"
+                  >
+                    <Instagram className="w-3.5 h-3.5" />@{instagramHandle.replace(/^@/, '')}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
-          {/* Steps */}
+        </div>
+      </div>
+
+      {/* ── Steps bar (sticky) ── */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {STEPS.map((step, i) => {
               const stepNum  = (i + 1) as BookingState['step']
@@ -223,7 +229,7 @@ export function BookingFlow() {
               return (
                 <div key={i} className="flex flex-col items-center flex-1">
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold transition-all"
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
                     style={
                       isDone   ? { backgroundColor: accentColor, color: '#fff' } :
                       isActive ? { backgroundColor: alpha(accentColor, 0.15), color: accentColor, outline: `2px solid ${accentColor}`, outlineOffset: '2px' } :
@@ -245,7 +251,7 @@ export function BookingFlow() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* ── Content ── */}
       <div className="max-w-2xl mx-auto px-4 py-6">
         {state.step === 1 && (
           <ServiceSelector

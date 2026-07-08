@@ -12,50 +12,68 @@ interface Props {
   accentColor?: string
 }
 
-const CATEGORY_META: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluqueria':   { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Manos':        { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Barberia':     { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
-  'Masajes':      { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
-  'Reflexologia': { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  'Drenaje':      { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
-  'Aparatologia': { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
-  'Facial':       { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Consultas':    { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
-  'Diagnostico':  { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
-  'Procedimientos':{ emoji: '🧬', gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
-  'Tratamientos': { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
+// Real photo URLs from Unsplash (stable CDN links, no API key required)
+const CATEGORY_IMAGES: Record<string, string> = {
+  // Beauty / hair
+  'Peluquería':   'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=480&h=360&fit=crop&auto=format',
+  'Peluqueria':   'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=480&h=360&fit=crop&auto=format',
+  // Nails
+  'Manicuría':    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Manicuria':    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Manos':        'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Nail Art':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Semi':         'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Esculpidas':   'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  'Kapping':      'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=480&h=360&fit=crop&auto=format',
+  // Feet
+  'Pedicuría':    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=480&h=360&fit=crop&auto=format',
+  'Pedicuria':    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=480&h=360&fit=crop&auto=format',
+  // Massage / spa
+  'Masajes':      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=480&h=360&fit=crop&auto=format',
+  'Reflexología': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=480&h=360&fit=crop&auto=format',
+  'Reflexologia': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=480&h=360&fit=crop&auto=format',
+  'Drenaje':      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=480&h=360&fit=crop&auto=format',
+  // Facial / aesthetic
+  'Facial':       'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=480&h=360&fit=crop&auto=format',
+  'Aparatología': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=480&h=360&fit=crop&auto=format',
+  'Aparatologia': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=480&h=360&fit=crop&auto=format',
+  // Barber
+  'Barbería':     'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=480&h=360&fit=crop&auto=format',
+  'Barberia':     'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=480&h=360&fit=crop&auto=format',
+  // Medical
+  'Consultas':    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=480&h=360&fit=crop&auto=format',
+  'Diagnóstico':  'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=480&h=360&fit=crop&auto=format',
+  'Diagnostico':  'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=480&h=360&fit=crop&auto=format',
+  'Tratamientos': 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=480&h=360&fit=crop&auto=format',
+  'Procedimientos':'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=480&h=360&fit=crop&auto=format',
+  // Sports / canchas
+  'Fútbol':       'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=480&h=360&fit=crop&auto=format',
+  'Futbol':       'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=480&h=360&fit=crop&auto=format',
+  'Pádel':        'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=480&h=360&fit=crop&auto=format',
+  'Padel':        'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=480&h=360&fit=crop&auto=format',
+  'Tenis':        'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=480&h=360&fit=crop&auto=format',
 }
 
-const CATEGORY_META_ES: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-  'Peluquería':    { emoji: '✂️',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Manicuría':     { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Pedicuría':     { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  'Manos':         { emoji: '💅',  gradient: 'from-rose-50 to-pink-50',      border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Barbería':      { emoji: '🪒',  gradient: 'from-slate-50 to-zinc-50',     border: 'border-slate-300',   text: 'text-slate-700'   },
-  'Masajes':       { emoji: '🫧',  gradient: 'from-teal-50 to-emerald-50',   border: 'border-teal-200',    text: 'text-teal-700'    },
-  'Reflexología':  { emoji: '🦶',  gradient: 'from-amber-50 to-yellow-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  'Drenaje':       { emoji: '💧',  gradient: 'from-cyan-50 to-sky-50',       border: 'border-cyan-200',    text: 'text-cyan-700'    },
-  'Aparatología':  { emoji: '✨',  gradient: 'from-violet-50 to-purple-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
-  'Facial':        { emoji: '🌸',  gradient: 'from-rose-50 to-fuchsia-50',   border: 'border-rose-200',    text: 'text-rose-700'    },
-  'Semi':          { emoji: '💅',  gradient: 'from-pink-50 to-rose-50',      border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Kapping':       { emoji: '💎',  gradient: 'from-fuchsia-50 to-purple-50', border: 'border-fuchsia-200', text: 'text-fuchsia-700' },
-  'Esculpidas':    { emoji: '🪄',  gradient: 'from-purple-50 to-violet-50',  border: 'border-purple-200',  text: 'text-purple-700'  },
-  'Nail Art':      { emoji: '🎨',  gradient: 'from-pink-50 to-fuchsia-50',   border: 'border-pink-200',    text: 'text-pink-700'    },
-  'Otros':         { emoji: '✦',   gradient: 'from-gray-50 to-slate-50',     border: 'border-gray-200',    text: 'text-gray-700'    },
-  'Consultas':     { emoji: '🩺',  gradient: 'from-blue-50 to-sky-50',       border: 'border-blue-200',    text: 'text-blue-700'    },
-  'Diagnóstico':   { emoji: '🔬',  gradient: 'from-emerald-50 to-teal-50',   border: 'border-emerald-200', text: 'text-emerald-700' },
-  'Procedimientos':{ emoji: '🧬',  gradient: 'from-orange-50 to-amber-50',   border: 'border-orange-200',  text: 'text-orange-700'  },
-  'Tratamientos':  { emoji: '💊',  gradient: 'from-violet-50 to-indigo-50',  border: 'border-violet-200',  text: 'text-violet-700'  },
-  'Fútbol':        { emoji: '⚽',  gradient: 'from-green-50 to-emerald-50',  border: 'border-green-200',   text: 'text-green-700'   },
-  'Pádel':         { emoji: '🎾',  gradient: 'from-teal-50 to-cyan-50',      border: 'border-teal-200',    text: 'text-teal-700'    },
-  'Tenis':         { emoji: '🎾',  gradient: 'from-yellow-50 to-amber-50',   border: 'border-yellow-200',  text: 'text-yellow-700'  },
+// Fallback gradient for categories without a photo
+const CATEGORY_GRADIENTS: Record<string, { from: string; to: string; text: string }> = {
+  'Peluquería':   { from: '#fce7f3', to: '#f9a8d4', text: '#be185d' },
+  'Manicuría':    { from: '#fff1f2', to: '#fecdd3', text: '#be123c' },
+  'Masajes':      { from: '#f0fdfa', to: '#99f6e4', text: '#0f766e' },
+  'Facial':       { from: '#fdf2f8', to: '#f5d0fe', text: '#a21caf' },
+  'Consultas':    { from: '#eff6ff', to: '#bfdbfe', text: '#1d4ed8' },
+  'Tratamientos': { from: '#f5f3ff', to: '#ddd6fe', text: '#6d28d9' },
+  'Procedimientos':{ from: '#fff7ed', to: '#fed7aa', text: '#c2410c' },
+  'Fútbol':       { from: '#f0fdf4', to: '#bbf7d0', text: '#15803d' },
+  'Pádel':        { from: '#f0fdfa', to: '#a5f3fc', text: '#0e7490' },
+  'Tenis':        { from: '#fefce8', to: '#fde68a', text: '#b45309' },
 }
 
-const DEFAULT_CAT_META = { emoji: '💈', gradient: 'from-sky-50 to-blue-50', border: 'border-sky-200', text: 'text-sky-700' }
+function getCategoryImage(cat: string): string | null {
+  return CATEGORY_IMAGES[cat] ?? null
+}
 
-function getCatMeta(cat: string) {
-  return CATEGORY_META_ES[cat] ?? CATEGORY_META[cat] ?? DEFAULT_CAT_META
+function getCategoryGradient(cat: string) {
+  return CATEGORY_GRADIENTS[cat] ?? { from: '#f8fafc', to: '#e2e8f0', text: '#475569' }
 }
 
 export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medical', accentColor = '#0ea5e9' }: Props) {
@@ -63,8 +81,6 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState('')
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
-
-  const isBeauty = tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'cancha'
 
   useEffect(() => {
     setLoading(true)
@@ -86,14 +102,19 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
     [services],
   )
 
+  // Show category grid for: beauty/estetica/cancha tenants always,
+  // OR any tenant that has more than 1 category defined
+  const isBeauty = tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'cancha'
+  const showCategoryGrid = isBeauty || categories.length > 1
+
   const filteredServices = useMemo(
-    () => isBeauty && selectedCat ? services.filter(s => s.category === selectedCat) : services,
-    [services, isBeauty, selectedCat],
+    () => showCategoryGrid && selectedCat ? services.filter(s => s.category === selectedCat) : services,
+    [services, showCategoryGrid, selectedCat],
   )
 
   if (loading) return (
-    <div className="space-y-3">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />)}
+    <div className="grid grid-cols-2 gap-4">
+      {[1, 2, 3, 4].map(i => <div key={i} className="aspect-[4/3] bg-gray-200 rounded-2xl animate-pulse" />)}
     </div>
   )
 
@@ -101,29 +122,46 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
     <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">Error al cargar servicios: {error}</div>
   )
 
-  if (isBeauty && !selectedCat) {
+  // ── Category grid ──
+  if (showCategoryGrid && !selectedCat) {
     return (
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-1">
-          {tenantType === 'cancha' ? 'Que deporte queres jugar?' : 'Que servicio buscas?'}
+          {tenantType === 'cancha' ? 'Que deporte querés jugar?' : 'Que servicio buscás?'}
         </h2>
         <p className="text-sm text-gray-500 mb-5">
-          {tenantType === 'cancha' ? 'Elegí el deporte para ver las canchas disponibles' : 'Elegi una categoria para comenzar'}
+          {tenantType === 'cancha' ? 'Elegí el deporte para ver canchas disponibles' : 'Elegí una categoría para comenzar'}
         </p>
         <div className="grid grid-cols-2 gap-4">
           {categories.map(cat => {
-            const meta  = getCatMeta(cat)
+            const img   = getCategoryImage(cat)
+            const grad  = getCategoryGradient(cat)
             const count = services.filter(s => s.category === cat).length
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCat(cat)}
-                className={`bg-gradient-to-br ${meta.gradient} border-2 ${meta.border} rounded-2xl p-6 flex flex-col items-center gap-3 hover:shadow-md transition-all duration-200 active:scale-95`}
+                className="relative rounded-2xl overflow-hidden hover:shadow-lg active:scale-95 transition-all duration-200 aspect-[4/3] group"
               >
-                <span className="text-5xl leading-none">{meta.emoji}</span>
-                <div className="text-center">
-                  <div className={`font-semibold text-base ${meta.text}`}>{cat}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{count} {count === 1 ? 'opción' : 'opciones'}</div>
+                {/* Background: real photo or gradient fallback */}
+                {img ? (
+                  <img
+                    src={img}
+                    alt={cat}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: `linear-gradient(135deg, ${grad.from} 0%, ${grad.to} 100%)` }}
+                  />
+                )}
+                {/* Dark gradient overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/5" />
+                {/* Text */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
+                  <div className="text-white font-bold text-base leading-tight drop-shadow">{cat}</div>
+                  <div className="text-white/70 text-xs mt-0.5">{count} {count === 1 ? 'opción' : 'opciones'}</div>
                 </div>
               </button>
             )
@@ -133,30 +171,34 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
     )
   }
 
+  // ── Service list ──
   return (
     <div>
-      {isBeauty && selectedCat && (
+      {showCategoryGrid && selectedCat && (
         <button
           onClick={() => setSelectedCat(null)}
           className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl transition-colors mb-4"
           style={{ color: accentColor, backgroundColor: alpha(accentColor, 0.08) }}
         >
-          <ChevronLeft className="w-4 h-4" /> {selectedCat}
+          <ChevronLeft className="w-4 h-4" />
+          {selectedCat}
         </button>
       )}
       <h2 className="text-lg font-semibold text-gray-900 mb-1">
-        {isBeauty
-          ? (tenantType === 'cancha' ? `Turnos de ${selectedCat}` : `Servicios de ${selectedCat}`)
-          : 'Que servicio necesita?'}
+        {tenantType === 'cancha'
+          ? `Turnos de ${selectedCat}`
+          : showCategoryGrid && selectedCat
+            ? `Servicios de ${selectedCat}`
+            : 'Que servicio necesita?'}
       </h2>
       <p className="text-sm text-gray-500 mb-4">
         {tenantType === 'cancha'
           ? 'Elegí la duración del turno'
-          : isBeauty ? 'Toca el servicio para continuar' : 'Seleccione el tipo de consulta'}
+          : 'Tocá el servicio para continuar'}
       </p>
       {filteredServices.length === 0 ? (
         <div className="bg-amber-50 text-amber-700 text-sm px-4 py-3 rounded-xl">
-          No hay servicios disponibles en esta categoria por el momento.
+          No hay servicios disponibles en esta categoría por el momento.
         </div>
       ) : (
         <div className="space-y-3">
@@ -164,11 +206,11 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
             <button
               key={s.id}
               onClick={() => onSelect(s)}
-              className="w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 shadow-sm"
+              className="w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 shadow-sm hover:shadow-md"
               style={
                 selected?.id === s.id
                   ? { borderColor: accentColor, backgroundColor: alpha(accentColor, 0.06) }
-                  : { borderColor: '#f3f4f6', backgroundColor: '#fff' }
+                  : { borderColor: '#e5e7eb', backgroundColor: '#fff' }
               }
             >
               <div className="flex items-start gap-3">
@@ -181,7 +223,7 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
                       <Clock className="w-3.5 h-3.5" />{s.duration_minutes} min
                     </span>
                     {s.price != null && s.price > 0 && (
-                      <span className="text-xs text-gray-400">${s.price.toLocaleString('es-AR')}</span>
+                      <span className="text-xs font-medium text-gray-500">${s.price.toLocaleString('es-AR')}</span>
                     )}
                   </div>
                 </div>

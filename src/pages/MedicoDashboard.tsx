@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   format, parseISO, isToday, isTomorrow, isSameDay,
@@ -426,6 +426,116 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
   )
 }
 
+
+// ── Service donut chart (inline SVG) ─────────────────────────────────────────
+const DONUT_PALETTE = [
+  '#1A3F4E','#C9A96E','#3B82F6','#10B981','#8B5CF6',
+  '#F59E0B','#EF4444','#06B6D4','#EC4899','#6366F1',
+]
+
+function ServiceDonut({ appointments }: { appointments: Appointment[] }) {
+  const active = appointments.filter(a => a.status !== 'cancelado')
+  if (active.length === 0) return null
+
+  // Aggregate by service name
+  const map: Record<string, number> = {}
+  active.forEach(a => {
+    const name = (a.service as { name: string } | undefined)?.name ?? 'Consulta'
+    map[name] = (map[name] ?? 0) + 1
+  })
+
+  const entries = Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8) // max 8 slices for readability
+
+  const total  = entries.reduce((s, [, v]) => s + v, 0)
+  const R      = 52   // outer radius
+  const r      = 30   // inner radius
+  const cx     = 64
+  const cy     = 64
+  const SIZE   = 128
+
+  // Build SVG arcs
+  let startAngle = -Math.PI / 2
+  const arcs = entries.map(([name, count], i) => {
+    const pct   = count / total
+    const angle = pct * 2 * Math.PI
+    const end   = startAngle + angle
+    const large = angle > Math.PI ? 1 : 0
+    const x1o = cx + R * Math.cos(startAngle)
+    const y1o = cy + R * Math.sin(startAngle)
+    const x2o = cx + R * Math.cos(end)
+    const y2o = cy + R * Math.sin(end)
+    const x1i = cx + r * Math.cos(end)
+    const y1i = cy + r * Math.sin(end)
+    const x2i = cx + r * Math.cos(startAngle)
+    const y2i = cy + r * Math.sin(startAngle)
+    const d   = `M ${x1o} ${y1o} A ${R} ${R} 0 ${large} 1 ${x2o} ${y2o} L ${x1i} ${y1i} A ${r} ${r} 0 ${large} 0 ${x2i} ${y2i} Z`
+    const arc = { d, color: DONUT_PALETTE[i % DONUT_PALETTE.length], name, count, pct }
+    startAngle = end
+    return arc
+  })
+
+  const [hovered, setHovered] = React.useState<string | null>(null)
+
+  return (
+    <div style={{ backgroundColor: CARD, borderRadius: '12px', padding: '18px 20px', border: `1px solid ${BD}`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: TEXT }}>Distribución de servicios</div>
+          <div style={{ fontSize: '11px', color: T3, marginTop: '2px' }}>Semana actual · {total} turno{total !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        {/* SVG donut */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ overflow: 'visible' }}>
+            {arcs.map((arc, i) => (
+              <path
+                key={arc.name}
+                d={arc.d}
+                fill={arc.color}
+                opacity={hovered === null || hovered === arc.name ? 1 : 0.25}
+                style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+                onMouseEnter={() => setHovered(arc.name)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            ))}
+            {/* Center label */}
+            <text x={cx} y={cy - 6} textAnchor="middle" style={{ fontSize: '18px', fontWeight: 700, fill: TEXT, fontFamily: 'Inter, sans-serif' }}>
+              {hovered
+                ? `${Math.round((arcs.find(a => a.name === hovered)?.pct ?? 0) * 100)}%`
+                : total
+              }
+            </text>
+            <text x={cx} y={cy + 10} textAnchor="middle" style={{ fontSize: '9px', fill: T3, fontFamily: 'Inter, sans-serif' }}>
+              {hovered ? arcs.find(a => a.name === hovered)?.name.slice(0, 10) : 'turnos'}
+            </text>
+          </svg>
+        </div>
+
+        {/* Legend */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '120px' }}>
+          {arcs.map(arc => (
+            <div key={arc.name}
+              onMouseEnter={() => setHovered(arc.name)}
+              onMouseLeave={() => setHovered(null)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'default', opacity: hovered === null || hovered === arc.name ? 1 : 0.4, transition: 'opacity 0.15s' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: arc.color, flexShrink: 0 }} />
+              <span style={{ fontSize: '11px', color: TEXT, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{arc.name}</span>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: T2, flexShrink: 0 }}>
+                {Math.round(arc.pct * 100)}%
+              </span>
+              <span style={{ fontSize: '10px', color: T3, flexShrink: 0 }}>({arc.count})</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Dashboard view ────────────────────────────────────────────────────────────
 function DashView({ appointments, today, tomorrow, loading, go, onSelect, profile }: {
   appointments:Appointment[]; today:Appointment[]; tomorrow:Appointment[];
@@ -502,6 +612,9 @@ function DashView({ appointments, today, tomorrow, loading, go, onSelect, profil
 
       {/* Weekly chart */}
       <WeekChart appointments={appointments}/>
+
+      {/* Service donut */}
+      <ServiceDonut appointments={wkAppts}/>
 
       {/* Tomorrow preview */}
       {tomorrow.length > 0 && (

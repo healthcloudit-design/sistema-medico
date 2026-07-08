@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, isToday, isTomorrow, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns'
+import {
+  format, parseISO, isToday, isTomorrow, isSameDay,
+  startOfDay, endOfDay, addDays, startOfWeek, endOfWeek,
+} from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Calendar, LogOut, FileText, Users, LayoutList, CalendarX, ChevronRight } from 'lucide-react'
+import {
+  LayoutDashboard, Calendar, Users, LogOut, FileText,
+  CalendarX, Settings, ChevronRight, Search, MessageCircle,
+  CheckCircle, AlertCircle, TrendingUp, Menu, X, ArrowRight,
+  Lock, Clock, Activity,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
@@ -13,279 +21,753 @@ import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
-// ── PRAXIS Agenda tokens ─────────────────────────────────────────────────────
-const P800      = '#0F2830'
-const P600      = '#1A3F4E'
-const GOLD      = '#C9A96E'
-const GOLD_DIM  = '#C9A96E22'
-const GOLD_BRD  = '#C9A96E55'
-const T_HI      = '#FFFFFF'
-const T_MED     = 'rgba(255,255,255,0.55)'
-const T_LOW     = 'rgba(255,255,255,0.25)'
-const SIDEBAR_BORDER = 'rgba(255,255,255,0.07)'
-const BG        = '#F4F5F7'
-const CARD      = '#FFFFFF'
-const TEXT      = '#111827'
-const TEXT_SEC  = '#6B7280'
-const BORDER    = '#E5E7EB'
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const P900    = '#0B1E24'
+const P800    = '#0F2830'
+const P600    = '#1A3F4E'
+const GOLD    = '#C9A96E'
+const GOLD_DIM= '#C9A96E18'
+const GOLD_BD = '#C9A96E44'
+const BG      = '#EEF1F5'
+const CARD    = '#FFFFFF'
+const CARD2   = '#F8FAFB'
+const TEXT    = '#0F1923'
+const T2      = '#475569'
+const T3      = '#94A3B8'
+const BD      = '#E2E8F0'
+const BD2     = '#CBD5E1'
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  confirmado:  { label: 'Confirmado',  color: '#16a34a', bg: '#f0fdf4' },
-  pendiente:   { label: 'Pendiente',   color: '#d97706', bg: '#fffbeb' },
-  cancelado:   { label: 'Cancelado',   color: '#dc2626', bg: '#fef2f2' },
-  no_asistio:  { label: 'No asistió',  color: '#6b7280', bg: '#f9fafb' },
-  completado:  { label: 'Completado',  color: '#2563eb', bg: '#eff6ff' },
-  en_atencion: { label: 'En atención', color: '#7c3aed', bg: '#f5f3ff' },
+const ST: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  confirmado:  { label: 'Confirmado',  color: '#166534', bg: '#F0FDF4', dot: '#22C55E' },
+  pendiente:   { label: 'Pendiente',   color: '#92400E', bg: '#FFFBEB', dot: '#F59E0B' },
+  cancelado:   { label: 'Cancelado',   color: '#991B1B', bg: '#FEF2F2', dot: '#EF4444' },
+  no_asistio:  { label: 'No asistió',  color: '#374151', bg: '#F9FAFB', dot: '#9CA3AF' },
+  completado:  { label: 'Completado',  color: '#1E3A5F', bg: '#EFF6FF', dot: '#3B82F6' },
+  en_atencion: { label: 'En atención', color: '#4C1D95', bg: '#F5F3FF', dot: '#8B5CF6' },
 }
 
-function toArgTime(iso: string) {
+type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos' | 'configuracion'
+
+function argTime(iso: string) {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
-  const d = new Date(ms)
+  const d  = new Date(ms)
   return `${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`
 }
 
-function PraxisWordmark() {
+// ── Wordmark ──────────────────────────────────────────────────────────────────
+function Wordmark() {
   return (
-    <div className="flex items-baseline gap-1 select-none">
-      <span className="font-extrabold text-base tracking-tight text-white"
-        style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' }}>PRAXIS</span>
-      <span className="font-light text-sm tracking-wide" style={{ color: GOLD, fontFamily: "'Inter', sans-serif" }}>Agenda</span>
+    <div style={{ display:'flex', alignItems:'baseline', gap:'4px', userSelect:'none' }}>
+      <span style={{ fontFamily:"'Inter',sans-serif", fontWeight:800, fontSize:'15px', letterSpacing:'-0.03em', color:'#fff' }}>PRAXIS</span>
+      <span style={{ fontFamily:"'Inter',sans-serif", fontWeight:300, fontSize:'13px', letterSpacing:'0.06em', color:GOLD }}>Agenda</span>
     </div>
   )
 }
 
+// ── Status badge ──────────────────────────────────────────────────────────────
+function Badge({ status }: { status: string }) {
+  const s = ST[status] ?? ST.pendiente
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'2px 8px', borderRadius:'999px', fontSize:'10px', fontWeight:600, backgroundColor:s.bg, color:s.color, whiteSpace:'nowrap' }}>
+      <span style={{ width:'5px', height:'5px', borderRadius:'50%', backgroundColor:s.dot }} />{s.label}
+    </span>
+  )
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { id:'dashboard',     icon:LayoutDashboard, label:'Inicio'        },
+  { id:'agenda',        icon:Calendar,        label:'Mi agenda'     },
+  { id:'pacientes',     icon:Users,           label:'Pacientes'     },
+  { id:'bloqueos',      icon:CalendarX,       label:'Bloqueos'      },
+  { id:'configuracion', icon:Settings,        label:'Configuración' },
+] as const
+
+function Sidebar({ view, go, profile, logout, close }: {
+  view:View; go:(v:View)=>void; profile:any; logout:()=>void; close?:()=>void
+}) {
+  const initials = profile?.full_name?.split(' ').map((n:string)=>n[0]).slice(0,2).join('') ?? '?'
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', backgroundColor:P800 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'20px 16px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+        <Wordmark />
+        {close && <button onClick={close} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', padding:'2px' }}><X size={15}/></button>}
+      </div>
+      <nav style={{ flex:1, padding:'10px 8px', display:'flex', flexDirection:'column', gap:'2px' }}>
+        {NAV_ITEMS.map(({ id, icon:Icon, label }) => {
+          const active = view === id
+          return (
+            <button key={id} onClick={() => { go(id); close?.() }}
+              style={{ display:'flex', alignItems:'center', gap:'10px', width:'100%', padding:'9px 12px', borderRadius:'8px', fontSize:'13px', fontWeight: active ? 500 : 400, border: active ? `1px solid ${GOLD_BD}` : '1px solid transparent', backgroundColor: active ? GOLD_DIM : 'transparent', color: active ? GOLD : 'rgba(255,255,255,0.5)', cursor:'pointer', textAlign:'left', transition:'all 0.12s' }}
+              onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.backgroundColor='rgba(255,255,255,0.06)'; el.style.color='#fff' } }}
+              onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.backgroundColor='transparent'; el.style.color='rgba(255,255,255,0.5)' } }}
+            >
+              <Icon size={14} style={{ flexShrink:0 }}/>
+              <span style={{ flex:1 }}>{label}</span>
+              {active && <ChevronRight size={11} style={{ opacity:0.4 }}/>}
+            </button>
+          )
+        })}
+      </nav>
+      <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
+          <div style={{ width:'32px', height:'32px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:700, backgroundColor:GOLD_DIM, color:GOLD, border:`1px solid ${GOLD_BD}`, flexShrink:0 }}>{initials}</div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:'12px', fontWeight:500, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'120px' }}>{profile?.full_name ?? '—'}</div>
+            <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)' }}>Profesional</div>
+          </div>
+        </div>
+        <button onClick={logout}
+          style={{ display:'flex', alignItems:'center', gap:'6px', width:'100%', padding:'7px 10px', borderRadius:'7px', fontSize:'11px', fontWeight:500, backgroundColor:'transparent', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.35)', cursor:'pointer', transition:'all 0.12s' }}
+          onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.backgroundColor='rgba(239,68,68,0.12)'; el.style.borderColor='#fca5a5'; el.style.color='#f87171' }}
+          onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.backgroundColor='transparent'; el.style.borderColor='rgba(255,255,255,0.08)'; el.style.color='rgba(255,255,255,0.35)' }}
+        ><LogOut size={12}/> Cerrar sesión</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Metric card ───────────────────────────────────────────────────────────────
+function Metric({ icon:Icon, label, value, sub, accent=P600, loading=false }: {
+  icon:React.ElementType; label:string; value:string|number; sub?:string; accent?:string; loading?:boolean
+}) {
+  return (
+    <div style={{ backgroundColor:CARD, borderRadius:'12px', padding:'16px', border:`1px solid ${BD}`, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ width:'36px', height:'36px', borderRadius:'9px', display:'flex', alignItems:'center', justifyContent:'center', backgroundColor:`${accent}12`, marginBottom:'14px' }}>
+        <Icon size={16} style={{ color:accent }}/>
+      </div>
+      {loading
+        ? <div style={{ width:'44px', height:'28px', borderRadius:'6px', backgroundColor:BG, marginBottom:'4px' }}/>
+        : <div style={{ fontSize:'26px', fontWeight:700, color:TEXT, lineHeight:1, marginBottom:'3px' }}>{value}</div>
+      }
+      <div style={{ fontSize:'12px', fontWeight:500, color:T2 }}>{label}</div>
+      {sub && <div style={{ fontSize:'11px', color:T3, marginTop:'2px' }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Weekly bar chart (inline SVG) ─────────────────────────────────────────────
+function WeekChart({ appointments }: { appointments:Appointment[] }) {
+  const weekStart = startOfWeek(new Date(), { weekStartsOn:1 })
+  const DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb']
+  const counts = DAYS.map((_,i) => appointments.filter(a => isSameDay(parseISO(a.starts_at), addDays(weekStart,i)) && a.status !== 'cancelado').length)
+  const max    = Math.max(...counts, 1)
+  const todayI = (new Date().getDay() + 6) % 7
+
+  return (
+    <div style={{ backgroundColor:CARD, borderRadius:'12px', padding:'18px 20px', border:`1px solid ${BD}`, boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'16px' }}>
+        <div>
+          <div style={{ fontSize:'13px', fontWeight:600, color:TEXT }}>Ocupación semanal</div>
+          <div style={{ fontSize:'11px', color:T3, marginTop:'2px' }}>Turnos confirmados por día</div>
+        </div>
+        <Activity size={15} style={{ color:T3, marginTop:'2px' }}/>
+      </div>
+      <div style={{ display:'flex', alignItems:'flex-end', gap:'6px', height:'72px' }}>
+        {counts.map((n, i) => {
+          const h   = Math.max((n / max) * 56, n > 0 ? 8 : 2)
+          const act = i === todayI
+          return (
+            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', height:'100%', justifyContent:'flex-end' }}>
+              <span style={{ fontSize:'10px', fontWeight:act ? 700 : 400, color: act ? GOLD : (n > 0 ? P600 : T3) }}>{n > 0 ? n : ''}</span>
+              <div style={{ width:'100%', borderRadius:'4px 4px 0 0', height:`${h}px`, backgroundColor: act ? GOLD : (n > 0 ? P600 : BD), transition:'height 0.3s ease' }}/>
+              <span style={{ fontSize:'10px', fontWeight: act ? 600 : 400, color: act ? GOLD : T3 }}>{DAYS[i]}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Appointment card (timeline style) ────────────────────────────────────────
+function ApptCard({ appt, onClick }: { appt:Appointment; onClick:()=>void }) {
+  const svc = appt.service as { name:string; duration_minutes?:number }|undefined
+  const s   = ST[appt.status] ?? ST.pendiente
+  const [hov, setHov] = useState(false)
+  return (
+    <div onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display:'flex', gap:'12px', padding:'13px 14px', borderRadius:'10px', border:`1px solid ${hov ? BD2 : BD}`, backgroundColor: hov ? '#F8FAFC' : CARD, cursor:'pointer', transition:'all 0.12s', boxShadow: hov ? '0 4px 12px rgba(0,0,0,0.07)' : '0 1px 2px rgba(0,0,0,0.03)' }}>
+      <div style={{ textAlign:'center', width:'38px', flexShrink:0 }}>
+        <div style={{ fontSize:'12px', fontWeight:700, color:TEXT, fontFamily:'monospace' }}>{argTime(appt.starts_at)}</div>
+        {svc?.duration_minutes && <div style={{ fontSize:'10px', color:T3, marginTop:'2px' }}>{svc.duration_minutes}′</div>}
+      </div>
+      <div style={{ width:'2px', borderRadius:'2px', backgroundColor:s.dot, flexShrink:0, alignSelf:'stretch' }}/>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'3px' }}>
+          <span style={{ fontSize:'13px', fontWeight:600, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{appt.patient_name}</span>
+          <Badge status={appt.status}/>
+        </div>
+        <div style={{ fontSize:'12px', color:T2 }}>{svc?.name ?? 'Consulta'}</div>
+        {appt.patient_phone && <div style={{ fontSize:'11px', color:T3, marginTop:'3px' }}>{appt.patient_phone}</div>}
+      </div>
+      <ChevronRight size={14} style={{ color:T3, alignSelf:'center', flexShrink:0 }}/>
+    </div>
+  )
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+function Empty({ go }: { go:(v:View)=>void }) {
+  return (
+    <div style={{ textAlign:'center', padding:'36px 20px', borderRadius:'12px', border:`1.5px dashed ${BD2}`, backgroundColor:CARD2 }}>
+      <div style={{ width:'44px', height:'44px', borderRadius:'12px', backgroundColor:`${P600}0D`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
+        <Calendar size={20} style={{ color:P600 }}/>
+      </div>
+      <h3 style={{ fontSize:'14px', fontWeight:600, color:TEXT, margin:'0 0 6px' }}>Sin turnos para hoy</h3>
+      <p style={{ fontSize:'12px', color:T2, maxWidth:'240px', margin:'0 auto 20px', lineHeight:1.65 }}>
+        No tenés turnos programados. Revisá la agenda, creá uno nuevo o bloqueá horarios no disponibles.
+      </p>
+      <div style={{ display:'flex', gap:'8px', justifyContent:'center', flexWrap:'wrap' }}>
+        <button onClick={() => go('agenda')} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}><Calendar size={12}/> Ver agenda</button>
+        <button onClick={() => go('bloqueos')} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:'transparent', color:T2, border:`1px solid ${BD}`, cursor:'pointer' }}><Lock size={12}/> Bloquear horario</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Section block ─────────────────────────────────────────────────────────────
+function Section({ title, count, empty, children }: { title:string; count:number; empty?:string; children?:React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
+        <div style={{ width:'3px', height:'13px', borderRadius:'2px', backgroundColor:GOLD }}/>
+        <span style={{ fontSize:'11px', fontWeight:600, color:T2, textTransform:'uppercase', letterSpacing:'0.09em' }}>{title}</span>
+        <span style={{ fontSize:'11px', color:T3 }}>({count})</span>
+      </div>
+      {count === 0
+        ? <div style={{ padding:'14px', borderRadius:'10px', textAlign:'center', fontSize:'12px', color:T3, backgroundColor:CARD2, border:`1px solid ${BD}` }}>{empty}</div>
+        : <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{children}</div>
+      }
+    </div>
+  )
+}
+
+// ── Right panel ───────────────────────────────────────────────────────────────
+function RightPanel({ appointments, onSelect, go }: {
+  appointments:Appointment[]; onSelect:(a:Appointment)=>void; go:(v:View)=>void
+}) {
+  const now   = new Date()
+  const next  = appointments.filter(a => parseISO(a.starts_at) > now && a.status !== 'cancelado').sort((a,b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime())[0]
+  const soon  = appointments.filter(a => parseISO(a.starts_at) > now && a.status !== 'cancelado').sort((a,b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime()).slice(1,5)
+  const cxls  = appointments.filter(a => a.status === 'cancelado').length
+
+  const QUICK = [
+    { icon:Calendar, label:'Agenda completa',  action:() => go('agenda') },
+    { icon:Users,    label:'Buscar paciente',  action:() => go('pacientes') },
+    { icon:Lock,     label:'Bloquear horario', action:() => go('bloqueos') },
+  ]
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+      {/* Quick actions */}
+      <div style={{ backgroundColor:CARD, borderRadius:'12px', padding:'16px', border:`1px solid ${BD}` }}>
+        <div style={{ fontSize:'10px', fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'10px' }}>Acciones rápidas</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
+          {QUICK.map(({ icon:Icon, label, action }) => (
+            <button key={label} onClick={action}
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 10px', borderRadius:'8px', border:`1px solid ${BD}`, backgroundColor:'transparent', fontSize:'12px', fontWeight:500, color:T2, cursor:'pointer', textAlign:'left', transition:'all 0.12s' }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.backgroundColor=`${P600}08`; el.style.borderColor=`${P600}30`; el.style.color=P600 }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.backgroundColor='transparent'; el.style.borderColor=BD; el.style.color=T2 }}
+            ><Icon size={13}/>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Next appointment */}
+      {next && (
+        <div style={{ backgroundColor:CARD, borderRadius:'12px', padding:'16px', border:`1px solid ${BD}` }}>
+          <div style={{ fontSize:'10px', fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'10px' }}>Próximo turno</div>
+          <div style={{ backgroundColor:`${P600}08`, borderRadius:'9px', padding:'12px', border:`1px solid ${P600}1A`, marginBottom:'10px' }}>
+            <div style={{ fontSize:'11px', color:T3, marginBottom:'4px' }}>
+              {isToday(parseISO(next.starts_at)) ? 'Hoy' : isTomorrow(parseISO(next.starts_at)) ? 'Mañana' : format(parseISO(next.starts_at), 'EEE d MMM', { locale:es })}
+              {' · '}{argTime(next.starts_at)}hs
+            </div>
+            <div style={{ fontSize:'13px', fontWeight:700, color:TEXT, marginBottom:'2px' }}>{next.patient_name}</div>
+            <div style={{ fontSize:'12px', color:T2 }}>{(next.service as { name:string }|undefined)?.name ?? 'Consulta'}</div>
+          </div>
+          <button onClick={() => onSelect(next)}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', width:'100%', padding:'9px', borderRadius:'9px', fontSize:'12px', fontWeight:600, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}>
+            Ver detalle <ChevronRight size={13}/>
+          </button>
+        </div>
+      )}
+
+      {/* Upcoming list */}
+      {soon.length > 0 && (
+        <div style={{ backgroundColor:CARD, borderRadius:'12px', padding:'16px', border:`1px solid ${BD}` }}>
+          <div style={{ fontSize:'10px', fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'10px' }}>Próximos turnos</div>
+          <div style={{ display:'flex', flexDirection:'column' }}>
+            {soon.map(a => {
+              const svc = a.service as { name:string }|undefined
+              return (
+                <button key={a.id} onClick={() => onSelect(a)}
+                  style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 4px', border:'none', borderBottom:`1px solid ${BD}`, backgroundColor:'transparent', cursor:'pointer', textAlign:'left' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor='#F8FAFC'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor='transparent'}
+                >
+                  <div style={{ width:'6px', height:'6px', borderRadius:'50%', backgroundColor:(ST[a.status]??ST.pendiente).dot, flexShrink:0 }}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:'12px', fontWeight:500, color:TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{a.patient_name}</div>
+                    <div style={{ fontSize:'10px', color:T3 }}>
+                      {isToday(parseISO(a.starts_at)) ? 'Hoy' : isTomorrow(parseISO(a.starts_at)) ? 'Mañana' : format(parseISO(a.starts_at),'d MMM',{locale:es})} · {argTime(a.starts_at)}
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation alert */}
+      {cxls > 0 && (
+        <div style={{ borderRadius:'10px', padding:'12px 14px', backgroundColor:'#FFFBEB', border:'1px solid #FDE68A', display:'flex', gap:'10px' }}>
+          <AlertCircle size={14} style={{ color:'#D97706', flexShrink:0, marginTop:'1px' }}/>
+          <div>
+            <div style={{ fontSize:'12px', fontWeight:600, color:'#92400E' }}>{cxls} cancelación{cxls!==1?'es':''} esta semana</div>
+            <div style={{ fontSize:'11px', color:'#B45309', marginTop:'2px' }}>Contactá a esos pacientes para reprogramar.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Appointment detail modal ──────────────────────────────────────────────────
+function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC }: {
+  appt:Appointment; onClose:()=>void;
+  onStatus:(id:string,s:string)=>void;
+  featureHc:boolean; onShowHC:()=>void
+}) {
+  const s   = ST[appt.status] ?? ST.pendiente
+  const svc = appt.service as { name:string; duration_minutes?:number }|undefined
+  const pat = appt.patient as { obra_social?:string }|undefined
+
+  const INFO = [
+    ['Servicio',   svc?.name ?? '—'],
+    ['Duración',   svc?.duration_minutes ? `${svc.duration_minutes} min` : '—'],
+    ['Teléfono',   appt.patient_phone ?? '—'],
+    ['Email',      appt.patient_email ?? '—'],
+    ...(pat?.obra_social ? [['Obra social', pat.obra_social]] : []),
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ backgroundColor:'rgba(11,30,36,0.65)', backdropFilter:'blur(4px)' }}
+      onClick={e => { if (e.target===e.currentTarget) onClose() }}>
+      <div style={{ width:'100%', maxWidth:'440px', borderRadius:'18px', overflow:'hidden', backgroundColor:CARD, boxShadow:'0 32px 72px rgba(0,0,0,0.22)' }}>
+        {/* Header */}
+        <div style={{ padding:'18px 20px', backgroundColor:P800, borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'8px' }}>
+            <div>
+              <div style={{ fontSize:'15px', fontWeight:700, color:'#fff', marginBottom:'3px' }}>{appt.patient_name}</div>
+              <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)', textTransform:'capitalize' }}>
+                {format(parseISO(appt.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale:es })} · {argTime(appt.starts_at)}hs
+              </div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
+              <Badge status={appt.status}/>
+              <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', fontSize:'20px', lineHeight:1, padding:'0 2px' }}>×</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div style={{ padding:'20px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'20px' }}>
+            {INFO.map(([label, value]) => (
+              <div key={label}>
+                <div style={{ fontSize:'10px', fontWeight:700, color:T3, textTransform:'uppercase', letterSpacing:'0.09em', marginBottom:'3px' }}>{label}</div>
+                <div style={{ fontSize:'13px', color:TEXT }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Primary action */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+            {(appt.status==='confirmado'||appt.status==='pendiente') && (
+              <button onClick={() => onStatus(appt.id,'en_atencion')}
+                style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}>
+                Llamar paciente
+              </button>
+            )}
+            {appt.status==='en_atencion' && (
+              <button onClick={() => onStatus(appt.id,'completado')}
+                style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:'#16a34a', color:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'7px' }}>
+                <CheckCircle size={15}/> Marcar como atendido
+              </button>
+            )}
+
+            {/* Secondary */}
+            <div style={{ display:'flex', gap:'8px' }}>
+              {featureHc && (
+                <button onClick={onShowHC}
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'transparent', color:T2, border:`1px solid ${BD}`, cursor:'pointer' }}>
+                  <FileText size={13}/> Historia clínica
+                </button>
+              )}
+              {appt.patient_phone && (
+                <a href={`https://wa.me/${appt.patient_phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer"
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0', textDecoration:'none' }}>
+                  <MessageCircle size={13}/> WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Dashboard view ────────────────────────────────────────────────────────────
+function DashView({ appointments, today, tomorrow, loading, go, onSelect, profile }: {
+  appointments:Appointment[]; today:Appointment[]; tomorrow:Appointment[];
+  loading:boolean; go:(v:View)=>void; onSelect:(a:Appointment)=>void; profile:any
+}) {
+  const now       = new Date()
+  const wkStart   = startOfWeek(now, { weekStartsOn:1 })
+  const wkEnd     = endOfWeek(now, { weekStartsOn:1 })
+  const wkAppts   = appointments.filter(a => { const d=parseISO(a.starts_at); return d>=wkStart && d<=wkEnd && a.status!=='cancelado' })
+  const pending   = appointments.filter(a => a.status==='pendiente').length
+  const nextAppt  = appointments.filter(a => parseISO(a.starts_at)>now && a.status!=='cancelado').sort((a,b)=>parseISO(a.starts_at).getTime()-parseISO(b.starts_at).getTime())[0]
+  const occupancy = Math.min(100, Math.round((wkAppts.length / Math.max(wkAppts.length+8, 20)) * 100))
+  const greeting  = now.getHours() < 13 ? 'Buenos días' : now.getHours() < 20 ? 'Buenas tardes' : 'Buenas noches'
+  const firstName = profile?.full_name?.split(' ')[0] ?? 'Profesional'
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'18px' }}>
+
+      {/* Welcome banner */}
+      <div style={{ borderRadius:'14px', padding:'22px 26px', background:`linear-gradient(130deg, ${P900} 0%, ${P600} 100%)`, position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:'-24px', right:'-24px', width:'130px', height:'130px', borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.04)' }}/>
+        <div style={{ position:'absolute', bottom:'-20px', right:'80px', width:'70px', height:'70px', borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.03)' }}/>
+        <div style={{ position:'relative', zIndex:1 }}>
+          <div style={{ fontSize:'11px', fontWeight:500, color:`${GOLD}BB`, marginBottom:'4px', letterSpacing:'0.04em' }}>{greeting}</div>
+          <div style={{ fontSize:'22px', fontWeight:700, color:'#fff', marginBottom:'6px', lineHeight:1.2 }}>{firstName}</div>
+          <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>
+            {wkAppts.length > 0
+              ? `${wkAppts.length} turno${wkAppts.length!==1?'s':''} esta semana${nextAppt ? ` · próximo: ${argTime(nextAppt.starts_at)}hs` : ''}`
+              : 'Sin turnos programados esta semana'}
+          </div>
+          <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+            <button onClick={() => go('agenda')}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 18px', borderRadius:'8px', fontSize:'12px', fontWeight:600, backgroundColor:GOLD, color:P900, border:'none', cursor:'pointer' }}>
+              Ver agenda completa <ArrowRight size={12}/>
+            </button>
+            <button onClick={() => go('pacientes')}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 16px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:'rgba(255,255,255,0.1)', color:'#fff', border:'1px solid rgba(255,255,255,0.15)', cursor:'pointer' }}>
+              <Search size={12}/> Buscar paciente
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px,1fr))', gap:'10px' }}>
+        <Metric icon={Calendar}    label="Turnos hoy"   value={today.length}         sub={today.length===0?'Sin actividad':undefined}    accent={P600}    loading={loading}/>
+        <Metric icon={Clock}       label="Esta semana"  value={wkAppts.length}        sub="turnos programados"                            accent={P600}    loading={loading}/>
+        <Metric icon={AlertCircle} label="Pendientes"   value={pending}               sub={pending>0?'Requieren atención':'Al día'}        accent="#D97706" loading={loading}/>
+        <Metric icon={TrendingUp}  label="Ocupación"    value={`${occupancy}%`}       sub="de agenda semanal"                             accent={GOLD}    loading={loading}/>
+      </div>
+
+      {/* Today's agenda */}
+      <div style={{ backgroundColor:CARD, borderRadius:'12px', border:`1px solid ${BD}`, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:`1px solid ${BD}` }}>
+          <div>
+            <div style={{ fontSize:'13px', fontWeight:600, color:TEXT }}>Agenda de hoy</div>
+            <div style={{ fontSize:'11px', color:T3, marginTop:'1px', textTransform:'capitalize' }}>
+              {format(now, "EEEE d 'de' MMMM", { locale:es })}
+            </div>
+          </div>
+          <button onClick={() => go('agenda')} style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', fontWeight:500, color:P600, background:'none', border:'none', cursor:'pointer' }}>
+            Ver todo <ArrowRight size={12}/>
+          </button>
+        </div>
+        <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', gap:'8px' }}>
+          {loading
+            ? [1,2,3].map(i => <div key={i} style={{ height:'64px', borderRadius:'9px', backgroundColor:BG, border:`1px solid ${BD}` }}/>)
+            : today.length === 0
+              ? <Empty go={go}/>
+              : today.map(a => <ApptCard key={a.id} appt={a} onClick={() => onSelect(a)}/>)
+          }
+        </div>
+      </div>
+
+      {/* Weekly chart */}
+      <WeekChart appointments={appointments}/>
+
+      {/* Tomorrow preview */}
+      {tomorrow.length > 0 && (
+        <div style={{ backgroundColor:CARD, borderRadius:'12px', border:`1px solid ${BD}`, overflow:'hidden' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:`1px solid ${BD}` }}>
+            <div style={{ fontSize:'13px', fontWeight:600, color:TEXT }}>Mañana</div>
+            <span style={{ fontSize:'11px', color:T3 }}>{tomorrow.length} turno{tomorrow.length!==1?'s':''}</span>
+          </div>
+          <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', gap:'8px' }}>
+            {tomorrow.slice(0,3).map(a => <ApptCard key={a.id} appt={a} onClick={() => onSelect(a)}/>)}
+            {tomorrow.length > 3 && (
+              <button onClick={() => go('agenda')} style={{ fontSize:'12px', color:P600, background:'none', border:'none', cursor:'pointer', padding:'8px', textAlign:'center' }}>
+                +{tomorrow.length-3} más — Ver agenda completa
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Agenda view ───────────────────────────────────────────────────────────────
+function AgendaView({ appointments, today, tomorrow, upcoming, loading, onSelect, calendar, setCalendar, week, setWeek }: {
+  appointments:Appointment[]; today:Appointment[]; tomorrow:Appointment[]; upcoming:Appointment[];
+  loading:boolean; onSelect:(a:Appointment)=>void;
+  calendar:boolean; setCalendar:(v:boolean)=>void;
+  week:Date; setWeek:(d:Date)=>void
+}) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:0 }}>Mi agenda</h2>
+        <div style={{ display:'flex', gap:'5px' }}>
+          {(['Lista','Calendario'] as const).map((lbl,i) => {
+            const active = (i===1) === calendar
+            return (
+              <button key={lbl} onClick={() => setCalendar(i===1)}
+                style={{ padding:'6px 12px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor: active ? P600 : 'transparent', color: active ? '#fff' : T2, border:`1px solid ${active ? P600 : BD}`, cursor:'pointer' }}>
+                {lbl}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {calendar
+        ? <WeekCalendar appointments={appointments} currentWeek={week} onWeekChange={setWeek} onSelect={onSelect}/>
+        : (
+          <>
+            <Section title="Hoy" count={today.length} empty="Sin turnos para hoy">
+              {today.map(a => <ApptCard key={a.id} appt={a} onClick={() => onSelect(a)}/>)}
+            </Section>
+            {tomorrow.length > 0 && (
+              <Section title="Mañana" count={tomorrow.length}>
+                {tomorrow.map(a => <ApptCard key={a.id} appt={a} onClick={() => onSelect(a)}/>)}
+              </Section>
+            )}
+            {upcoming.length > 0 && (
+              <Section title="Próximos días" count={upcoming.length}>
+                {upcoming.map(a => <ApptCard key={a.id} appt={a} onClick={() => onSelect(a)}/>)}
+              </Section>
+            )}
+          </>
+        )
+      }
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export function MedicoDashboard() {
-  const [user, setUser]                 = useState<User | null>(null)
-  const [authLoading, setAuthLoading]   = useState(true)
-  const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [, setLoadingAppts] = useState(true)
-  const [selected, setSelected]         = useState<Appointment | null>(null)
-  const [showHC, setShowHC]             = useState(false)
-  const [tab, setTab]                   = useState<'agenda' | 'pacientes' | 'bloqueos'>('agenda')
-  const [calendarView, setCalendarView] = useState(false)
-  const [currentWeek, setCurrentWeek]   = useState(new Date())
+  const [user, setUser]       = useState<User|null>(null)
+  const [authLoading, setAL]  = useState(true)
+  const [appointments, setAppts] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSel]    = useState<Appointment|null>(null)
+  const [showHC, setShowHC]   = useState(false)
+  const [view, setView]       = useState<View>('dashboard')
+  const [calendar, setCal]    = useState(false)
+  const [week, setWeek]       = useState(new Date())
+  const [drawer, setDrawer]   = useState(false)
   const navigate = useNavigate()
 
-  const { profile, loading: profileLoading } = useProfile(user)
-  const [orgId, setOrgId]           = useState<string | null>(null)
-  const [tenantType, setTenantType] = useState<string>('medical')
+  const { profile, loading:profileLoading } = useProfile(user)
+  const [orgId, setOrgId]   = useState<string|null>(null)
+  const [tenant, setTenant] = useState('medical')
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    supabase
-      .from('professionals')
-      .select('organization_id, organizations(tenant_type)')
-      .eq('id', profile.professional_id)
-      .single()
-      .then(({ data }) => {
-        setOrgId(data?.organization_id ?? null)
-        const tt = (data?.organizations as { tenant_type?: string } | null)?.tenant_type ?? 'medical'
-        setTenantType(tt)
-      })
+    supabase.from('professionals').select('organization_id, organizations(tenant_type)').eq('id', profile.professional_id).single()
+      .then(({ data }) => { setOrgId(data?.organization_id ?? null); setTenant((data?.organizations as any)?.tenant_type ?? 'medical') })
   }, [profile?.professional_id])
 
   const { featureHc } = useOrgFeatures(orgId)
-  const clientesLabel = tenantType === 'cancha' ? 'Reservas' : ['medical', 'estetica'].includes(tenantType) ? 'Pacientes' : 'Clientes'
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setAuthLoading(false)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null)
-    })
+    supabase.auth.getSession().then(({ data:{ session } }) => { setUser(session?.user ?? null); setAL(false) })
+    const { data:{ subscription } } = supabase.auth.onAuthStateChange((_,s) => setUser(s?.user ?? null))
     return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
-    if (!user && !authLoading) { navigate('/', { replace: true }); return }
+    if (!user && !authLoading) { navigate('/', { replace:true }); return }
     if (!profile) return
-    if (profile.role === 'admin' || profile.role === 'superadmin') navigate('/admin', { replace: true })
-    if (profile.role === 'recepcion') navigate('/recepcion', { replace: true })
+    if (['admin','superadmin'].includes(profile.role)) navigate('/admin', { replace:true })
+    if (profile.role === 'recepcion') navigate('/recepcion', { replace:true })
   }, [user, authLoading, profile])
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-    const from = startOfDay(weekStart).toISOString()
-    const to   = endOfDay(addDays(weekStart, 27)).toISOString()
-    supabase
-      .from('appointments')
+    const wkStart = startOfWeek(new Date(), { weekStartsOn:1 })
+    supabase.from('appointments')
       .select('*, services(name, color, duration_minutes), patients(id, full_name, phone, email, obra_social)')
       .eq('professional_id', profile.professional_id)
-      .gte('starts_at', from)
-      .lte('starts_at', to)
-      .not('status', 'eq', 'cancelado')
+      .gte('starts_at', startOfDay(wkStart).toISOString())
+      .lte('starts_at', endOfDay(addDays(wkStart, 27)).toISOString())
       .order('starts_at')
       .then(({ data }) => {
-        setAppointments((data ?? []).map((r: Record<string, unknown>) => ({
-          ...r, service: r.services, patient: r.patients,
-        })) as Appointment[])
-        setLoadingAppts(false)
+        setAppts((data ?? []).map((r:any) => ({ ...r, service:r.services, patient:r.patients })) as Appointment[])
+        setLoading(false)
       })
   }, [profile?.professional_id])
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    const channel = supabase
-      .channel(`medico-appts-${profile.professional_id}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'appointments', filter: `professional_id=eq.${profile.professional_id}` },
-        (payload) => {
-          const updated = payload.new as any
-          if (updated.status === 'cancelado') {
-            setAppointments(prev => prev.filter(a => a.id !== updated.id))
-            setSelected(prev => prev?.id === updated.id ? null : prev)
-          } else {
-            setAppointments(prev => prev.map(a => a.id === updated.id ? { ...a, ...updated } : a))
-            setSelected(prev => prev?.id === updated.id ? { ...prev, ...updated } as any : prev)
-          }
+    const ch = supabase.channel(`medico-${profile.professional_id}`)
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'appointments', filter:`professional_id=eq.${profile.professional_id}` },
+        payload => {
+          const u = payload.new as any
+          if (u.status === 'cancelado') { setAppts(p => p.filter(a => a.id !== u.id)); setSel(p => p?.id===u.id ? null : p) }
+          else { setAppts(p => p.map(a => a.id===u.id ? { ...a, ...u } : a)); setSel(p => p?.id===u.id ? { ...p, ...u } as any : p) }
         })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(ch) }
   }, [profile?.professional_id])
 
-  if (authLoading || profileLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: P800 }}>
-        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: GOLD }} />
-      </div>
-    )
-  }
+  if (authLoading || profileLoading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor:P800 }}>
+      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor:GOLD }}/>
+    </div>
+  )
   if (!user) return null
 
-  const today    = appointments.filter(a => isToday(parseISO(a.starts_at)))
-  const tomorrow = appointments.filter(a => isTomorrow(parseISO(a.starts_at)))
-  const upcoming = appointments.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
+  const active   = appointments.filter(a => a.status !== 'cancelado')
+  const today    = active.filter(a => isToday(parseISO(a.starts_at)))
+  const tomorrow = active.filter(a => isTomorrow(parseISO(a.starts_at)))
+  const upcoming = active.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
+  const logout   = () => supabase.auth.signOut()
+  const go       = (v: View) => { setView(v); setDrawer(false) }
 
-  const changeStatus = async (id: string, newStatus: string) => {
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', id)
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus as any } : a))
-    setSelected(prev => prev?.id === id ? { ...prev, status: newStatus as any } : prev)
+  const changeStatus = async (id:string, status:string) => {
+    await supabase.from('appointments').update({ status }).eq('id', id)
+    setAppts(p => p.map(a => a.id===id ? { ...a, status:status as any } : a))
+    setSel(p => p?.id===id ? { ...p, status:status as any } : p)
   }
 
-  // ── Tab config ──────────────────────────────────────────────────────────────
-  const TABS = [
-    { id: 'agenda',    icon: Calendar,  label: 'Mi agenda' },
-    { id: 'pacientes', icon: Users,     label: clientesLabel },
-    { id: 'bloqueos',  icon: CalendarX, label: 'Bloqueos' },
-  ] as const
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: BG }}>
+    <div className="min-h-screen" style={{ backgroundColor:BG }}>
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-        style={{ backgroundColor: P800, borderBottom: `1px solid ${SIDEBAR_BORDER}`, boxShadow: '0 1px 8px rgba(0,0,0,0.2)' }}>
-        <PraxisWordmark />
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <div className="text-xs font-medium" style={{ color: T_HI }}>{profile?.full_name}</div>
-            <div className="text-xs" style={{ color: T_LOW }}>Profesional</div>
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden lg:block fixed inset-y-0 left-0 w-[220px] z-20" style={{ boxShadow:'2px 0 16px rgba(0,0,0,0.14)' }}>
+        <Sidebar view={view} go={go} profile={profile} logout={logout}/>
+      </aside>
+
+      {/* ── Mobile overlay + drawer ── */}
+      {drawer && <div className="fixed inset-0 z-30 lg:hidden" style={{ backgroundColor:'rgba(0,0,0,0.5)' }} onClick={() => setDrawer(false)}/>}
+      <aside className="fixed inset-y-0 left-0 w-[260px] z-40 lg:hidden"
+        style={{ transform: drawer ? 'translateX(0)' : 'translateX(-100%)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', boxShadow:'4px 0 24px rgba(0,0,0,0.25)' }}>
+        <Sidebar view={view} go={go} profile={profile} logout={logout} close={() => setDrawer(false)}/>
+      </aside>
+
+      {/* ── Content ── */}
+      <div className="lg:pl-[220px]">
+
+        {/* Mobile header */}
+        <header className="lg:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+          style={{ backgroundColor:P800, borderBottom:'1px solid rgba(255,255,255,0.06)', boxShadow:'0 1px 10px rgba(0,0,0,0.2)' }}>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setDrawer(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', padding:'2px' }}><Menu size={20}/></button>
+            <Wordmark/>
           </div>
-          <button onClick={() => supabase.auth.signOut()}
-            className="flex items-center justify-center w-8 h-8 rounded-lg transition-all"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: T_MED }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = T_MED }}
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
-      </header>
+          <div style={{ fontSize:'11px', fontWeight:500, color:'rgba(255,255,255,0.6)' }}>{profile?.full_name?.split(' ')[0]}</div>
+        </header>
 
-      <main className="max-w-2xl mx-auto p-4 pb-10 space-y-5">
-
-        {/* ── Stat row (agenda only) ── */}
-        {tab === 'agenda' && (
-          <div className="grid grid-cols-3 gap-3 pt-1">
-            <MiniStat label="Hoy"     value={today.length}        accent={P600} />
-            <MiniStat label="Mañana"  value={tomorrow.length}     accent="#92400e" />
-            <MiniStat label="Próximos" value={appointments.length} accent="#4c1d95" />
+        {/* Desktop header */}
+        <header className="hidden lg:flex sticky top-0 z-10 items-center justify-between px-7 py-3"
+          style={{ backgroundColor:CARD, borderBottom:`1px solid ${BD}`, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div>
+            <div style={{ fontSize:'13px', fontWeight:600, color:TEXT }}>{profile?.full_name ?? '—'}</div>
+            <div style={{ fontSize:'11px', color:T3, textTransform:'capitalize' }}>
+              {format(new Date(), "EEEE d 'de' MMMM", { locale:es })} · Profesional
+            </div>
           </div>
-        )}
-
-        {/* ── Tab bar ── */}
-        <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: '#E4E7EB' }}>
-          {TABS.map(({ id, icon: Icon, label }) => {
-            const isActive = tab === id
-            return (
-              <button key={id}
-                onClick={() => setTab(id as any)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: isActive ? CARD : 'transparent',
-                  color: isActive ? TEXT : TEXT_SEC,
-                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  border: 'none', cursor: 'pointer',
-                }}>
-                <Icon size={14} />
-                {label}
-              </button>
-            )
-          })}
-          {tab === 'agenda' && (
-            <button
-              onClick={() => setCalendarView(v => !v)}
-              className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium transition-all"
-              style={{
-                backgroundColor: calendarView ? CARD : 'transparent',
-                color: calendarView ? P600 : TEXT_SEC,
-                boxShadow: calendarView ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                border: 'none', cursor: 'pointer',
-              }}
-              title={calendarView ? 'Vista lista' : 'Vista calendario'}
-            >
-              {calendarView ? <LayoutList size={14} /> : <Calendar size={14} />}
+          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'5px 12px', borderRadius:'999px', backgroundColor:'#f0fdf4', border:'1px solid #bbf7d0' }}>
+              <span style={{ width:'7px', height:'7px', borderRadius:'50%', backgroundColor:'#22c55e' }}/>
+              <span style={{ fontSize:'11px', fontWeight:500, color:'#166534' }}>Consultorio activo</span>
+            </div>
+            <button onClick={logout}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', borderRadius:'8px', border:`1px solid ${BD}`, backgroundColor:'transparent', fontSize:'12px', fontWeight:500, color:T2, cursor:'pointer' }}
+              onMouseEnter={e => { const el=e.currentTarget as HTMLElement; el.style.borderColor='#fca5a5'; el.style.color='#dc2626'; el.style.backgroundColor='#fef2f2' }}
+              onMouseLeave={e => { const el=e.currentTarget as HTMLElement; el.style.borderColor=BD; el.style.color=T2; el.style.backgroundColor='transparent' }}>
+              <LogOut size={13}/> Salir
             </button>
-          )}
-        </div>
+          </div>
+        </header>
 
-        {/* ── Content ── */}
-        {tab === 'bloqueos' && profile?.professional_id && (
-          <MiAgendaBloqueos professionalId={profile.professional_id} />
-        )}
+        {/* Main grid (content + right panel) */}
+        <div className="xl:grid xl:grid-cols-[1fr_272px]" style={{ minHeight:'calc(100vh - 56px)' }}>
 
-        {tab === 'pacientes' && (
-          <PatientSearch orgId={orgId} professionalId={profile?.professional_id ?? null} />
-        )}
-
-        {tab === 'agenda' && (
-          <>
-            {calendarView ? (
-              <WeekCalendar
-                appointments={appointments}
-                currentWeek={currentWeek}
-                onWeekChange={setCurrentWeek}
-                onSelect={setSelected}
-              />
-            ) : (
-              <>
-                <AgendaSection title="Hoy" empty={today.length === 0} emptyText="Sin turnos para hoy">
-                  {today.map(a => <ApptCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
-                </AgendaSection>
-                {tomorrow.length > 0 && (
-                  <AgendaSection title="Mañana" empty={false}>
-                    {tomorrow.map(a => <ApptCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
-                  </AgendaSection>
-                )}
-                {upcoming.length > 0 && (
-                  <AgendaSection title="Próximos días" empty={false}>
-                    {upcoming.map(a => <ApptCard key={a.id} appt={a} onClick={() => setSelected(a)} />)}
-                  </AgendaSection>
-                )}
-              </>
+          {/* Content */}
+          <main style={{ padding:'22px 22px 96px', maxWidth:'860px' }}>
+            {view === 'dashboard' && (
+              <DashView appointments={appointments} today={today} tomorrow={tomorrow} loading={loading} go={go} onSelect={setSel} profile={profile}/>
             )}
-          </>
-        )}
-      </main>
+            {view === 'agenda' && (
+              <AgendaView appointments={appointments} today={today} tomorrow={tomorrow} upcoming={upcoming} loading={loading} onSelect={setSel} calendar={calendar} setCalendar={setCal} week={week} setWeek={setWeek}/>
+            )}
+            {view === 'pacientes' && (
+              <div>
+                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>
+                  {tenant === 'cancha' ? 'Reservas' : ['medical','estetica'].includes(tenant) ? 'Pacientes' : 'Clientes'}
+                </h2>
+                <PatientSearch orgId={orgId} professionalId={profile?.professional_id ?? null}/>
+              </div>
+            )}
+            {view === 'bloqueos' && profile?.professional_id && (
+              <div>
+                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>Bloqueos de agenda</h2>
+                <MiAgendaBloqueos professionalId={profile.professional_id}/>
+              </div>
+            )}
+            {view === 'configuracion' && (
+              <div style={{ textAlign:'center', padding:'60px 20px', color:T3 }}>
+                <Settings size={36} style={{ marginBottom:'12px', opacity:0.25 }}/>
+                <p style={{ fontSize:'14px' }}>Configuración próximamente</p>
+              </div>
+            )}
+          </main>
 
-      {/* ── Clinical record modal ── */}
+          {/* Right panel — xl+ only */}
+          <aside className="hidden xl:block border-l py-5 px-4 overflow-y-auto"
+            style={{ borderColor:BD, backgroundColor:'#F8FAFB', minHeight:'100%' }}>
+            <RightPanel appointments={appointments} onSelect={setSel} go={go}/>
+          </aside>
+        </div>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around px-1 py-1.5"
+        style={{ backgroundColor:CARD, borderTop:`1px solid ${BD}`, boxShadow:'0 -4px 20px rgba(0,0,0,0.08)' }}>
+        {NAV_ITEMS.filter(n => n.id !== 'configuracion').map(({ id, icon:Icon, label }) => {
+          const active = view === id
+          return (
+            <button key={id} onClick={() => go(id as View)}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'3px', padding:'6px 10px', borderRadius:'10px', backgroundColor: active ? `${P600}10` : 'transparent', border:'none', cursor:'pointer' }}>
+              <Icon size={19} style={{ color: active ? P600 : T3 }}/>
+              <span style={{ fontSize:'9px', fontWeight: active ? 600 : 400, color: active ? P600 : T3 }}>{label.split(' ')[0]}</span>
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* Modals */}
+      {selected && !showHC && (
+        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)}/>
+      )}
       {selected && showHC && profile?.professional_id && (
         <ClinicalRecordModal
           appointmentId={selected.id}
-          patientId={(selected.patient as { id?: string } | undefined)?.id ?? null}
+          patientId={(selected.patient as any)?.id ?? null}
           professionalId={profile.professional_id}
           organizationId={selected.organization_id}
           patientName={selected.patient_name}
@@ -293,164 +775,6 @@ export function MedicoDashboard() {
           onClose={() => setShowHC(false)}
         />
       )}
-
-      {/* ── Appointment detail drawer ── */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={e => { if (e.target === e.currentTarget) setSelected(null) }}>
-          <div className="w-full max-w-md rounded-2xl overflow-hidden"
-            style={{ backgroundColor: CARD, boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: `1px solid ${BORDER}`, backgroundColor: P800 }}>
-              <span className="text-sm font-semibold" style={{ color: T_HI }}>Detalle del turno</span>
-              <button onClick={() => setSelected(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T_MED, fontSize: '18px', lineHeight: 1 }}>
-                ×
-              </button>
-            </div>
-
-            {(() => {
-              const cfg     = STATUS_CONFIG[selected.status]
-              const patient = selected.patient as { full_name: string; phone?: string; email?: string; obra_social?: string } | undefined
-              const service = selected.service as { name: string; duration_minutes: number } | undefined
-              return (
-                <div className="p-5 space-y-4">
-                  {/* Status + time */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full"
-                      style={{ backgroundColor: cfg?.bg, color: cfg?.color }}>
-                      {cfg?.label}
-                    </span>
-                    <span className="text-sm" style={{ color: TEXT_SEC }}>
-                      {format(parseISO(selected.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })} · {toArgTime(selected.starts_at)}hs
-                    </span>
-                  </div>
-
-                  {/* Info grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <InfoRow label="Paciente"   value={selected.patient_name} />
-                    <InfoRow label="Teléfono"   value={selected.patient_phone ?? '-'} />
-                    <InfoRow label="Servicio"   value={service?.name ?? '-'} />
-                    <InfoRow label="Duración"   value={service ? `${service.duration_minutes} min` : '-'} />
-                    {selected.patient_email && <InfoRow label="Email" value={selected.patient_email} />}
-                    {patient?.obra_social     && <InfoRow label="Obra social" value={patient.obra_social} />}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-1">
-                    {featureHc && (
-                      <button onClick={() => setShowHC(true)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all"
-                        style={{ border: `1px solid ${BORDER}`, color: P600, backgroundColor: 'transparent' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#f0f4f5'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'}
-                      >
-                        <FileText size={15} /> Historia clínica
-                      </button>
-                    )}
-                    {(selected.status === 'confirmado' || selected.status === 'pendiente') && (
-                      <button onClick={() => changeStatus(selected.id, 'en_atencion')}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all"
-                        style={{ backgroundColor: P600, border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = P800}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = P600}
-                      >
-                        Llamar
-                      </button>
-                    )}
-                    {selected.status === 'en_atencion' && (
-                      <button onClick={() => changeStatus(selected.id, 'completado')}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all"
-                        style={{ backgroundColor: '#16a34a', border: 'none', cursor: 'pointer' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#15803d'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#16a34a'}
-                      >
-                        Completado
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-function MiniStat({ label, value, accent }: { label: string; value: number; accent: string }) {
-  return (
-    <div className="rounded-xl p-3.5" style={{ backgroundColor: CARD, border: `1px solid ${BORDER}` }}>
-      <div className="text-2xl font-bold" style={{ color: accent }}>{value}</div>
-      <div className="text-xs font-medium mt-0.5" style={{ color: TEXT_SEC }}>{label}</div>
-    </div>
-  )
-}
-
-function AgendaSection({ title, children, empty, emptyText }: {
-  title: string; children?: React.ReactNode; empty: boolean; emptyText?: string
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: GOLD }} />
-        <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: TEXT_SEC }}>
-          {title}
-        </h2>
-      </div>
-      {empty
-        ? (
-          <div className="rounded-xl p-5 text-center text-sm" style={{ backgroundColor: CARD, border: `1px solid ${BORDER}`, color: TEXT_SEC }}>
-            {emptyText}
-          </div>
-        )
-        : <div className="space-y-2">{children}</div>
-      }
-    </div>
-  )
-}
-
-function ApptCard({ appt, onClick }: { appt: Appointment; onClick: () => void }) {
-  const service = appt.service as { name: string; color?: string } | undefined
-  const cfg = STATUS_CONFIG[appt.status]
-  return (
-    <button onClick={onClick} className="w-full text-left rounded-xl p-4 flex items-center gap-3 transition-all"
-      style={{ backgroundColor: CARD, border: `1px solid ${BORDER}`, cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'}
-    >
-      {/* Status dot */}
-      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg?.color }} />
-      {/* Time */}
-      <div className="text-sm font-mono font-semibold w-11 flex-shrink-0" style={{ color: TEXT }}>
-        {toArgTime(appt.starts_at)}
-      </div>
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate" style={{ color: TEXT }}>{appt.patient_name}</div>
-        {service?.name && (
-          <div className="text-xs truncate mt-0.5" style={{ color: TEXT_SEC }}>{service.name}</div>
-        )}
-      </div>
-      {/* Badge */}
-      <span className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: cfg?.bg, color: cfg?.color }}>
-        {cfg?.label}
-      </span>
-      <ChevronRight size={14} style={{ color: TEXT_SEC, flexShrink: 0 }} />
-    </button>
-  )
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-xs mb-0.5" style={{ color: TEXT_SEC }}>{label}</div>
-      <div className="text-sm font-medium" style={{ color: TEXT }}>{value}</div>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { ServiceSelector } from './ServiceSelector'
 import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
+import { PremiumBookingFlow } from './PremiumBookingFlow'
 
 const STEPS_MEDICAL = [
   { label: 'Servicio',     icon: Stethoscope },
@@ -121,6 +122,11 @@ export function BookingFlow() {
   const instagramHandle  = org.instagram_handle ?? null
   const orgAddress       = org.address ?? null
   const STEPS            = getSteps(tenantType)
+
+  // Beauty & estética tenants get the premium booking experience
+  if (tenantType === 'beauty' || tenantType === 'estetica') {
+    return <PremiumBookingFlow org={org} />
+  }
 
   if (completed) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -256,7 +262,18 @@ export function BookingFlow() {
         {state.step === 1 && (
           <ServiceSelector
             selected={state.service}
-            onSelect={s => { update({ service: s, professional: undefined, fecha: undefined, hora: undefined }); next() }}
+            onSelect={async s => {
+              const { data } = await supabase
+                .from('professional_services')
+                .select('professionals(id, full_name, specialty, bio, avatar_url, active)')
+                .eq('service_id', s.id)
+              const profs = (data ?? []).map((r: any) => r.professionals).filter((p: any) => p?.active)
+              if (profs.length === 1) {
+                update({ service: s, professional: profs[0], fecha: undefined, hora: undefined, step: 3 })
+              } else {
+                update({ service: s, professional: undefined, fecha: undefined, hora: undefined }); next()
+              }
+            }}
             orgId={org.id}
             tenantType={tenantType}
             accentColor={accentColor}

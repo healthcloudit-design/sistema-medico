@@ -8,61 +8,82 @@ import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
 
-// ── Design tokens ──────────────────────────────────────────────────────────
-const G = {
-  gold:      '#C9A96E',
-  goldFade:  'rgba(201,169,110,0.12)',
-  goldBorder:'rgba(201,169,110,0.25)',
-  dark:      '#0B0B0B',
-  card:      '#141414',
-  border:    'rgba(255,255,255,0.07)',
-  textPri:   '#FFFFFF',
-  textSec:   'rgba(255,255,255,0.52)',
-  textMuted: 'rgba(255,255,255,0.25)',
-  serif:     "'Playfair Display', Georgia, serif",
-  sans:      "'Inter', sans-serif",
+// ── Design tokens (accent = org primary_color, fallback gold) ──────────────
+const DARK      = '#0B0B0B'
+const CARD      = '#141414'
+const BORDER    = 'rgba(255,255,255,0.07)'
+const TEXT_PRI  = '#FFFFFF'
+const TEXT_SEC  = 'rgba(255,255,255,0.52)'
+const TEXT_MUTED= 'rgba(255,255,255,0.25)'
+const SERIF     = "'Playfair Display', Georgia, serif"
+const SANS      = "'Inter', sans-serif"
+
+// 8-digit hex opacity helpers (CSS-native, no rgba needed)
+const fade   = (hex: string) => hex + '1E' // ~12%
+const border = (hex: string) => hex + '40' // ~25%
+
+// ── Per-tenant context ──────────────────────────────────────────────────────
+function getTenantContext(tenantType: string, orgName: string) {
+  if (tenantType === 'medical') return {
+    eyebrow:     'Medicina Estética',
+    subtitle:    'Reservá tu consulta personalizada',
+    ctaLabel:    'Reservar Consulta',
+    doneTitle:   'Consulta confirmada',
+    doneMsg:     'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking:  'Reservar otra consulta',
+    heroImg:     'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1600&h=900&fit=crop&auto=format&q=80',
+  }
+  if (tenantType === 'estetica') return {
+    eyebrow:     'Estética de Autor',
+    subtitle:    'Reservá tu experiencia personalizada',
+    ctaLabel:    'Reservar Turno',
+    doneTitle:   'Reserva confirmada',
+    doneMsg:     'Tu reserva fue registrada. Te contactamos para confirmar.',
+    newBooking:  'Reservar otro turno',
+    heroImg:     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
+  }
+  // beauty / fallback
+  return {
+    eyebrow:     'Peluquería de Autora',
+    subtitle:    'Reservá tu experiencia personalizada',
+    ctaLabel:    'Reservar Turno',
+    doneTitle:   'Reserva confirmada',
+    doneMsg:     'Tu reserva fue registrada. Te contactamos para confirmar.',
+    newBooking:  'Reservar otro turno',
+    heroImg:     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
+  }
 }
 
-// ── Category images — editorial, brand-specific, NOT generic stock ─────────
-// These represent the ESSENCE of each service, not the category
+// ── Category images ─────────────────────────────────────────────────────────
 const CAT_IMG: Record<string, string> = {
-  // Hair — close-up artisan work, not salon interior
-  'Peluquería':   'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
-  'Peluqueria':   'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
-  // Nails — artistic detail, editorial
-  'Manicuría':    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Manicuria':    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Manos':        'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  // Feet
-  'Pedicuría':    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Pedicuria':    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
-  // Massage — warm, intimate, textural
-  'Masajes':      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
-  // Facial — luminous skin, not spa stock
-  'Facial':       'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
-  // Barber — artisan craft
-  'Barbería':     'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Barberia':     'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
-  // Nail art
-  'Nail Art':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Semi':         'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Esculpidas':   'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Kapping':      'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  // Aesthetic & lymph
-  'Drenaje':      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&h=450&fit=crop&auto=format&q=85',
-  'Reflexología': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
-  'Aparatología': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
-  // Dermatology — luminous skin, premium aesthetic medicine — NOT medical stock
-  'Consultas':    'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=450&fit=crop&auto=format&q=85',
-  'Tratamientos': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
+  'Peluquería':    'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
+  'Peluqueria':    'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
+  'Manicuría':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
+  'Manicuria':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
+  'Manos':         'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
+  'Pedicuría':     'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
+  'Pedicuria':     'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
+  'Masajes':       'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
+  'Facial':        'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
+  'Barbería':      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
+  'Barberia':      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
+  'Nail Art':      'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
+  'Semi':          'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
+  'Drenaje':       'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&h=450&fit=crop&auto=format&q=85',
+  'Reflexología':  'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
+  'Aparatología':  'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
+  // Dermatología / medicina estética
+  'Consultas':     'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
+  'Consulta':      'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
+  'Tratamientos':  'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
+  'Tratamiento':   'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
   'Procedimientos':'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
-  // Sports
-  'Fútbol':       'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=600&h=450&fit=crop&auto=format&q=85',
-  'Pádel':        'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&h=450&fit=crop&auto=format&q=85',
-  'Tenis':        'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=600&h=450&fit=crop&auto=format&q=85',
+  'Procedimiento': 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
+  'LASER':         'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
+  'Laser':         'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&h=450&fit=crop&auto=format&q=85',
 }
 
-// ── Service thumbnail — keyword matching ────────────────────────────────────
+// ── Service thumbnails ──────────────────────────────────────────────────────
 const SVC_KW: [string, string][] = [
   ['keratina',      'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=160&h=160&fit=crop&auto=format'],
   ['alisado',       'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=160&h=160&fit=crop&auto=format'],
@@ -81,13 +102,16 @@ const SVC_KW: [string, string][] = [
   ['toxina',        'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
   ['hialur',        'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
   ['relleno',       'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
-  ['peeling',       'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=160&h=160&fit=crop&auto=format'],
+  ['peeling',       'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
   ['laser',         'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
   ['láser',         'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
-  ['bioestimul',    'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=160&h=160&fit=crop&auto=format'],
-  ['consulta',      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=160&h=160&fit=crop&auto=format'],
-  ['rinoplastia',   'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
+  ['bioestimul',    'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
+  ['prp',           'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
   ['f-cell',        'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
+  ['dermapen',      'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
+  ['hidratac',      'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
+  ['consulta',      'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=160&h=160&fit=crop&auto=format'],
+  ['rinoplastia',   'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=160&h=160&fit=crop&auto=format'],
 ]
 
 function svcThumb(name: string, catImg: string | null): string | null {
@@ -103,18 +127,17 @@ const INIT: BookingState = {
 
 const STEPS = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar']
 
-// ── Hero image — editorial, changes per category if detected ───────────────
-// Default: editorial hair & beauty (warm, intimate)
-const HERO_DEFAULT = 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80'
-
 export function PremiumBookingFlow({ org }: { org: Organization }) {
-  const [state, setState]       = useState<BookingState>(INIT)
+  const gold  = org.primary_color ?? '#C9A96E'
+  const ctx   = getTenantContext(org.tenant_type ?? 'beauty', org.name)
+
+  const [state, setState]         = useState<BookingState>(INIT)
   const [completed, setCompleted] = useState(false)
   const [services, setServices]   = useState<Service[]>([])
   const [loadingSvc, setLoadingSvc] = useState(true)
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
-  const [hovCat, setHovCat]     = useState<string | null>(null)
-  const [hovSvc, setHovSvc]     = useState<string | null>(null)
+  const [hovCat, setHovCat]       = useState<string | null>(null)
+  const [hovSvc, setHovSvc]       = useState<string | null>(null)
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const instagramHandle = org.instagram_handle?.replace(/^@/, '') ?? null
@@ -138,9 +161,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const scrollToBooking = () =>
     setTimeout(() => bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
 
-  useEffect(() => {
-    if (state.step > 1) scrollToBooking()
-  }, [state.step])
+  useEffect(() => { if (state.step > 1) scrollToBooking() }, [state.step])
 
   const handleServiceSelect = async (svc: Service) => {
     const { data } = await supabase
@@ -161,82 +182,78 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
     [services, selectedCat],
   )
 
-  // ── Completed ─────────────────────────────────────────────────────────────
+  // ── Completed ──────────────────────────────────────────────────────────────
   if (completed) return (
-    <div style={{ minHeight: '100vh', backgroundColor: G.dark, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
-      {/* Subtle bg texture */}
-      <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${HERO_DEFAULT})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.08, transform: 'scale(1.1)', zIndex: 0 }} />
-      <div style={{ position: 'relative', zIndex: 1, backgroundColor: G.card, border: `1px solid ${G.border}`, borderRadius: '20px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: G.goldFade, border: `1px solid ${G.goldBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <CheckCircle size={28} style={{ color: G.gold }} />
+    <div style={{ minHeight: '100vh', backgroundColor: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${ctx.heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.08, transform: 'scale(1.1)', zIndex: 0 }} />
+      <div style={{ position: 'relative', zIndex: 1, backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: '20px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: fade(gold), border: `1px solid ${border(gold)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <CheckCircle size={28} style={{ color: gold }} />
         </div>
-        <div style={{ fontFamily: G.serif, fontSize: '26px', fontStyle: 'italic', fontWeight: 400, color: G.textPri, marginBottom: '8px' }}>Reserva confirmada</div>
-        <p style={{ fontFamily: G.sans, fontSize: '13px', color: G.textSec, marginBottom: '28px', lineHeight: 1.65 }}>
-          Tu reserva fue registrada. Te contactamos para confirmar.
-        </p>
-        <div style={{ backgroundColor: G.goldFade, border: `1px solid ${G.goldBorder}`, borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '24px' }}>
+        <div style={{ fontFamily: SERIF, fontSize: '26px', fontStyle: 'italic', fontWeight: 400, color: TEXT_PRI, marginBottom: '8px' }}>{ctx.doneTitle}</div>
+        <p style={{ fontFamily: SANS, fontSize: '13px', color: TEXT_SEC, marginBottom: '28px', lineHeight: 1.65 }}>{ctx.doneMsg}</p>
+        <div style={{ backgroundColor: fade(gold), border: `1px solid ${border(gold)}`, borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '24px' }}>
           {[
             ['Servicio',    state.service?.name ?? ''],
             ['Profesional', state.professional?.full_name ?? ''],
             ['Fecha',       state.fecha ? format(parseISO(state.fecha), "EEEE d 'de' MMMM", { locale: es }) : ''],
             ['Hora',        state.hora ? `${state.hora}hs` : ''],
           ].filter(([, v]) => v).map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontFamily: G.sans, fontSize: '13px', textTransform: label === 'Fecha' ? 'capitalize' : 'none' }}>
-              <span style={{ color: G.textMuted }}>{label}</span>
-              <span style={{ color: G.textPri, fontWeight: 500 }}>{val}</span>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontFamily: SANS, fontSize: '13px', textTransform: label === 'Fecha' ? 'capitalize' : 'none' }}>
+              <span style={{ color: TEXT_MUTED }}>{label}</span>
+              <span style={{ color: TEXT_PRI, fontWeight: 500 }}>{val}</span>
             </div>
           ))}
         </div>
         {whatsappNumber && (
           <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', padding: '13px', fontFamily: G.sans, fontSize: '13px', fontWeight: 500, cursor: 'pointer', textDecoration: 'none', marginBottom: '10px' }}>
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 500, cursor: 'pointer', textDecoration: 'none', marginBottom: '10px' }}>
             <MessageCircle size={15} /> Confirmar por WhatsApp
           </a>
         )}
         <button onClick={() => { setState(INIT); setCompleted(false); setSelectedCat(null) }}
-          style={{ width: '100%', backgroundColor: G.gold, color: G.dark, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: G.sans, fontSize: '13px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em' }}>
-          Reservar otro turno
+          style={{ width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em' }}>
+          {ctx.newBooking}
         </button>
       </div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: G.dark }}>
+    <div style={{ minHeight: '100vh', backgroundColor: DARK }}>
 
-      {/* ─────────── HERO ─────────── */}
+      {/* ─── HERO ─── */}
       <div style={{ position: 'relative', height: '88vh', minHeight: '580px', maxHeight: '900px' }}>
-        <img src={HERO_DEFAULT} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
+        <img src={ctx.heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)' }} />
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
 
           {logoUrl && (
             <img src={logoUrl} alt={org.name}
-              style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }}
-            />
+              style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
 
-          <div style={{ fontFamily: G.sans, fontSize: '10px', fontWeight: 400, letterSpacing: '0.35em', textTransform: 'uppercase', color: G.gold, marginBottom: '14px' }}>
-            {org.tenant_type === 'estetica' ? 'Estética de Autor' : 'Peluquería de Autora'}
+          <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 400, letterSpacing: '0.35em', textTransform: 'uppercase', color: gold, marginBottom: '14px' }}>
+            {ctx.eyebrow}
           </div>
 
-          <h1 style={{ fontFamily: G.serif, fontSize: 'clamp(34px, 7vw, 54px)', fontWeight: 400, fontStyle: 'italic', color: '#fff', margin: '0 0 18px', lineHeight: 1.15, maxWidth: '540px' }}>
+          <h1 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 6vw, 50px)', fontWeight: 400, fontStyle: 'italic', color: '#fff', margin: '0 0 18px', lineHeight: 1.15, maxWidth: '580px' }}>
             {org.name}
           </h1>
 
-          <p style={{ fontFamily: G.sans, fontSize: '15px', fontWeight: 300, color: 'rgba(255,255,255,0.58)', marginBottom: '44px', maxWidth: '320px', lineHeight: 1.65 }}>
-            Reservá tu experiencia personalizada
+          <p style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 300, color: 'rgba(255,255,255,0.58)', marginBottom: '44px', maxWidth: '320px', lineHeight: 1.65 }}>
+            {ctx.subtitle}
           </p>
 
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '52px' }}>
             <button onClick={scrollToBooking}
-              style={{ backgroundColor: G.gold, color: G.dark, border: 'none', borderRadius: '8px', padding: '14px 36px', fontFamily: G.sans, fontWeight: 600, fontSize: '13px', letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
-              Reservar Turno
+              style={{ backgroundColor: gold, color: DARK, border: 'none', borderRadius: '8px', padding: '14px 36px', fontFamily: SANS, fontWeight: 600, fontSize: '13px', letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              {ctx.ctaLabel}
             </button>
             {instagramHandle && (
               <a href={`https://instagram.com/${instagramHandle}`} target="_blank" rel="noopener noreferrer"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', padding: '14px 28px', fontFamily: G.sans, fontWeight: 400, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                <Instagram size={14} /> Ver Instagram
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', padding: '14px 28px', fontFamily: SANS, fontWeight: 400, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Instagram size={14} /> @{instagramHandle}
               </a>
             )}
           </div>
@@ -244,25 +261,25 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {orgAddress && (
               <a href={`https://maps.google.com/?q=${encodeURIComponent(orgAddress)}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: G.sans, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
                 <MapPin size={13} />{orgAddress}
               </a>
             )}
             {whatsappNumber && (
               <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: G.sans, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
                 <MessageCircle size={13} />WhatsApp
               </a>
             )}
           </div>
         </div>
         <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: '1px', height: '36px', background: `linear-gradient(to bottom, transparent, ${G.gold})` }} />
+          <div style={{ width: '1px', height: '36px', background: `linear-gradient(to bottom, transparent, ${gold})` }} />
         </div>
       </div>
 
-      {/* ─────────── STEPS BAR (sticky) ─────────── */}
-      <div ref={bookingRef} style={{ backgroundColor: '#0E0E0E', borderBottom: `1px solid ${G.border}`, position: 'sticky', top: 0, zIndex: 30 }}>
+      {/* ─── STEPS BAR ─── */}
+      <div ref={bookingRef} style={{ backgroundColor: '#0E0E0E', borderBottom: `1px solid ${BORDER}`, position: 'sticky', top: 0, zIndex: 30 }}>
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {STEPS.map((label, i) => {
@@ -272,15 +289,15 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: G.sans, fontSize: '11px', fontWeight: 600, transition: 'all 0.25s', backgroundColor: isDone ? G.gold : 'transparent', border: isDone ? 'none' : isActive ? `1.5px solid ${G.gold}` : `1px solid rgba(255,255,255,0.18)`, color: isDone ? G.dark : isActive ? G.gold : G.textMuted }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SANS, fontSize: '11px', fontWeight: 600, transition: 'all 0.25s', backgroundColor: isDone ? gold : 'transparent', border: isDone ? 'none' : isActive ? `1.5px solid ${gold}` : `1px solid rgba(255,255,255,0.18)`, color: isDone ? DARK : isActive ? gold : TEXT_MUTED }}>
                       {isDone ? '✓' : n}
                     </div>
-                    <span style={{ fontFamily: G.sans, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: isActive ? G.gold : G.textMuted, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: SANS, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: isActive ? gold : TEXT_MUTED, whiteSpace: 'nowrap' }}>
                       {label}
                     </span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? G.gold : G.border, transition: 'background-color 0.3s' }} />
+                    <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? gold : BORDER, transition: 'background-color 0.3s' }} />
                   )}
                 </div>
               )
@@ -289,33 +306,31 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         </div>
       </div>
 
-      {/* ─────────── CONTENT ─────────── */}
+      {/* ─── CONTENT ─── */}
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px 80px', position: 'relative' }}>
-
-        {/* Subtle blurred texture behind content */}
-        <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${HERO_DEFAULT})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(32px)', opacity: 0.06, transform: 'scale(1.1)', zIndex: 0, pointerEvents: 'none' }} />
+        <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${ctx.heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(32px)', opacity: 0.06, transform: 'scale(1.1)', zIndex: 0, pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* ── STEP 1: Services ── */}
+        {/* STEP 1 */}
         {state.step === 1 && (
           <div>
             <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontFamily: G.sans, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: G.gold, marginBottom: '8px' }}>Paso 1</div>
-              <h2 style={{ fontFamily: G.serif, fontSize: '28px', fontStyle: 'italic', fontWeight: 400, color: G.textPri, margin: 0 }}>
+              <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 1</div>
+              <h2 style={{ fontFamily: SERIF, fontSize: '28px', fontStyle: 'italic', fontWeight: 400, color: TEXT_PRI, margin: 0 }}>
                 {selectedCat ? `Servicios de ${selectedCat}` : '¿Qué servicio buscás?'}
               </h2>
             </div>
 
             {selectedCat && (
               <button onClick={() => setSelectedCat(null)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: G.sans, fontSize: '12px', color: G.gold, background: 'none', border: `1px solid ${G.goldBorder}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: gold, background: 'none', border: `1px solid ${border(gold)}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
                 <ChevronLeft size={14} /> {selectedCat}
               </button>
             )}
 
             {loadingSvc ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                {[1,2,3,4].map(i => <div key={i} style={{ aspectRatio: '4/3', backgroundColor: G.card, borderRadius: '16px' }} />)}
+                {[1,2,3,4].map(i => <div key={i} style={{ aspectRatio: '4/3', backgroundColor: CARD, borderRadius: '16px' }} />)}
               </div>
             ) : !selectedCat && categories.length > 1 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -325,15 +340,15 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                   const isHov = hovCat === cat
                   return (
                     <button key={cat} onClick={() => setSelectedCat(cat)} onMouseEnter={() => setHovCat(cat)} onMouseLeave={() => setHovCat(null)}
-                      style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${G.gold}` : `1px solid ${G.border}`, cursor: 'pointer', background: 'none', padding: 0, transition: 'border-color 0.2s, transform 0.2s', transform: isHov ? 'scale(1.02)' : 'scale(1)' }}>
+                      style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, cursor: 'pointer', background: 'none', padding: 0, transition: 'border-color 0.2s, transform 0.2s', transform: isHov ? 'scale(1.02)' : 'scale(1)' }}>
                       {img
                         ? <img src={img} alt={cat} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: isHov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
-                        : <div style={{ position: 'absolute', inset: 0, backgroundColor: G.card }} />
+                        : <div style={{ position: 'absolute', inset: 0, backgroundColor: CARD }} />
                       }
-                      <div style={{ position: 'absolute', inset: 0, background: isHov ? 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.82) 100%)' : 'linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.72) 100%)', transition: 'background 0.2s' }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.72) 100%)' }} />
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px' }}>
-                        <div style={{ fontFamily: G.serif, fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '2px' }}>{cat}</div>
-                        <div style={{ fontFamily: G.sans, fontSize: '11px', color: isHov ? G.gold : 'rgba(255,255,255,0.5)', transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'}</div>
+                        <div style={{ fontFamily: SERIF, fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '2px' }}>{cat}</div>
+                        <div style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : 'rgba(255,255,255,0.5)', transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'}</div>
                       </div>
                     </button>
                   )
@@ -342,25 +357,25 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredSvcs.map(svc => {
-                  const thumb  = svcThumb(svc.name, selectedCat ? (CAT_IMG[selectedCat] ?? null) : null)
-                  const isHov  = hovSvc === svc.id
+                  const thumb = svcThumb(svc.name, selectedCat ? (CAT_IMG[selectedCat] ?? null) : null)
+                  const isHov = hovSvc === svc.id
                   return (
                     <button key={svc.id} onClick={() => handleServiceSelect(svc)} onMouseEnter={() => setHovSvc(svc.id)} onMouseLeave={() => setHovSvc(null)}
-                      style={{ display: 'flex', alignItems: 'stretch', borderRadius: '14px', overflow: 'hidden', border: isHov ? `1px solid ${G.gold}` : `1px solid ${G.border}`, backgroundColor: isHov ? '#1C1C1C' : G.card, cursor: 'pointer', padding: 0, textAlign: 'left', transition: 'all 0.2s' }}>
+                      style={{ display: 'flex', alignItems: 'stretch', borderRadius: '14px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, backgroundColor: isHov ? '#1C1C1C' : CARD, cursor: 'pointer', padding: 0, textAlign: 'left', transition: 'all 0.2s' }}>
                       {thumb && (
                         <div style={{ width: '80px', flexShrink: 0, overflow: 'hidden' }}>
                           <img src={thumb} alt={svc.name} style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '80px' }} />
                         </div>
                       )}
                       <div style={{ flex: 1, padding: '14px 16px' }}>
-                        <div style={{ fontFamily: G.sans, fontWeight: 500, fontSize: '14px', color: G.textPri, marginBottom: '3px' }}>{svc.name}</div>
-                        {svc.description && <div style={{ fontFamily: G.sans, fontSize: '12px', color: G.textSec, lineHeight: 1.5, marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>{svc.description}</div>}
+                        <div style={{ fontFamily: SANS, fontWeight: 500, fontSize: '14px', color: TEXT_PRI, marginBottom: '3px' }}>{svc.name}</div>
+                        {svc.description && <div style={{ fontFamily: SANS, fontSize: '12px', color: TEXT_SEC, lineHeight: 1.5, marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>{svc.description}</div>}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: G.sans, fontSize: '11px', color: G.textMuted }}><Clock size={11} />{svc.duration_minutes} min</span>
-                          {svc.price != null && svc.price > 0 && <span style={{ fontFamily: G.sans, fontSize: '12px', fontWeight: 500, color: G.gold }}>${svc.price.toLocaleString('es-AR')}</span>}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: SANS, fontSize: '11px', color: TEXT_MUTED }}><Clock size={11} />{svc.duration_minutes} min</span>
+                          {svc.price != null && svc.price > 0 && <span style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 500, color: gold }}>${svc.price.toLocaleString('es-AR')}</span>}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px 0 4px', color: G.textMuted, flexShrink: 0, fontSize: '18px' }}>›</div>
+                      <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px 0 4px', color: TEXT_MUTED, flexShrink: 0, fontSize: '18px' }}>›</div>
                     </button>
                   )
                 })}
@@ -369,31 +384,27 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           </div>
         )}
 
-        {/* ── STEP 2: Professional — fully dark ── */}
+        {/* STEP 2 */}
         {state.step === 2 && state.service && (
           <div>
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontFamily: G.sans, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: G.gold, marginBottom: '8px' }}>Paso 2</div>
-            </div>
+            <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 2</div>
             <ProfessionalSelector
               service={state.service}
               selected={state.professional}
               onSelect={p => update({ professional: p, fecha: undefined, hora: undefined })}
               onConfirm={() => update({ step: 3 })}
               onBack={() => update({ step: 1 })}
-              accentColor={G.gold}
+              accentColor={gold}
               tenantType={org.tenant_type ?? 'beauty'}
               darkMode={true}
             />
           </div>
         )}
 
-        {/* ── STEP 3: Date / Time — fully dark ── */}
+        {/* STEP 3 */}
         {state.step === 3 && state.professional && (
           <div>
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontFamily: G.sans, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: G.gold, marginBottom: '8px' }}>Paso 3</div>
-            </div>
+            <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 3</div>
             <DateTimeSelector
               professional={state.professional}
               selectedDate={state.fecha}
@@ -401,25 +412,23 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
               serviceDurationMinutes={state.service?.duration_minutes ?? 30}
               onSelect={(fecha, hora) => update({ fecha, hora, step: 4 })}
               onBack={() => update({ step: 2 })}
-              accentColor={G.gold}
+              accentColor={gold}
               darkMode={true}
             />
           </div>
         )}
 
-        {/* ── STEP 4: Confirm — fully dark ── */}
+        {/* STEP 4 */}
         {state.step === 4 && (
           <div>
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontFamily: G.sans, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: G.gold, marginBottom: '8px' }}>Paso 4</div>
-            </div>
+            <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 4</div>
             <BookingConfirm
               state={state}
               onChange={update}
               onBack={() => update({ step: 3 })}
               onComplete={() => setCompleted(true)}
               tenantType={org.tenant_type ?? 'beauty'}
-              accentColor={G.gold}
+              accentColor={gold}
               darkMode={true}
             />
           </div>

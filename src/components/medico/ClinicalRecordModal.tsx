@@ -129,7 +129,7 @@ function exportPDF(
     ` : ''}
 
     <div style="margin-top:48px;border-top:1px solid #e5e7eb;padding-top:12px;font-size:11px;color:#9ca3af;">
-      Generado por TurnOS · ${new Date().toLocaleString('es-AR')}
+      Generado por PRAXIS Agenda · ${new Date().toLocaleString('es-AR')}
     </div>
     </body></html>
   `

@@ -1,13 +1,40 @@
 import { useState } from 'react'
-import { LayoutDashboard, Calendar, Building2, Store, Menu, X, LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2 } from 'lucide-react'
+import {
+  LayoutDashboard, Calendar, Building2, Store, Menu, X,
+  LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2, ChevronRight,
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { GreetingBanner } from '../shared/GreetingBanner'
 
-// ── Praxis brand tokens ───────────────────────────────────────
-const P_TEAL = '#1a4a52'
-const P_GOLD = '#c9a97e'
-const P_TEAL_LIGHT = '#1a4a5218'
-const P_GOLD_LIGHT = '#c9a97e22'
+// ── PRAXIS Agenda design tokens ──────────────────────────────────────────────
+export const PA = {
+  // Petroleum blue scale
+  P900: '#0B1E24',
+  P800: '#0F2830',
+  P700: '#14323D',
+  P600: '#1A3F4E',
+  P500: '#1e4d5e',
+  // Gold
+  GOLD: '#C9A96E',
+  GOLD_DIM: '#C9A96E33',
+  GOLD_BORDER: '#C9A96E55',
+  // Text
+  T_HI: '#FFFFFF',
+  T_MED: 'rgba(255,255,255,0.55)',
+  T_LOW: 'rgba(255,255,255,0.25)',
+  // UI
+  BORDER: 'rgba(255,255,255,0.07)',
+  BORDER2: 'rgba(255,255,255,0.12)',
+  // Content area
+  BG: '#F4F5F7',
+  CARD: '#FFFFFF',
+  TEXT: '#111827',
+  TEXT_SEC: '#6B7280',
+  BORDER_LIGHT: '#E5E7EB',
+} as const
+
+export type AdminView =
+  | 'dashboard' | 'appointments' | 'availability' | 'services'
+  | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes'
 
 interface NavItem {
   label: string
@@ -15,8 +42,6 @@ interface NavItem {
   view: AdminView
   superadminOnly?: boolean
 }
-
-export type AdminView = 'dashboard' | 'appointments' | 'availability' | 'services' | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes'
 
 const NAV: NavItem[] = [
   { label: 'Dashboard',      icon: LayoutDashboard, view: 'dashboard'     },
@@ -31,10 +56,10 @@ const NAV: NavItem[] = [
 ]
 
 const ROLE_LABEL: Record<string, string> = {
-  superadmin: 'Super Admin',
+  superadmin:  'Super Admin',
   globaladmin: 'Global Admin',
-  comercial: 'Comercial',
-  admin: 'Admin',
+  comercial:   'Comercial',
+  admin:       'Admin',
 }
 
 interface Props {
@@ -52,12 +77,73 @@ function getGreeting() {
   return 'Buenas noches'
 }
 
-export function AdminLayout({ children, activeView, onNavigate, userRole = 'admin', userName = '' }: Props) {
-  const [mobileOpen, setMobileOpen] = useState(false)
+// ── Wordmark ─────────────────────────────────────────────────────────────────
+function PraxisWordmark({ collapsed = false }: { collapsed?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', userSelect: 'none' }}>
+      <span style={{
+        fontFamily: "'Inter', sans-serif", fontWeight: 800,
+        fontSize: '16px', letterSpacing: '-0.02em', color: PA.T_HI,
+      }}>PRAXIS</span>
+      {!collapsed && (
+        <span style={{
+          fontFamily: "'Inter', sans-serif", fontWeight: 300,
+          fontSize: '14px', letterSpacing: '0.04em', color: PA.GOLD,
+        }}>Agenda</span>
+      )}
+    </div>
+  )
+}
 
+// ── Nav button ───────────────────────────────────────────────────────────────
+function NavBtn({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
+  const Icon = item.icon
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        width: '100%', padding: '9px 12px', borderRadius: '8px',
+        fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: active ? 500 : 400,
+        border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+        backgroundColor: active
+          ? PA.GOLD_DIM
+          : hov ? 'rgba(255,255,255,0.06)' : 'transparent',
+        color: active ? PA.GOLD : hov ? PA.T_HI : PA.T_MED,
+      }}
+    >
+      <Icon size={15} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {active && <ChevronRight size={12} style={{ opacity: 0.5 }} />}
+    </button>
+  )
+}
+
+// ── Role pill ────────────────────────────────────────────────────────────────
+function RolePill({ role }: { role: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 10px', borderRadius: '999px',
+      fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 500,
+      backgroundColor: PA.GOLD_DIM, color: PA.GOLD, border: `1px solid ${PA.GOLD_BORDER}`,
+      letterSpacing: '0.02em',
+    }}>
+      {ROLE_LABEL[role] ?? role}
+    </span>
+  )
+}
+
+// ── Sidebar content ──────────────────────────────────────────────────────────
+function SidebarContent({ activeView, onNavigate, userRole, userName, onClose, onLogout }: {
+  activeView: AdminView; onNavigate: (v: AdminView) => void
+  userRole: string; userName: string; onClose?: () => void; onLogout: () => void
+}) {
   const isSuperadmin = userRole === 'superadmin'
-  const isAdmin      = ['admin', 'superadmin'].includes(userRole)
-  const isPraxis     = ['superadmin', 'globaladmin', 'comercial'].includes(userRole)
+  const isAdmin = ['admin', 'superadmin'].includes(userRole)
 
   const visibleNav = NAV.filter(item => {
     if (item.superadminOnly) return isSuperadmin || userRole === 'globaladmin'
@@ -65,221 +151,192 @@ export function AdminLayout({ children, activeView, onNavigate, userRole = 'admi
     return true
   })
 
-  const handleLogout = () => supabase.auth.signOut()
-
-  // ── Sidebar logo section ─────────────────────────────────────
-  const SidebarBrand = () => isPraxis ? (
-    <div className="p-5 border-b" style={{ borderColor: `${P_GOLD}33` }}>
-      <img src="/praxis_logo.png" alt="Praxis Operativa" className="h-8 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
-      <p className="text-xs mt-2 font-medium" style={{ color: P_GOLD }}>Sistema de Turnos</p>
-    </div>
-  ) : (
-    <div className="p-5 border-b border-gray-100">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center">
-          <Calendar className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-bold text-gray-900">TurnOS</span>
-      </div>
-    </div>
-  )
-
-  // ── Mobile header brand ──────────────────────────────────────
-  const MobileHeaderBrand = () => isPraxis ? (
-    <img src="/praxis_logo.png" alt="Praxis Operativa" className="h-7 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
-  ) : (
-    <span className="font-bold text-gray-900">TurnOS</span>
-  )
-
-  // ── Sidebar styles ───────────────────────────────────────────
-  const sidebarBg    = isPraxis ? P_TEAL    : 'white'
-  const sidebarBorder = isPraxis ? 'transparent' : '#f3f4f6'
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: PA.P800 }}>
 
-      {/* Desktop sidebar */}
-      <aside
-        className="hidden lg:flex flex-col w-60 fixed inset-y-0 left-0 z-20"
-        style={{ backgroundColor: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}
-      >
-        <SidebarBrand />
-        <nav className="flex-1 p-3 space-y-1">
-          {visibleNav.map(item => (
-            <NavButton
-              key={item.view}
-              item={item}
-              active={activeView === item.view}
-              isPraxis={isPraxis}
-              onClick={() => onNavigate(item.view)}
-            />
-          ))}
-        </nav>
-        {/* Role badge bottom */}
-        <div className="p-4 border-t" style={{ borderColor: isPraxis ? `${P_GOLD}33` : '#f3f4f6' }}>
-          <span
-            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={isPraxis
-              ? { backgroundColor: P_GOLD_LIGHT, color: P_GOLD }
-              : { backgroundColor: '#f0f9ff', color: '#0284c7' }}
-          >
-            {ROLE_LABEL[userRole] ?? userRole}
-          </span>
-        </div>
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMobileOpen(false)} />
-      )}
-
-      {/* Mobile sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-60 transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ backgroundColor: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}
-      >
-        <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: isPraxis ? `${P_GOLD}33` : '#f3f4f6' }}>
-          <MobileHeaderBrand />
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="p-1 rounded-lg transition-colors"
-            style={isPraxis ? { color: P_GOLD } : { color: '#6b7280' }}
-          >
-            <X className="w-4 h-4" />
+      {/* Brand header */}
+      <div style={{
+        padding: '20px 16px 16px',
+        borderBottom: `1px solid ${PA.BORDER}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <PraxisWordmark />
+        {onClose && (
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: PA.T_MED, padding: '4px', borderRadius: '6px',
+          }}>
+            <X size={16} />
           </button>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
+        {/* Group divider */}
+        <div style={{ padding: '4px 12px 8px', fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: PA.T_LOW }}>
+          Gestión
         </div>
-        <nav className="flex-1 p-3 space-y-1">
-          {visibleNav.map(item => (
-            <NavButton
-              key={item.view}
-              item={item}
-              active={activeView === item.view}
-              isPraxis={isPraxis}
-              onClick={() => { onNavigate(item.view); setMobileOpen(false) }}
-            />
-          ))}
-        </nav>
-        <div className="p-4 border-t" style={{ borderColor: isPraxis ? `${P_GOLD}33` : '#f3f4f6' }}>
-          <span
-            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={isPraxis
-              ? { backgroundColor: P_GOLD_LIGHT, color: P_GOLD }
-              : { backgroundColor: '#f0f9ff', color: '#0284c7' }}
-          >
-            {ROLE_LABEL[userRole] ?? userRole}
-          </span>
+        {visibleNav.slice(0, 6).map(item => (
+          <NavBtn key={item.view} item={item} active={activeView === item.view}
+            onClick={() => { onNavigate(item.view); onClose?.() }} />
+        ))}
+        {visibleNav.length > 6 && (
+          <>
+            <div style={{ padding: '12px 12px 8px', fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: PA.T_LOW, marginTop: '4px' }}>
+              Sistema
+            </div>
+            {visibleNav.slice(6).map(item => (
+              <NavBtn key={item.view} item={item} active={activeView === item.view}
+                onClick={() => { onNavigate(item.view); onClose?.() }} />
+            ))}
+          </>
+        )}
+      </nav>
+
+      {/* Footer */}
+      <div style={{
+        padding: '12px 16px', borderTop: `1px solid ${PA.BORDER}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '8px',
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 500, color: PA.T_HI, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+            {userName || '—'}
+          </div>
+          <RolePill role={userRole} />
         </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 lg:pl-60">
-
-        {/* Desktop header */}
-        <header
-          className="hidden lg:flex sticky top-0 z-10 px-6 py-3 items-center justify-between"
-          style={isPraxis
-            ? { backgroundColor: '#f0f4f5', borderBottom: `1px solid ${P_TEAL}22` }
-            : { backgroundColor: 'white', borderBottom: '1px solid #f3f4f6' }}
+        <button onClick={onLogout} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '32px', height: '32px', borderRadius: '8px', border: 'none',
+          backgroundColor: 'transparent', cursor: 'pointer', color: PA.T_MED,
+          flexShrink: 0, transition: 'all 0.15s',
+        }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(239,68,68,0.15)'; (e.currentTarget as HTMLElement).style.color = '#f87171' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = PA.T_MED }}
+          title="Cerrar sesión"
         >
-          <div className="flex items-center gap-3">
-            <div>
-              <span className="text-sm text-gray-500">{getGreeting()},</span>
-              <span className="ml-1.5 font-semibold text-gray-900">{userName || '—'}</span>
-            </div>
-            {isPraxis && (
-              <span
-                className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: P_TEAL_LIGHT, color: P_TEAL }}
-              >
-                {ROLE_LABEL[userRole]}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-xl transition-colors text-gray-500 hover:text-red-600 hover:bg-red-50"
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar sesión
-          </button>
-        </header>
-
-        {/* Mobile header */}
-        <header
-          className="lg:hidden sticky top-0 z-10 px-4 py-3 flex items-center justify-between"
-          style={isPraxis
-            ? { backgroundColor: P_TEAL, borderBottom: `1px solid ${P_GOLD}33` }
-            : { backgroundColor: 'white', borderBottom: '1px solid #f3f4f6' }}
-        >
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="p-1.5 rounded-lg"
-              style={isPraxis ? { color: P_GOLD } : { color: '#4b5563' }}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            {isPraxis
-              ? <img src="/praxis_logo.png" alt="Praxis" className="h-6 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
-              : <span className="font-bold text-gray-900">TurnOS</span>
-            }
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm hidden sm:block" style={isPraxis ? { color: P_GOLD } : { color: '#6b7280' }}>
-              {userName}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-lg transition-colors"
-              style={isPraxis ? { color: P_GOLD } : { color: '#6b7280' }}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        <main className="p-4 lg:p-6 max-w-6xl mx-auto">
-          {activeView === 'dashboard' && (
-            <div className="mb-6">
-              <GreetingBanner userName={userName} />
-            </div>
-          )}
-          {children}
-        </main>
+          <LogOut size={15} />
+        </button>
       </div>
     </div>
   )
 }
 
-function NavButton({ item, active, isPraxis, onClick }: {
-  item: NavItem; active: boolean; isPraxis: boolean; onClick: () => void
-}) {
-  const Icon = item.icon
-
-  const activeStyle = isPraxis
-    ? { backgroundColor: P_GOLD_LIGHT, color: P_GOLD }
-    : { backgroundColor: '#f0f9ff', color: '#0284c7' }
-
-  const inactiveStyle = isPraxis
-    ? { color: 'rgba(255,255,255,0.65)' }
-    : { color: '#6b7280' }
+// ── Main layout ──────────────────────────────────────────────────────────────
+export function AdminLayout({ children, activeView, onNavigate, userRole = 'admin', userName = '' }: Props) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const handleLogout = () => supabase.auth.signOut()
 
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all font-medium"
-      style={active ? activeStyle : inactiveStyle}
-      onMouseEnter={e => {
-        if (!active) Object.assign((e.currentTarget as HTMLElement).style,
-          isPraxis ? { backgroundColor: 'rgba(255,255,255,0.08)', color: 'white' } : { backgroundColor: '#f9fafb', color: '#374151' })
+    <div style={{ minHeight: '100vh', backgroundColor: PA.BG, display: 'flex' }}>
+
+      {/* ─ Desktop sidebar ─ */}
+      <aside style={{
+        display: 'none', width: '220px', position: 'fixed',
+        inset: '0 auto 0 0', zIndex: 20, boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
       }}
-      onMouseLeave={e => {
-        if (!active) Object.assign((e.currentTarget as HTMLElement).style,
-          isPraxis ? { backgroundColor: 'transparent', color: 'rgba(255,255,255,0.65)' } : { backgroundColor: 'transparent', color: '#6b7280' })
-      }}
-    >
-      <Icon className="w-4 h-4 flex-shrink-0" />
-      {item.label}
-    </button>
+        className="lg-sidebar"
+      >
+        <style>{`
+          @media (min-width: 1024px) {
+            .lg-sidebar { display: flex !important; flex-direction: column; }
+            .lg-content { padding-left: 220px !important; }
+            .mobile-header { display: none !important; }
+          }
+        `}</style>
+        <SidebarContent
+          activeView={activeView} onNavigate={onNavigate}
+          userRole={userRole} userName={userName} onLogout={handleLogout}
+        />
+      </aside>
+
+      {/* ─ Mobile overlay ─ */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 30, backdropFilter: 'blur(2px)' }}
+        />
+      )}
+
+      {/* ─ Mobile sidebar ─ */}
+      <aside style={{
+        position: 'fixed', inset: '0 auto 0 0', width: '260px', zIndex: 40,
+        transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        boxShadow: mobileOpen ? '4px 0 24px rgba(0,0,0,0.25)' : 'none',
+      }}>
+        <SidebarContent
+          activeView={activeView} onNavigate={onNavigate}
+          userRole={userRole} userName={userName}
+          onClose={() => setMobileOpen(false)} onLogout={handleLogout}
+        />
+      </aside>
+
+      {/* ─ Content ─ */}
+      <div className="lg-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+
+        {/* Mobile header */}
+        <header className="mobile-header" style={{
+          position: 'sticky', top: 0, zIndex: 10,
+          padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          backgroundColor: PA.P800, borderBottom: `1px solid ${PA.BORDER}`,
+          boxShadow: '0 1px 8px rgba(0,0,0,0.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={() => setMobileOpen(true)} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: PA.T_MED, padding: '4px',
+            }}>
+              <Menu size={20} />
+            </button>
+            <PraxisWordmark />
+          </div>
+          <button onClick={handleLogout} style={{
+            background: 'none', border: 'none', cursor: 'pointer', color: PA.T_MED, padding: '4px',
+          }}>
+            <LogOut size={16} />
+          </button>
+        </header>
+
+        {/* Desktop top bar */}
+        <header style={{
+          display: 'none', position: 'sticky', top: 0, zIndex: 10,
+          padding: '12px 28px',
+          backgroundColor: PA.CARD, borderBottom: `1px solid ${PA.BORDER_LIGHT}`,
+          alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        }}
+          className="lg-topbar"
+        >
+          <style>{`@media (min-width: 1024px) { .lg-topbar { display: flex !important; } }`}</style>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', color: PA.TEXT_SEC }}>
+              {getGreeting()},
+            </span>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: PA.TEXT }}>
+              {userName || '—'}
+            </span>
+            <RolePill role={userRole} />
+          </div>
+          <button onClick={handleLogout} style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 14px', borderRadius: '8px', border: `1px solid ${PA.BORDER_LIGHT}`,
+            backgroundColor: 'transparent', cursor: 'pointer',
+            fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 500, color: PA.TEXT_SEC,
+            transition: 'all 0.15s',
+          }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#fca5a5'; el.style.color = '#dc2626'; el.style.backgroundColor = '#fef2f2' }}
+            onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = PA.BORDER_LIGHT; el.style.color = PA.TEXT_SEC; el.style.backgroundColor = 'transparent' }}
+          >
+            <LogOut size={14} /> Cerrar sesión
+          </button>
+        </header>
+
+        <main style={{ padding: '28px 28px 60px', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+          {children}
+        </main>
+      </div>
+    </div>
   )
 }

@@ -1,36 +1,85 @@
 import { useEffect, useState } from 'react'
-import { Calendar, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Calendar, CheckCircle, XCircle, Clock, TrendingUp, ArrowRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import type { Appointment } from '../../types'
+import { PA } from './AdminLayout'
 
-const ESTADO_CONFIG: Record<string, { label: string; className: string }> = {
-  confirmado: { label: 'Confirmado', className: 'bg-green-100 text-green-800' },
-  pendiente:  { label: 'Pendiente',  className: 'bg-yellow-100 text-yellow-800' },
-  cancelado:  { label: 'Cancelado',  className: 'bg-red-100 text-red-800' },
-  no_asistio: { label: 'No asistio', className: 'bg-gray-100 text-gray-600' },
-  completado: { label: 'Completado', className: 'bg-blue-100 text-blue-800' },
+// ── Status config ─────────────────────────────────────────────────────────────
+const STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  confirmado: { label: 'Confirmado', color: '#16a34a', bg: '#f0fdf4' },
+  pendiente:  { label: 'Pendiente',  color: '#d97706', bg: '#fffbeb' },
+  cancelado:  { label: 'Cancelado',  color: '#dc2626', bg: '#fef2f2' },
+  no_asistio: { label: 'No asistió', color: '#6b7280', bg: '#f9fafb' },
+  completado: { label: 'Completado', color: '#2563eb', bg: '#eff6ff' },
+  en_atencion:{ label: 'En atención', color: '#7c3aed', bg: '#f5f3ff' },
 }
 
-function toArgTime(iso: string): string {
+function toArgTime(iso: string) {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
   const d = new Date(ms)
   return `${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`
 }
 
+// ── Stat card ─────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, accent, loading }: {
+  icon: React.ElementType; label: string; value: number; accent: string; loading: boolean
+}) {
+  return (
+    <div style={{
+      backgroundColor: PA.CARD, borderRadius: '12px',
+      border: `1px solid ${PA.BORDER_LIGHT}`, padding: '20px 22px',
+      display: 'flex', alignItems: 'center', gap: '14px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    }}>
+      <div style={{
+        width: '42px', height: '42px', borderRadius: '10px', flexShrink: 0,
+        backgroundColor: `${accent}14`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={20} style={{ color: accent }} />
+      </div>
+      <div>
+        {loading ? (
+          <div style={{ width: '40px', height: '28px', borderRadius: '6px', backgroundColor: '#f3f4f6', marginBottom: '4px' }} />
+        ) : (
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '26px', fontWeight: 700, color: PA.TEXT, lineHeight: 1 }}>
+            {value}
+          </div>
+        )}
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: PA.TEXT_SEC, marginTop: '3px', fontWeight: 400 }}>
+          {label}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', fontWeight: 600, color: PA.TEXT, margin: 0 }}>
+        {title}
+      </h2>
+      {sub && <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: PA.TEXT_SEC }}>{sub}</span>}
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export function Dashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [stats, setStats] = useState({ total: 0, confirmados: 0, cancelados: 0, pendientes: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const today = format(new Date(), 'yyyy-MM-dd')
+    const today    = format(new Date(), 'yyyy-MM-dd')
     const dayStart = `${today}T00:00:00-03:00`
     const dayEnd   = `${today}T23:59:59-03:00`
 
-    supabase
-      .from('appointments')
+    supabase.from('appointments')
       .select('*, professionals(full_name, specialty), services(name, color), patients(full_name, phone)')
       .gte('starts_at', dayStart)
       .lte('starts_at', dayEnd)
@@ -53,53 +102,110 @@ export function Dashboard() {
       })
   }, [])
 
+  const todayLabel = format(new Date(), "EEEE d 'de' MMMM", { locale: es })
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm capitalize">
-          {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+      {/* Page header */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div style={{
+            width: '4px', height: '20px', borderRadius: '2px',
+            background: `linear-gradient(to bottom, ${PA.GOLD}, ${PA.P600})`,
+            flexShrink: 0,
+          }} />
+          <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: '20px', fontWeight: 700, color: PA.TEXT, margin: 0 }}>
+            Dashboard
+          </h1>
+        </div>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: PA.TEXT_SEC, textTransform: 'capitalize', marginLeft: '12px' }}>
+          {todayLabel}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Calendar}    label="Turnos hoy"  value={stats.total}       color="blue"   loading={loading} />
-        <StatCard icon={CheckCircle} label="Confirmados" value={stats.confirmados}  color="green"  loading={loading} />
-        <StatCard icon={Clock}       label="Pendientes"  value={stats.pendientes}   color="yellow" loading={loading} />
-        <StatCard icon={XCircle}     label="Cancelados"  value={stats.cancelados}   color="red"    loading={loading} />
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
+        <StatCard icon={Calendar}    label="Turnos hoy"  value={stats.total}       accent={PA.P600}    loading={loading} />
+        <StatCard icon={CheckCircle} label="Confirmados" value={stats.confirmados}  accent="#16a34a"    loading={loading} />
+        <StatCard icon={Clock}       label="Pendientes"  value={stats.pendientes}   accent="#d97706"    loading={loading} />
+        <StatCard icon={XCircle}     label="Cancelados"  value={stats.cancelados}   accent="#dc2626"    loading={loading} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Turnos de hoy</h2>
-          <span className="text-sm text-gray-400">{stats.total} total</span>
+      {/* Appointment table */}
+      <div style={{ backgroundColor: PA.CARD, borderRadius: '12px', border: `1px solid ${PA.BORDER_LIGHT}`, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: `1px solid ${PA.BORDER_LIGHT}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <SectionHeader title="Turnos de hoy" sub={`${stats.total} total`} />
         </div>
+
         {loading ? (
-          <div className="p-5 space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-gray-50 rounded-xl animate-pulse" />)}</div>
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ height: '56px', borderRadius: '8px', backgroundColor: '#f9fafb', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            ))}
+          </div>
         ) : appointments.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p>No hay turnos para hoy</p>
+          <div style={{ padding: '56px 20px', textAlign: 'center' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <Calendar size={22} style={{ color: '#9ca3af' }} />
+            </div>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', color: PA.TEXT_SEC, margin: 0 }}>
+              Sin turnos para hoy
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {appointments.map(a => {
-              const professional = a.professional as { full_name: string } | undefined
+          <div>
+            {appointments.map((a, idx) => {
+              const professional = a.professional as { full_name: string; specialty?: string } | undefined
               const service      = a.service      as { name: string } | undefined
-              const cfg = ESTADO_CONFIG[a.status]
+              const cfg          = STATUS[a.status] ?? STATUS.pendiente
+
               return (
-                <div key={a.id} className="px-5 py-3.5 flex items-center gap-3">
-                  <div className="text-sm font-mono font-semibold text-gray-500 w-12">
+                <div key={a.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  padding: '13px 20px',
+                  borderBottom: idx < appointments.length - 1 ? `1px solid ${PA.BORDER_LIGHT}` : 'none',
+                  transition: 'background-color 0.12s',
+                }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'}
+                >
+                  {/* Time */}
+                  <div style={{
+                    fontFamily: "'Inter', sans-serif", fontSize: '13px',
+                    fontWeight: 600, color: PA.TEXT, letterSpacing: '0.01em',
+                    width: '42px', flexShrink: 0,
+                  }}>
                     {toArgTime(a.starts_at)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 text-sm">{a.patient_name}</div>
-                    <div className="text-xs text-gray-400">
-                      {service?.name} - {professional?.full_name}
+
+                  {/* Status dot */}
+                  <div style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    backgroundColor: cfg.color, flexShrink: 0,
+                  }} />
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 500, color: PA.TEXT }}>
+                      {a.patient_name}
+                    </div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', color: PA.TEXT_SEC, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {[service?.name, professional?.full_name].filter(Boolean).join(' · ')}
                     </div>
                   </div>
-                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${cfg?.className}`}>
-                    {cfg?.label}
+
+                  {/* Status badge */}
+                  <span style={{
+                    fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 500,
+                    padding: '3px 10px', borderRadius: '999px', flexShrink: 0,
+                    backgroundColor: cfg.bg, color: cfg.color,
+                  }}>
+                    {cfg.label}
                   </span>
                 </div>
               )
@@ -107,29 +213,23 @@ export function Dashboard() {
           </div>
         )}
       </div>
-    </div>
-  )
-}
 
-function StatCard({ icon: Icon, label, value, color, loading }: {
-  icon: React.ElementType; label: string; value: number; color: string; loading: boolean
-}) {
-  const colors: Record<string, string> = {
-    blue:   'bg-blue-50 text-blue-600',
-    green:  'bg-green-50 text-green-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
-    red:    'bg-red-50 text-red-600',
-  }
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${colors[color]}`}>
-        <Icon className="w-4 h-4" />
+      {/* Quick stats row — for later extension */}
+      <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => {/* navigate to appointments */}}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 500,
+            color: PA.P600, background: 'none', border: 'none', cursor: 'pointer',
+            padding: '6px 0', opacity: 0.8,
+          }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0.8'}
+        >
+          Ver todos los turnos <ArrowRight size={13} />
+        </button>
       </div>
-      {loading
-        ? <div className="h-7 w-10 bg-gray-100 rounded animate-pulse mb-1" />
-        : <div className="text-2xl font-bold text-gray-900">{value}</div>
-      }
-      <div className="text-xs text-gray-500">{label}</div>
     </div>
   )
 }

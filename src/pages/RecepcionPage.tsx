@@ -138,7 +138,7 @@ export function RecepcionPage() {
             <Calendar className="w-4 h-4 text-white" />
           </div>
           <div>
-            <span className="font-bold text-gray-900 text-sm">TurnOS</span>
+            <span className="font-bold text-gray-900 text-sm">PRAXIS Agenda</span>
             <span className="text-xs text-gray-400 ml-2">Recepcion</span>
           </div>
         </div>

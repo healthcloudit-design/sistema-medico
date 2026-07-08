@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle, ChevronLeft, Clock, MapPin, MessageCircle, Instagram } from 'lucide-react'
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Instagram } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -8,116 +8,93 @@ import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
 
-// ── Design tokens (accent = org primary_color, fallback gold) ──────────────
+// ── Tokens ──────────────────────────────────────────────────────────────────
 const DARK      = '#0B0B0B'
 const CARD      = '#141414'
+const CARD2     = '#1A1A1A'
 const BORDER    = 'rgba(255,255,255,0.07)'
+const BORDER2   = 'rgba(255,255,255,0.12)'
 const TEXT_PRI  = '#FFFFFF'
 const TEXT_SEC  = 'rgba(255,255,255,0.52)'
-const TEXT_MUTED= 'rgba(255,255,255,0.25)'
+const TEXT_MUTED= 'rgba(255,255,255,0.28)'
 const SERIF     = "'Playfair Display', Georgia, serif"
 const SANS      = "'Inter', sans-serif"
 
-// 8-digit hex opacity helpers (CSS-native, no rgba needed)
-const fade   = (hex: string) => hex + '1E' // ~12%
-const border = (hex: string) => hex + '40' // ~25%
+const fade   = (hex: string) => hex + '1E'
+const bord   = (hex: string) => hex + '40'
+
+// ── Category accent gradients (no external images) ──────────────────────────
+const CAT_GRADIENT: Record<string, string> = {
+  // Hair / beauty
+  'Peluquería':    'linear-gradient(135deg, #2C1810 0%, #1A0F0A 100%)',
+  'Peluqueria':    'linear-gradient(135deg, #2C1810 0%, #1A0F0A 100%)',
+  'Barbería':      'linear-gradient(135deg, #1A1A2E 0%, #0F0F1A 100%)',
+  'Barberia':      'linear-gradient(135deg, #1A1A2E 0%, #0F0F1A 100%)',
+  // Nails
+  'Manicuría':     'linear-gradient(135deg, #2A1520 0%, #1A0D14 100%)',
+  'Manicuria':     'linear-gradient(135deg, #2A1520 0%, #1A0D14 100%)',
+  'Manos':         'linear-gradient(135deg, #2A1520 0%, #1A0D14 100%)',
+  'Nail Art':      'linear-gradient(135deg, #2A1520 0%, #1A0D14 100%)',
+  'Semi':          'linear-gradient(135deg, #2A1520 0%, #1A0D14 100%)',
+  'Pedicuría':     'linear-gradient(135deg, #201520 0%, #120F12 100%)',
+  'Pedicuria':     'linear-gradient(135deg, #201520 0%, #120F12 100%)',
+  // Relaxation
+  'Masajes':       'linear-gradient(135deg, #0F1E2A 0%, #091218 100%)',
+  'Reflexología':  'linear-gradient(135deg, #0F1E2A 0%, #091218 100%)',
+  'Reflexologia':  'linear-gradient(135deg, #0F1E2A 0%, #091218 100%)',
+  'Drenaje':       'linear-gradient(135deg, #0A1A1A 0%, #060F0F 100%)',
+  // Skin / facial / medical aesthetic
+  'Facial':        'linear-gradient(135deg, #1E1420 0%, #120D14 100%)',
+  'Aparatología':  'linear-gradient(135deg, #0E1C2A 0%, #091218 100%)',
+  'Aparatologia':  'linear-gradient(135deg, #0E1C2A 0%, #091218 100%)',
+  // Dermatology
+  'Consultas':     'linear-gradient(135deg, #0E1A24 0%, #091218 100%)',
+  'Consulta':      'linear-gradient(135deg, #0E1A24 0%, #091218 100%)',
+  'Tratamientos':  'linear-gradient(135deg, #1C1020 0%, #110A14 100%)',
+  'Tratamiento':   'linear-gradient(135deg, #1C1020 0%, #110A14 100%)',
+  'Procedimientos':'linear-gradient(135deg, #101E20 0%, #0A1214 100%)',
+  'Procedimiento': 'linear-gradient(135deg, #101E20 0%, #0A1214 100%)',
+  'LASER':         'linear-gradient(135deg, #101E20 0%, #0A1214 100%)',
+  'Laser':         'linear-gradient(135deg, #101E20 0%, #0A1214 100%)',
+  // Sports
+  'Fútbol':        'linear-gradient(135deg, #0F2010 0%, #091509 100%)',
+  'Futbol':        'linear-gradient(135deg, #0F2010 0%, #091509 100%)',
+  'Pádel':         'linear-gradient(135deg, #1A1A10 0%, #0F0F09 100%)',
+  'Padel':         'linear-gradient(135deg, #1A1A10 0%, #0F0F09 100%)',
+  'Tenis':         'linear-gradient(135deg, #1A1A10 0%, #0F0F09 100%)',
+}
+
+const DEFAULT_GRAD = 'linear-gradient(135deg, #1A1A1A 0%, #0F0F0F 100%)'
 
 // ── Per-tenant context ──────────────────────────────────────────────────────
-function getTenantContext(tenantType: string, orgName: string) {
+function getTenantContext(tenantType: string) {
   if (tenantType === 'medical') return {
-    eyebrow:     'Medicina Estética',
-    subtitle:    'Reservá tu consulta personalizada',
-    ctaLabel:    'Reservar Consulta',
-    doneTitle:   'Consulta confirmada',
-    doneMsg:     'Tu consulta fue registrada. Te contactamos para confirmar.',
-    newBooking:  'Reservar otra consulta',
-    heroImg:     'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1600&h=900&fit=crop&auto=format&q=80',
+    eyebrow:    'Medicina Estética',
+    subtitle:   'Reservá tu consulta personalizada',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1600&h=900&fit=crop&auto=format&q=80',
   }
   if (tenantType === 'estetica') return {
-    eyebrow:     'Estética de Autor',
-    subtitle:    'Reservá tu experiencia personalizada',
-    ctaLabel:    'Reservar Turno',
-    doneTitle:   'Reserva confirmada',
-    doneMsg:     'Tu reserva fue registrada. Te contactamos para confirmar.',
-    newBooking:  'Reservar otro turno',
-    heroImg:     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
+    eyebrow:    'Estética de Autor',
+    subtitle:   'Reservá tu experiencia personalizada',
+    ctaLabel:   'Reservar Turno',
+    doneTitle:  'Reserva confirmada',
+    doneMsg:    'Tu reserva fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otro turno',
+    heroImg:    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
   }
-  // beauty / fallback
   return {
-    eyebrow:     'Peluquería de Autora',
-    subtitle:    'Reservá tu experiencia personalizada',
-    ctaLabel:    'Reservar Turno',
-    doneTitle:   'Reserva confirmada',
-    doneMsg:     'Tu reserva fue registrada. Te contactamos para confirmar.',
-    newBooking:  'Reservar otro turno',
-    heroImg:     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
+    eyebrow:    'Peluquería de Autora',
+    subtitle:   'Reservá tu experiencia personalizada',
+    ctaLabel:   'Reservar Turno',
+    doneTitle:  'Reserva confirmada',
+    doneMsg:    'Tu reserva fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otro turno',
+    heroImg:    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
   }
-}
-
-// ── Category images ─────────────────────────────────────────────────────────
-const CAT_IMG: Record<string, string> = {
-  'Peluquería':    'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
-  'Peluqueria':    'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=600&h=450&fit=crop&auto=format&q=85',
-  'Manicuría':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Manicuria':     'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Manos':         'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Pedicuría':     'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Pedicuria':     'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Masajes':       'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
-  'Facial':        'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=600&h=450&fit=crop&auto=format&q=85',
-  'Barbería':      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Barberia':      'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&h=450&fit=crop&auto=format&q=85',
-  'Nail Art':      'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Semi':          'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&h=450&fit=crop&auto=format&q=85',
-  'Drenaje':       'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&h=450&fit=crop&auto=format&q=85',
-  'Reflexología':  'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=450&fit=crop&auto=format&q=85',
-  'Aparatología':  'https://images.unsplash.com/photo-9PWGki5WCGs?w=600&h=450&fit=crop&auto=format&q=85',
-  // Dermatología / medicina estética
-  'Consultas':     'https://images.unsplash.com/photo-9TTNQmAV9TQ?w=600&h=450&fit=crop&auto=format&q=85',
-  'Consulta':      'https://images.unsplash.com/photo-9TTNQmAV9TQ?w=600&h=450&fit=crop&auto=format&q=85',
-  'Tratamientos':  'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=600&h=450&fit=crop&auto=format&q=85',
-  'Tratamiento':   'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=600&h=450&fit=crop&auto=format&q=85',
-  'Procedimientos':'https://images.unsplash.com/photo-9PWGki5WCGs?w=600&h=450&fit=crop&auto=format&q=85',
-  'Procedimiento': 'https://images.unsplash.com/photo-9PWGki5WCGs?w=600&h=450&fit=crop&auto=format&q=85',
-  'LASER':         'https://images.unsplash.com/photo-9PWGki5WCGs?w=600&h=450&fit=crop&auto=format&q=85',
-  'Laser':         'https://images.unsplash.com/photo-9PWGki5WCGs?w=600&h=450&fit=crop&auto=format&q=85',
-}
-
-// ── Service thumbnails ──────────────────────────────────────────────────────
-const SVC_KW: [string, string][] = [
-  ['keratina',      'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=160&h=160&fit=crop&auto=format'],
-  ['alisado',       'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=160&h=160&fit=crop&auto=format'],
-  ['brushing',      'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=160&h=160&fit=crop&auto=format'],
-  ['color',         'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=160&h=160&fit=crop&auto=format'],
-  ['tintura',       'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=160&h=160&fit=crop&auto=format'],
-  ['mechas',        'https://images.unsplash.com/photo-1522337660859-02dc82f4c5b9?w=160&h=160&fit=crop&auto=format'],
-  ['corte',         'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=160&h=160&fit=crop&auto=format'],
-  ['semipermanente','https://images.unsplash.com/photo-1604654894610-df63bc536371?w=160&h=160&fit=crop&auto=format'],
-  ['esculpidas',    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=160&h=160&fit=crop&auto=format'],
-  ['manicur',       'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=160&h=160&fit=crop&auto=format'],
-  ['pedicur',       'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=160&h=160&fit=crop&auto=format'],
-  ['masaje',        'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=160&h=160&fit=crop&auto=format'],
-  ['drenaje',       'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=160&h=160&fit=crop&auto=format'],
-  ['botox',         'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=160&h=160&fit=crop&auto=format'],
-  ['toxina',        'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=160&h=160&fit=crop&auto=format'],
-  ['hialur',        'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=160&h=160&fit=crop&auto=format'],
-  ['relleno',       'https://images.unsplash.com/photo-QWoJ-e_OQWA?w=160&h=160&fit=crop&auto=format'],
-  ['peeling',       'https://images.unsplash.com/photo-1r3KDC0P0oA?w=160&h=160&fit=crop&auto=format'],
-  ['laser',         'https://images.unsplash.com/photo-9PWGki5WCGs?w=160&h=160&fit=crop&auto=format'],
-  ['láser',         'https://images.unsplash.com/photo-9PWGki5WCGs?w=160&h=160&fit=crop&auto=format'],
-  ['bioestimul',    'https://images.unsplash.com/photo-RbIcMsh0NSk?w=160&h=160&fit=crop&auto=format'],
-  ['prp',           'https://images.unsplash.com/photo-RbIcMsh0NSk?w=160&h=160&fit=crop&auto=format'],
-  ['f-cell',        'https://images.unsplash.com/photo-9PWGki5WCGs?w=160&h=160&fit=crop&auto=format'],
-  ['dermapen',      'https://images.unsplash.com/photo-RbIcMsh0NSk?w=160&h=160&fit=crop&auto=format'],
-  ['hidratac',      'https://images.unsplash.com/photo-RbIcMsh0NSk?w=160&h=160&fit=crop&auto=format'],
-  ['consulta',      'https://images.unsplash.com/photo-9TTNQmAV9TQ?w=160&h=160&fit=crop&auto=format'],
-  ['rinoplastia',   'https://images.unsplash.com/photo-9PWGki5WCGs?w=160&h=160&fit=crop&auto=format'],
-]
-
-function svcThumb(name: string, catImg: string | null): string | null {
-  const lc = name.toLowerCase()
-  for (const [kw, url] of SVC_KW) if (lc.includes(kw)) return url
-  return catImg
 }
 
 const INIT: BookingState = {
@@ -129,15 +106,15 @@ const STEPS = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar']
 
 export function PremiumBookingFlow({ org }: { org: Organization }) {
   const gold  = org.primary_color ?? '#C9A96E'
-  const ctx   = getTenantContext(org.tenant_type ?? 'beauty', org.name)
+  const ctx   = getTenantContext(org.tenant_type ?? 'beauty')
 
-  const [state, setState]         = useState<BookingState>(INIT)
-  const [completed, setCompleted] = useState(false)
-  const [services, setServices]   = useState<Service[]>([])
+  const [state, setState]           = useState<BookingState>(INIT)
+  const [completed, setCompleted]   = useState(false)
+  const [services, setServices]     = useState<Service[]>([])
   const [loadingSvc, setLoadingSvc] = useState(true)
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
-  const [hovCat, setHovCat]       = useState<string | null>(null)
-  const [hovSvc, setHovSvc]       = useState<string | null>(null)
+  const [hovCat, setHovCat]         = useState<string | null>(null)
+  const [hovSvc, setHovSvc]         = useState<string | null>(null)
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const instagramHandle = org.instagram_handle?.replace(/^@/, '') ?? null
@@ -187,21 +164,16 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
     <div style={{ minHeight: '100vh', backgroundColor: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
       <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${ctx.heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.08, transform: 'scale(1.1)', zIndex: 0 }} />
       <div style={{ position: 'relative', zIndex: 1, backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: '20px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: fade(gold), border: `1px solid ${border(gold)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: fade(gold), border: `1px solid ${bord(gold)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <CheckCircle size={28} style={{ color: gold }} />
         </div>
         <div style={{ fontFamily: SERIF, fontSize: '26px', fontStyle: 'italic', fontWeight: 400, color: TEXT_PRI, marginBottom: '8px' }}>{ctx.doneTitle}</div>
         <p style={{ fontFamily: SANS, fontSize: '13px', color: TEXT_SEC, marginBottom: '28px', lineHeight: 1.65 }}>{ctx.doneMsg}</p>
-        <div style={{ backgroundColor: fade(gold), border: `1px solid ${border(gold)}`, borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '24px' }}>
-          {[
-            ['Servicio',    state.service?.name ?? ''],
-            ['Profesional', state.professional?.full_name ?? ''],
-            ['Fecha',       state.fecha ? format(parseISO(state.fecha), "EEEE d 'de' MMMM", { locale: es }) : ''],
-            ['Hora',        state.hora ? `${state.hora}hs` : ''],
-          ].filter(([, v]) => v).map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontFamily: SANS, fontSize: '13px', textTransform: label === 'Fecha' ? 'capitalize' : 'none' }}>
+        <div style={{ backgroundColor: fade(gold), border: `1px solid ${bord(gold)}`, borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '24px' }}>
+          {([['Servicio', state.service?.name ?? ''], ['Profesional', state.professional?.full_name ?? ''], ['Fecha', state.fecha ? format(parseISO(state.fecha), "EEEE d 'de' MMMM", { locale: es }) : ''], ['Hora', state.hora ? `${state.hora}hs` : '']] as [string,string][]).filter(([,v]) => v).map(([label, val]) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontFamily: SANS, fontSize: '13px' }}>
               <span style={{ color: TEXT_MUTED }}>{label}</span>
-              <span style={{ color: TEXT_PRI, fontWeight: 500 }}>{val}</span>
+              <span style={{ color: TEXT_PRI, fontWeight: 500, textTransform: label === 'Fecha' ? 'capitalize' : 'none' }}>{val}</span>
             </div>
           ))}
         </div>
@@ -212,7 +184,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           </a>
         )}
         <button onClick={() => { setState(INIT); setCompleted(false); setSelectedCat(null) }}
-          style={{ width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.04em' }}>
+          style={{ width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
           {ctx.newBooking}
         </button>
       </div>
@@ -227,24 +199,12 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         <img src={ctx.heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)' }} />
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
-
           {logoUrl && (
-            <img src={logoUrl} alt={org.name}
-              style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
+            <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
-
-          <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 400, letterSpacing: '0.35em', textTransform: 'uppercase', color: gold, marginBottom: '14px' }}>
-            {ctx.eyebrow}
-          </div>
-
-          <h1 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 6vw, 50px)', fontWeight: 400, fontStyle: 'italic', color: '#fff', margin: '0 0 18px', lineHeight: 1.15, maxWidth: '580px' }}>
-            {org.name}
-          </h1>
-
-          <p style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 300, color: 'rgba(255,255,255,0.58)', marginBottom: '44px', maxWidth: '320px', lineHeight: 1.65 }}>
-            {ctx.subtitle}
-          </p>
-
+          <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 400, letterSpacing: '0.35em', textTransform: 'uppercase', color: gold, marginBottom: '14px' }}>{ctx.eyebrow}</div>
+          <h1 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 6vw, 50px)', fontWeight: 400, fontStyle: 'italic', color: '#fff', margin: '0 0 18px', lineHeight: 1.15, maxWidth: '580px' }}>{org.name}</h1>
+          <p style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 300, color: 'rgba(255,255,255,0.58)', marginBottom: '44px', maxWidth: '320px', lineHeight: 1.65 }}>{ctx.subtitle}</p>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '52px' }}>
             <button onClick={scrollToBooking}
               style={{ backgroundColor: gold, color: DARK, border: 'none', borderRadius: '8px', padding: '14px 36px', fontFamily: SANS, fontWeight: 600, fontSize: '13px', letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
@@ -252,12 +212,11 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             </button>
             {instagramHandle && (
               <a href={`https://instagram.com/${instagramHandle}`} target="_blank" rel="noopener noreferrer"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', padding: '14px 28px', fontFamily: SANS, fontWeight: 400, fontSize: '13px', letterSpacing: '0.04em', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', padding: '14px 28px', fontFamily: SANS, fontWeight: 400, fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <Instagram size={14} /> @{instagramHandle}
               </a>
             )}
           </div>
-
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {orgAddress && (
               <a href={`https://maps.google.com/?q=${encodeURIComponent(orgAddress)}`} target="_blank" rel="noopener noreferrer"
@@ -273,7 +232,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             )}
           </div>
         </div>
-        <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)' }}>
           <div style={{ width: '1px', height: '36px', background: `linear-gradient(to bottom, transparent, ${gold})` }} />
         </div>
       </div>
@@ -283,22 +242,16 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {STEPS.map((label, i) => {
-              const n        = i + 1
-              const isActive = state.step === n
-              const isDone   = state.step > n
+              const n = i + 1; const isActive = state.step === n; const isDone = state.step > n
               return (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SANS, fontSize: '11px', fontWeight: 600, transition: 'all 0.25s', backgroundColor: isDone ? gold : 'transparent', border: isDone ? 'none' : isActive ? `1.5px solid ${gold}` : `1px solid rgba(255,255,255,0.18)`, color: isDone ? DARK : isActive ? gold : TEXT_MUTED }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SANS, fontSize: '11px', fontWeight: 600, backgroundColor: isDone ? gold : 'transparent', border: isDone ? 'none' : isActive ? `1.5px solid ${gold}` : `1px solid rgba(255,255,255,0.18)`, color: isDone ? DARK : isActive ? gold : TEXT_MUTED }}>
                       {isDone ? '✓' : n}
                     </div>
-                    <span style={{ fontFamily: SANS, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: isActive ? gold : TEXT_MUTED, whiteSpace: 'nowrap' }}>
-                      {label}
-                    </span>
+                    <span style={{ fontFamily: SANS, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: isActive ? gold : TEXT_MUTED, whiteSpace: 'nowrap' }}>{label}</span>
                   </div>
-                  {i < STEPS.length - 1 && (
-                    <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? gold : BORDER, transition: 'background-color 0.3s' }} />
-                  )}
+                  {i < STEPS.length - 1 && <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? gold : BORDER }} />}
                 </div>
               )
             })}
@@ -307,11 +260,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
       </div>
 
       {/* ─── CONTENT ─── */}
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px 80px', position: 'relative' }}>
-        <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${ctx.heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(32px)', opacity: 0.06, transform: 'scale(1.1)', zIndex: 0, pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px 80px' }}>
 
-        {/* STEP 1 */}
+        {/* STEP 1 — Services */}
         {state.step === 1 && (
           <div>
             <div style={{ marginBottom: '28px' }}>
@@ -323,59 +274,56 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
 
             {selectedCat && (
               <button onClick={() => setSelectedCat(null)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: gold, background: 'none', border: `1px solid ${border(gold)}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: gold, background: 'none', border: `1px solid ${bord(gold)}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
                 <ChevronLeft size={14} /> {selectedCat}
               </button>
             )}
 
             {loadingSvc ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                {[1,2,3,4].map(i => <div key={i} style={{ aspectRatio: '4/3', backgroundColor: CARD, borderRadius: '16px' }} />)}
+                {[1,2,3,4].map(i => <div key={i} style={{ height: '140px', backgroundColor: CARD, borderRadius: '16px', border: `1px solid ${BORDER}` }} />)}
               </div>
             ) : !selectedCat && categories.length > 1 ? (
+              // ── Category grid — elegant dark cards, no stock photos ──
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 {categories.map(cat => {
-                  const img   = CAT_IMG[cat] ?? null
                   const count = services.filter(s => s.category === cat).length
+                  const grad  = CAT_GRADIENT[cat] ?? DEFAULT_GRAD
                   const isHov = hovCat === cat
                   return (
                     <button key={cat} onClick={() => setSelectedCat(cat)} onMouseEnter={() => setHovCat(cat)} onMouseLeave={() => setHovCat(null)}
-                      style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, cursor: 'pointer', background: 'none', padding: 0, transition: 'border-color 0.2s, transform 0.2s', transform: isHov ? 'scale(1.02)' : 'scale(1)' }}>
-                      {img
-                        ? <img src={img} alt={cat} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: isHov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
-                        : <div style={{ position: 'absolute', inset: 0, backgroundColor: CARD }} />
-                      }
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.72) 100%)' }} />
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px' }}>
-                        <div style={{ fontFamily: SERIF, fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '2px' }}>{cat}</div>
-                        <div style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : 'rgba(255,255,255,0.5)', transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'}</div>
+                      style={{ position: 'relative', height: '140px', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, cursor: 'pointer', background: grad, padding: 0, transition: 'border-color 0.2s, transform 0.15s', transform: isHov ? 'scale(1.02)' : 'scale(1)', textAlign: 'left' }}>
+                      {/* Subtle noise texture overlay */}
+                      <div style={{ position: 'absolute', inset: 0, background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")', opacity: 0.4 }} />
+                      {/* Gold accent line */}
+                      <div style={{ position: 'absolute', top: 0, left: '20px', width: '24px', height: '2px', backgroundColor: isHov ? gold : 'rgba(255,255,255,0.15)', transition: 'background-color 0.2s, width 0.2s', ...(isHov ? { width: '36px' } : {}) }} />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 18px 16px' }}>
+                        <div style={{ fontFamily: SERIF, fontSize: '18px', fontStyle: 'italic', color: TEXT_PRI, marginBottom: '4px', lineHeight: 1.2 }}>{cat}</div>
+                        <div style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : TEXT_MUTED, transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'} →</div>
                       </div>
                     </button>
                   )
                 })}
               </div>
             ) : (
+              // ── Service list — clean dark cards, no thumbnails ──
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredSvcs.map(svc => {
-                  const thumb = svcThumb(svc.name, selectedCat ? (CAT_IMG[selectedCat] ?? null) : null)
                   const isHov = hovSvc === svc.id
                   return (
                     <button key={svc.id} onClick={() => handleServiceSelect(svc)} onMouseEnter={() => setHovSvc(svc.id)} onMouseLeave={() => setHovSvc(null)}
-                      style={{ display: 'flex', alignItems: 'stretch', borderRadius: '14px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, backgroundColor: isHov ? '#1C1C1C' : CARD, cursor: 'pointer', padding: 0, textAlign: 'left', transition: 'all 0.2s' }}>
-                      {thumb && (
-                        <div style={{ width: '80px', flexShrink: 0, overflow: 'hidden' }}>
-                          <img src={thumb} alt={svc.name} style={{ width: '100%', height: '100%', objectFit: 'cover', minHeight: '80px' }} />
-                        </div>
-                      )}
-                      <div style={{ flex: 1, padding: '14px 16px' }}>
+                      style={{ display: 'flex', alignItems: 'center', borderRadius: '14px', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, backgroundColor: isHov ? CARD2 : CARD, cursor: 'pointer', padding: '18px 20px', textAlign: 'left', transition: 'all 0.18s', gap: '14px' }}>
+                      {/* Gold dot accent */}
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isHov ? gold : 'rgba(255,255,255,0.2)', flexShrink: 0, transition: 'background-color 0.18s' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: SANS, fontWeight: 500, fontSize: '14px', color: TEXT_PRI, marginBottom: '3px' }}>{svc.name}</div>
-                        {svc.description && <div style={{ fontFamily: SANS, fontSize: '12px', color: TEXT_SEC, lineHeight: 1.5, marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }}>{svc.description}</div>}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {svc.description && <div style={{ fontFamily: SANS, fontSize: '12px', color: TEXT_SEC, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{svc.description}</div>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: SANS, fontSize: '11px', color: TEXT_MUTED }}><Clock size={11} />{svc.duration_minutes} min</span>
-                          {svc.price != null && svc.price > 0 && <span style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 500, color: gold }}>${svc.price.toLocaleString('es-AR')}</span>}
+                          {svc.price != null && svc.price > 0 && <span style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 600, color: gold }}>${svc.price.toLocaleString('es-AR')}</span>}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px 0 4px', color: TEXT_MUTED, flexShrink: 0, fontSize: '18px' }}>›</div>
+                      <ChevronRight size={16} style={{ color: isHov ? gold : TEXT_MUTED, flexShrink: 0, transition: 'color 0.18s' }} />
                     </button>
                   )
                 })}
@@ -388,16 +336,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         {state.step === 2 && state.service && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 2</div>
-            <ProfessionalSelector
-              service={state.service}
-              selected={state.professional}
-              onSelect={p => update({ professional: p, fecha: undefined, hora: undefined })}
-              onConfirm={() => update({ step: 3 })}
-              onBack={() => update({ step: 1 })}
-              accentColor={gold}
-              tenantType={org.tenant_type ?? 'beauty'}
-              darkMode={true}
-            />
+            <ProfessionalSelector service={state.service} selected={state.professional} onSelect={p => update({ professional: p, fecha: undefined, hora: undefined })} onConfirm={() => update({ step: 3 })} onBack={() => update({ step: 1 })} accentColor={gold} tenantType={org.tenant_type ?? 'beauty'} darkMode={true} />
           </div>
         )}
 
@@ -405,16 +344,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         {state.step === 3 && state.professional && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 3</div>
-            <DateTimeSelector
-              professional={state.professional}
-              selectedDate={state.fecha}
-              selectedTime={state.hora}
-              serviceDurationMinutes={state.service?.duration_minutes ?? 30}
-              onSelect={(fecha, hora) => update({ fecha, hora, step: 4 })}
-              onBack={() => update({ step: 2 })}
-              accentColor={gold}
-              darkMode={true}
-            />
+            <DateTimeSelector professional={state.professional} selectedDate={state.fecha} selectedTime={state.hora} serviceDurationMinutes={state.service?.duration_minutes ?? 30} onSelect={(fecha, hora) => update({ fecha, hora, step: 4 })} onBack={() => update({ step: 2 })} accentColor={gold} darkMode={true} />
           </div>
         )}
 
@@ -422,18 +352,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         {state.step === 4 && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 4</div>
-            <BookingConfirm
-              state={state}
-              onChange={update}
-              onBack={() => update({ step: 3 })}
-              onComplete={() => setCompleted(true)}
-              tenantType={org.tenant_type ?? 'beauty'}
-              accentColor={gold}
-              darkMode={true}
-            />
+            <BookingConfirm state={state} onChange={update} onBack={() => update({ step: 3 })} onComplete={() => setCompleted(true)} tenantType={org.tenant_type ?? 'beauty'} accentColor={gold} darkMode={true} />
           </div>
         )}
-        </div>
       </div>
     </div>
   )

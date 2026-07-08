@@ -47,6 +47,15 @@ interface ConsultationNote {
   created_at: string
 }
 
+interface SessionTreatmentEntry {
+  id: string
+  service_id: string
+  service_name: string
+  quantity: number
+  unit_price: number | null
+  notes: string | null
+}
+
 interface Props {
   appointmentId: string
   patientId: string | null
@@ -182,13 +191,14 @@ export function ClinicalRecordModal({
   // ── Historial ──
   const [history, setHistory]         = useState<ConsultationNote[]>([])
   const [expandedHist, setExpandedHist] = useState<string | null>(null)
+  const [sessionTreatments, setSessionTreatments] = useState<SessionTreatmentEntry[]>([])
 
   // ─── Load ────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true)
 
-      const [questRes, noteRes, vitalsRes, attachRes] = await Promise.all([
+      const [questRes, noteRes, vitalsRes, attachRes, stRes] = await Promise.all([
         supabase.from('professional_questions')
           .select('id, question_text, question_type, display_order')
           .eq('professional_id', professionalId).eq('active', true).order('display_order'),
@@ -201,7 +211,24 @@ export function ClinicalRecordModal({
 
         supabase.from('appointment_attachments')
           .select('*').eq('appointment_id', appointmentId).order('created_at'),
+
+        supabase.from('session_treatments')
+          .select('id, service_id, quantity, unit_price, notes, services(name)')
+          .eq('appointment_id', appointmentId)
+          .order('created_at'),
       ])
+
+      // Session treatments
+      setSessionTreatments(
+        (stRes.data ?? []).map((r: any) => ({
+          id:           r.id,
+          service_id:   r.service_id,
+          service_name: r.services?.name ?? '—',
+          quantity:     r.quantity,
+          unit_price:   r.unit_price,
+          notes:        r.notes,
+        }))
+      )
 
       const qs: Question[] = (questRes.data ?? []) as Question[]
       setQuestions(qs)
@@ -352,15 +379,26 @@ export function ClinicalRecordModal({
   const saveNote = async () => {
     if (!motivo.trim() || note?.is_closed) return
     setSavingNote(true)
+
+    // Auto-populate indicaciones from session treatments if still empty
+    let finalIndicaciones = indicaciones
+    if (!indicaciones.trim() && sessionTreatments.length > 0) {
+      const lines = sessionTreatments.map(t =>
+        `• ${t.service_name}${t.quantity > 1 ? ` x${t.quantity}` : ''}${t.notes ? ` (${t.notes})` : ''}`
+      ).join('\n')
+      finalIndicaciones = `Procedimientos realizados:\n${lines}`
+      setIndicaciones(finalIndicaciones)
+    }
+
     const payload = {
       appointment_id: appointmentId, patient_id: patientId,
       professional_id: professionalId, organization_id: organizationId,
       motivo, diagnostico: diagnostico || null,
-      indicaciones: indicaciones || null, notas: notas || null,
+      indicaciones: finalIndicaciones || null, notas: notas || null,
     }
     if (note) {
       await supabase.from('clinical_records')
-        .update({ motivo, diagnostico: diagnostico || null, indicaciones: indicaciones || null, notas: notas || null })
+        .update({ motivo, diagnostico: diagnostico || null, indicaciones: finalIndicaciones || null, notas: notas || null })
         .eq('id', note.id)
     } else {
       const { data } = await supabase.from('clinical_records').insert(payload).select('*').single()
@@ -649,6 +687,54 @@ export function ClinicalRecordModal({
                   <p className="text-sm text-gray-500">
                     Turno cerrado el {note.closed_at ? fmtDate(note.closed_at) : '—'}. No se puede editar.
                   </p>
+                </div>
+              )}
+
+              {/* ── Procedimientos de sesión ── */}
+              {sessionTreatments.length > 0 && (
+                <div className="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5" /> Procedimientos realizados en sesión
+                    </p>
+                    <span className="text-xs text-sky-500">
+                      {sessionTreatments.reduce((s, t) => s + t.quantity, 0)} ítem{sessionTreatments.reduce((s,t)=>s+t.quantity,0)!==1?'s':''}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {sessionTreatments.map(t => (
+                      <div key={t.id} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
+                          <span className="text-sm text-sky-900 truncate">{t.service_name}</span>
+                          {t.quantity > 1 && (
+                            <span className="text-xs text-sky-500 flex-shrink-0">×{t.quantity}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {t.notes && <span className="text-xs text-sky-600 italic truncate max-w-[100px]">{t.notes}</span>}
+                          {t.unit_price != null && (
+                            <span className="text-xs font-semibold text-sky-700">
+                              ${(t.quantity * t.unit_price).toLocaleString('es-AR')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {sessionTreatments.some(t => t.unit_price != null) && (
+                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-sky-200">
+                      <span className="text-xs font-semibold text-sky-700">Total sesión</span>
+                      <span className="text-sm font-bold text-sky-800">
+                        ${sessionTreatments.reduce((s,t)=>s+(t.quantity*(t.unit_price??0)),0).toLocaleString('es-AR')}
+                      </span>
+                    </div>
+                  )}
+                  {!indicaciones && !note?.is_closed && (
+                    <p className="text-xs text-sky-500 mt-2 italic">
+                      Al guardar, los procedimientos se copiarán automáticamente al campo Indicaciones.
+                    </p>
+                  )}
                 </div>
               )}
 

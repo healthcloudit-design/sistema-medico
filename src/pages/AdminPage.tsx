@@ -53,7 +53,7 @@ export function AdminPage() {
 
   return (
     <AdminLayout activeView={view} onNavigate={setView} userRole={profile?.role ?? 'admin'} userName={profile?.full_name ?? ''}>
-      {view === 'dashboard'     && <Dashboard />}
+      {view === 'dashboard'     && <Dashboard organizationId={(profile as any)?.organization_id ?? null} isSuperAdmin={profile?.role === 'superadmin'} />}
       {view === 'appointments'  && <AppointmentList />}
       {view === 'availability'  && <AvailabilityManager />}
       {view === 'services'      && <ServicesManager />}

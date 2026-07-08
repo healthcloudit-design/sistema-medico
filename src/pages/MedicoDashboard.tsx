@@ -14,6 +14,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
+import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
@@ -335,10 +336,10 @@ function RightPanel({ appointments, onSelect, go }: {
 }
 
 // ── Appointment detail modal ──────────────────────────────────────────────────
-function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC }: {
+function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
   appt:Appointment; onClose:()=>void;
   onStatus:(id:string,s:string)=>void;
-  featureHc:boolean; onShowHC:()=>void
+  featureHc:boolean; onShowHC:()=>void; onShowST:()=>void
 }) {
   const s   = ST[appt.status] ?? ST.pendiente
   const svc = appt.service as { name:string; duration_minutes?:number }|undefined
@@ -407,6 +408,10 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC }: {
                   <FileText size={13}/> Historia clínica
                 </button>
               )}
+              <button onClick={onShowST}
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#f5f3ff', color:'#7c3aed', border:'1px solid #e9d5ff', cursor:'pointer' }}>
+                <Activity size={13}/> Sesión
+              </button>
               {appt.patient_phone && (
                 <a href={`https://wa.me/${appt.patient_phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer"
                   style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0', textDecoration:'none' }}>
@@ -574,6 +579,7 @@ export function MedicoDashboard() {
   const [loading, setLoading] = useState(true)
   const [selected, setSel]    = useState<Appointment|null>(null)
   const [showHC, setShowHC]   = useState(false)
+  const [showST, setShowST]   = useState(false)
   const [view, setView]       = useState<View>('dashboard')
   const [calendar, setCal]    = useState(false)
   const [week, setWeek]       = useState(new Date())
@@ -762,7 +768,7 @@ export function MedicoDashboard() {
 
       {/* Modals */}
       {selected && !showHC && (
-        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)}/>
+        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)} onShowST={() => setShowST(true)}/>
       )}
       {selected && showHC && profile?.professional_id && (
         <ClinicalRecordModal
@@ -773,6 +779,15 @@ export function MedicoDashboard() {
           patientName={selected.patient_name}
           specialty={(profile as any).specialty ?? null}
           onClose={() => setShowHC(false)}
+        />
+      )}
+      {selected && showST && (
+        <SessionTreatmentsModal
+          appointmentId={selected.id}
+          organizationId={selected.organization_id}
+          patientName={selected.patient_name}
+          readOnly={false}
+          onClose={() => setShowST(false)}
         />
       )}
     </div>

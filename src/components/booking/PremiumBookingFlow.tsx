@@ -87,7 +87,7 @@ const SPECIALTY_MAP: Record<string, SpecialtyCtx> = {
     doneTitle:  'Consulta confirmada',
     doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar el turno.',
     newBooking: 'Reservar otra consulta',
-    heroImg:    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1600&h=900&fit=crop&auto=format&q=80',
+    heroImg:    'https://images.unsplash.com/photo-1516069677018-378515003435?w=1600&h=900&fit=crop&auto=format&q=80',
     accentHint: '#1B6CA8',
   },
   pediatria: {
@@ -207,7 +207,7 @@ const SPECIALTY_MAP: Record<string, SpecialtyCtx> = {
     doneTitle:  'Consulta confirmada',
     doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
     newBooking: 'Reservar otra consulta',
-    heroImg:    'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1600&h=900&fit=crop&auto=format&q=80',
+    heroImg:    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1600&h=900&fit=crop&auto=format&q=80',
     accentHint: '#5B4A8A',
   },
   gastroenterologia: {
@@ -562,5 +562,5 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
 
       </div>
     </div>
-  )
-}
+  )}
+

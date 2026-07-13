@@ -5,8 +5,6 @@ import { format, parseISO } from 'date-fns'
 import { supabase } from '../../lib/supabase'
 import { alpha } from '../../lib/color'
 import type { BookingState, Organization, TenantType } from '../../types'
-import { getTenantConfig } from '../../config/tenantRegistry'
-import { TenantLanding } from '../landing/TenantLanding'
 import { ServiceSelector } from './ServiceSelector'
 import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
@@ -85,10 +83,9 @@ export function BookingFlow() {
   const [org, setOrg]                 = useState<Organization | null>(null)
   const [orgLoading, setOrgLoading]   = useState(true)
   const [orgNotFound, setOrgNotFound] = useState(false)
-  const [showLanding, setShowLanding]   = useState(true)
 
   useEffect(() => {
-    setOrgLoading(true); setOrgNotFound(false); setShowLanding(true)
+    setOrgLoading(true); setOrgNotFound(false)
     const base = supabase.from('organizations').select('*').eq('active', true)
     const run  = slug ? base.eq('slug', slug).single() : base.order('created_at').limit(1).single()
     run.then(({ data, error }) => {
@@ -125,12 +122,6 @@ export function BookingFlow() {
   const instagramHandle  = org.instagram_handle ?? null
   const orgAddress       = org.address ?? null
   const STEPS            = getSteps(tenantType)
-
-  // ── Specialty landing (step 0) ───────────────────────────────────────────────
-  const tenantConfig = getTenantConfig(slug ?? '')
-  if (tenantConfig && showLanding) {
-    return <TenantLanding config={tenantConfig} org={org} onStart={() => setShowLanding(false)} />
-  }
 
   // Beauty & estética tenants get the premium booking experience
   if (tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'medical') {

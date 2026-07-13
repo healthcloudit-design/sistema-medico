@@ -30,6 +30,8 @@ export interface Organization {
   whatsapp_number?: string | null
   instagram_handle?: string | null
   specialty?: string | null
+  cover_image_url?: string | null
+  booking_headline?: string | null
   created_at: string
   updated_at: string
 }

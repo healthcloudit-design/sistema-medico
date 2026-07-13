@@ -21,6 +21,7 @@ import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
+import { OrgSettings } from '../components/admin/OrgSettings'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const P900    = '#0B1E24'
@@ -849,10 +850,7 @@ export function MedicoDashboard() {
               </div>
             )}
             {view === 'configuracion' && (
-              <div style={{ textAlign:'center', padding:'60px 20px', color:T3 }}>
-                <Settings size={36} style={{ marginBottom:'12px', opacity:0.25 }}/>
-                <p style={{ fontSize:'14px' }}>Configuración próximamente</p>
-              </div>
+              <OrgSettings organizationId={orgId} />
             )}
           </main>
 

@@ -314,8 +314,9 @@ const INIT: BookingState = {
 const STEPS = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar']
 
 export function PremiumBookingFlow({ org }: { org: Organization }) {
-  const ctx   = getOrgContext(org)
-  const gold  = org.primary_color ?? ctx.accentHint ?? '#C9A96E'
+  const ctx     = getOrgContext(org)
+  const gold    = org.primary_color ?? ctx.accentHint ?? '#C9A96E'
+  const heroImg = org.cover_image_url ?? ctx.heroImg
 
   const [state, setState]           = useState<BookingState>(INIT)
   const [completed, setCompleted]   = useState(false)
@@ -371,7 +372,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   // ── Completed ──────────────────────────────────────────────────────────────
   if (completed) return (
     <div style={{ minHeight: '100vh', backgroundColor: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative' }}>
-      <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${ctx.heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.08, transform: 'scale(1.1)', zIndex: 0 }} />
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${heroImg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.08, transform: 'scale(1.1)', zIndex: 0 }} />
       <div style={{ position: 'relative', zIndex: 1, backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: '20px', padding: '40px 32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}>
         <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: fade(gold), border: `1px solid ${bord(gold)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <CheckCircle size={28} style={{ color: gold }} />
@@ -405,7 +406,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
 
       {/* ─── HERO ─── */}
       <div style={{ position: 'relative', height: '88vh', minHeight: '580px', maxHeight: '900px' }}>
-        <img src={ctx.heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
+        <img src={heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)' }} />
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
           {logoUrl && (
@@ -562,5 +563,5 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
 
       </div>
     </div>
-  )}
-
+  )
+}

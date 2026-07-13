@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Calendar, Building2, Store, Menu, X,
-  LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2, ChevronRight,
+  LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2, ChevronRight, Settings,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -28,7 +28,7 @@ export const PA = {
 
 export type AdminView =
   | 'dashboard' | 'appointments' | 'availability' | 'services'
-  | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes'
+  | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes' | 'configuracion'
 
 interface NavItem {
   label: string
@@ -47,6 +47,7 @@ const NAV: NavItem[] = [
   { label: 'Centros',        icon: Store,           view: 'centros',      superadminOnly: true },
   { label: 'Reportes',       icon: BarChart2,       view: 'reportes',     superadminOnly: true },
   { label: 'Módulos',        icon: Puzzle,          view: 'modules',      superadminOnly: true },
+  { label: 'Configuración',  icon: Settings,        view: 'configuracion' },
 ]
 
 const ROLE_LABEL: Record<string, string> = {
@@ -297,7 +298,7 @@ export function AdminLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-5 lg:p-7 w-full max-w-6xl mx-auto box-border">
+        <main className="flex-1 p-5 lg:p-7 overflow-y-auto">
           {children}
         </main>
       </div>

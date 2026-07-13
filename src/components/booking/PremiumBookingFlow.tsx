@@ -66,9 +66,71 @@ const CAT_GRADIENT: Record<string, string> = {
 
 const DEFAULT_GRAD = 'linear-gradient(135deg, #1A1A1A 0%, #0F0F0F 100%)'
 
-// ── Per-tenant context ──────────────────────────────────────────────────────
-function getTenantContext(tenantType: string) {
-  if (tenantType === 'medical') return {
+// ── Per-specialty context ────────────────────────────────────────────────────
+interface SpecialtyCtx {
+  eyebrow:    string
+  subtitle:   string
+  ctaLabel:   string
+  doneTitle:  string
+  doneMsg:    string
+  newBooking: string
+  heroImg:    string
+  accentHint: string
+}
+
+const SPECIALTY_MAP: Record<string, SpecialtyCtx> = {
+  // ── Médicas ──────────────────────────────────────────────────────────────
+  oftalmologia: {
+    eyebrow:    'Oftalmología',
+    subtitle:   'Reservá tu examen visual con un especialista',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar el turno.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#1B6CA8',
+  },
+  pediatria: {
+    eyebrow:    'Pediatría',
+    subtitle:   'El cuidado que tu pequeño merece',
+    ctaLabel:   'Reservar Turno',
+    doneTitle:  'Turno confirmado',
+    doneMsg:    'El turno fue registrado. Te contactamos para confirmar.',
+    newBooking: 'Reservar otro turno',
+    heroImg:    'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#E8762C',
+  },
+  kinesiologia: {
+    eyebrow:    'Kinesiología & Fisioterapia',
+    subtitle:   'Tu recuperación en las mejores manos',
+    ctaLabel:   'Reservar Sesión',
+    doneTitle:  'Sesión confirmada',
+    doneMsg:    'Tu sesión fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra sesión',
+    heroImg:    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2D8B55',
+  },
+  fisioterapia: {
+    eyebrow:    'Fisioterapia',
+    subtitle:   'Tu recuperación en las mejores manos',
+    ctaLabel:   'Reservar Sesión',
+    doneTitle:  'Sesión confirmada',
+    doneMsg:    'Tu sesión fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra sesión',
+    heroImg:    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2D8B55',
+  },
+  dermatologia: {
+    eyebrow:    'Dermatología',
+    subtitle:   'Cuidado experto para tu piel',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#7B5E8A',
+  },
+  medicinaEstetica: {
     eyebrow:    'Medicina Estética',
     subtitle:   'Reservá tu consulta personalizada',
     ctaLabel:   'Reservar Consulta',
@@ -76,8 +138,110 @@ function getTenantContext(tenantType: string) {
     doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
     newBooking: 'Reservar otra consulta',
     heroImg:    'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1600&h=900&fit=crop&auto=format&q=80',
-  }
-  if (tenantType === 'estetica') return {
+    accentHint: '#C9A96E',
+  },
+  cardiologia: {
+    eyebrow:    'Cardiología',
+    subtitle:   'Tu corazón en las manos correctas',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#8B2040',
+  },
+  odontologia: {
+    eyebrow:    'Odontología',
+    subtitle:   'Tu sonrisa, nuestra especialidad',
+    ctaLabel:   'Reservar Turno',
+    doneTitle:  'Turno confirmado',
+    doneMsg:    'Tu turno fue registrado. Te contactamos para confirmar.',
+    newBooking: 'Reservar otro turno',
+    heroImg:    'https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2B7A9E',
+  },
+  nutricion: {
+    eyebrow:    'Nutrición',
+    subtitle:   'Alimentá tu bienestar con asesoramiento profesional',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#3A8F5A',
+  },
+  psicologia: {
+    eyebrow:    'Psicología',
+    subtitle:   'Un espacio seguro para tu bienestar mental',
+    ctaLabel:   'Reservar Sesión',
+    doneTitle:  'Sesión confirmada',
+    doneMsg:    'Tu sesión fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra sesión',
+    heroImg:    'https://images.unsplash.com/photo-1573497620053-ea5300f94f21?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#7B68AA',
+  },
+  traumatologia: {
+    eyebrow:    'Traumatología',
+    subtitle:   'Especialistas en tu movilidad y recuperación',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#4A6B8A',
+  },
+  ginecologia: {
+    eyebrow:    'Ginecología & Obstetricia',
+    subtitle:   'Tu salud femenina en buenas manos',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1631815588090-d1bcbe9a8a72?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#A85882',
+  },
+  neurologia: {
+    eyebrow:    'Neurología',
+    subtitle:   'Diagnóstico y tratamiento especializado',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#5B4A8A',
+  },
+  gastroenterologia: {
+    eyebrow:    'Gastroenterología',
+    subtitle:   'Cuidado integral de tu sistema digestivo',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1576671081837-49000212a370?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#3A7B8A',
+  },
+  endocrinologia: {
+    eyebrow:    'Endocrinología',
+    subtitle:   'Equilibrio hormonal y metabólico',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2A7A7A',
+  },
+  clinicamedica: {
+    eyebrow:    'Clínica Médica',
+    subtitle:   'Atención médica integral de calidad',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'Tu consulta fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#1B6CA8',
+  },
+  // ── Estética / Beauty ─────────────────────────────────────────────────────
+  estetica: {
     eyebrow:    'Estética de Autor',
     subtitle:   'Reservá tu experiencia personalizada',
     ctaLabel:   'Reservar Turno',
@@ -85,16 +249,61 @@ function getTenantContext(tenantType: string) {
     doneMsg:    'Tu reserva fue registrada. Te contactamos para confirmar.',
     newBooking: 'Reservar otro turno',
     heroImg:    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
-  }
-  return {
-    eyebrow:    'Peluquería de Autora',
+    accentHint: '#C9A96E',
+  },
+  beauty: {
+    eyebrow:    'Peluquería & Belleza',
     subtitle:   'Reservá tu experiencia personalizada',
     ctaLabel:   'Reservar Turno',
     doneTitle:  'Reserva confirmada',
     doneMsg:    'Tu reserva fue registrada. Te contactamos para confirmar.',
     newBooking: 'Reservar otro turno',
     heroImg:    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#C9A96E',
+  },
+  masajes: {
+    eyebrow:    'Masajes & Bienestar',
+    subtitle:   'Reservá tu momento de relajación',
+    ctaLabel:   'Reservar Sesión',
+    doneTitle:  'Sesión confirmada',
+    doneMsg:    'Tu sesión fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra sesión',
+    heroImg:    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#8A7B5A',
+  },
+}
+
+// Slug keyword → specialty key (fallback when org.specialty is null)
+const SLUG_KEYWORDS: [RegExp, string][] = [
+  [/oftalmo/i,             'oftalmologia'],
+  [/pediatr/i,             'pediatria'],
+  [/kinesi/i,              'kinesiologia'],
+  [/fisiote/i,             'fisioterapia'],
+  [/dermato/i,             'dermatologia'],
+  [/estetica|laser/i,      'medicinaEstetica'],
+  [/cardio/i,              'cardiologia'],
+  [/odonto|dental/i,       'odontologia'],
+  [/nutrici/i,             'nutricion'],
+  [/psico|psiqui/i,        'psicologia'],
+  [/traumato|ortop/i,      'traumatologia'],
+  [/gineco|obstetr/i,      'ginecologia'],
+  [/neurolog/i,            'neurologia'],
+  [/gastro/i,              'gastroenterologia'],
+  [/endocrin/i,            'endocrinologia'],
+  [/clinica|medico-gral/i, 'clinicamedica'],
+  [/masaje|spa|zen/i,      'masajes'],
+]
+
+function getOrgContext(org: Organization): SpecialtyCtx {
+  // 1. Explicit specialty field
+  if (org.specialty && SPECIALTY_MAP[org.specialty]) return SPECIALTY_MAP[org.specialty]
+  // 2. Slug keyword detection
+  for (const [re, key] of SLUG_KEYWORDS) {
+    if (re.test(org.slug) && SPECIALTY_MAP[key]) return SPECIALTY_MAP[key]
   }
+  // 3. Tenant-type fallback
+  const tt = org.tenant_type ?? 'beauty'
+  return SPECIALTY_MAP[tt] ?? SPECIALTY_MAP.medicinaEstetica
 }
 
 const INIT: BookingState = {
@@ -105,8 +314,8 @@ const INIT: BookingState = {
 const STEPS = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar']
 
 export function PremiumBookingFlow({ org }: { org: Organization }) {
-  const gold  = org.primary_color ?? '#C9A96E'
-  const ctx   = getTenantContext(org.tenant_type ?? 'beauty')
+  const ctx   = getOrgContext(org)
+  const gold  = org.primary_color ?? ctx.accentHint ?? '#C9A96E'
 
   const [state, setState]           = useState<BookingState>(INIT)
   const [completed, setCompleted]   = useState(false)
@@ -284,7 +493,6 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                 {[1,2,3,4].map(i => <div key={i} style={{ height: '140px', backgroundColor: CARD, borderRadius: '16px', border: `1px solid ${BORDER}` }} />)}
               </div>
             ) : !selectedCat && categories.length > 1 ? (
-              // ── Category grid — elegant dark cards, no stock photos ──
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 {categories.map(cat => {
                   const count = services.filter(s => s.category === cat).length
@@ -293,9 +501,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                   return (
                     <button key={cat} onClick={() => setSelectedCat(cat)} onMouseEnter={() => setHovCat(cat)} onMouseLeave={() => setHovCat(null)}
                       style={{ position: 'relative', height: '140px', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, cursor: 'pointer', background: grad, padding: 0, transition: 'border-color 0.2s, transform 0.15s', transform: isHov ? 'scale(1.02)' : 'scale(1)', textAlign: 'left' }}>
-                      {/* Subtle noise texture overlay */}
                       <div style={{ position: 'absolute', inset: 0, background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")', opacity: 0.4 }} />
-                      {/* Gold accent line */}
                       <div style={{ position: 'absolute', top: 0, left: '20px', width: '24px', height: '2px', backgroundColor: isHov ? gold : 'rgba(255,255,255,0.15)', transition: 'background-color 0.2s, width 0.2s', ...(isHov ? { width: '36px' } : {}) }} />
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 18px 16px' }}>
                         <div style={{ fontFamily: SERIF, fontSize: '18px', fontStyle: 'italic', color: TEXT_PRI, marginBottom: '4px', lineHeight: 1.2 }}>{cat}</div>
@@ -306,14 +512,12 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                 })}
               </div>
             ) : (
-              // ── Service list — clean dark cards, no thumbnails ──
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredSvcs.map(svc => {
                   const isHov = hovSvc === svc.id
                   return (
                     <button key={svc.id} onClick={() => handleServiceSelect(svc)} onMouseEnter={() => setHovSvc(svc.id)} onMouseLeave={() => setHovSvc(null)}
                       style={{ display: 'flex', alignItems: 'center', borderRadius: '14px', border: isHov ? `1px solid ${gold}` : `1px solid ${BORDER}`, backgroundColor: isHov ? CARD2 : CARD, cursor: 'pointer', padding: '18px 20px', textAlign: 'left', transition: 'all 0.18s', gap: '14px' }}>
-                      {/* Gold dot accent */}
                       <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isHov ? gold : 'rgba(255,255,255,0.2)', flexShrink: 0, transition: 'background-color 0.18s' }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: SANS, fontWeight: 500, fontSize: '14px', color: TEXT_PRI, marginBottom: '3px' }}>{svc.name}</div>
@@ -349,12 +553,13 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         )}
 
         {/* STEP 4 */}
-        {state.step === 4 && (
+        {state.step === 4 && state.professional && state.service && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 4</div>
-            <BookingConfirm state={state} onChange={update} onBack={() => update({ step: 3 })} onComplete={() => setCompleted(true)} tenantType={org.tenant_type ?? 'beauty'} accentColor={gold} darkMode={true} />
+            <BookingConfirm state={state} onChange={update} onBack={() => update({ step: 3 })} onComplete={() => setCompleted(true)} tenantType={org.tenant_type ?? 'medical'} accentColor={gold} darkMode={true} />
           </div>
         )}
+
       </div>
     </div>
   )

@@ -67,6 +67,7 @@ export function AdminPage() {
       )}
       {view === 'modules'       && <ModulesManager />}
       {view === 'centros'       && <CentrosManager userRole={profile?.role} />}
+      {view === 'reportes'      && <ReportsView />}
       {view === 'configuracion' && <OrgSettings organizationId={(profile as any)?.organization_id ?? null} />}
     </AdminLayout>
   )

@@ -1,4 +1,9 @@
-node_modules/ 
-dist/ 
-.env 
-.env.local 
+node_modules/
+dist/
+.env
+.env.local
+
+# Scripts de migración ad-hoc (nunca deben commitearse — pueden contener tokens)
+*.mjs
+migrate*.js
+fix-migration*.js

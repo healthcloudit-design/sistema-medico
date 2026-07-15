@@ -53,6 +53,7 @@ export function OrgSettings({ organizationId }: Props) {
   const [specialty, setSpecialty]     = useState('')
   const [primaryColor, setPrimaryColor] = useState('#C9A96E')
   const [headline, setHeadline]       = useState('')
+  const [bookingWeeks, setBookingWeeks] = useState<1 | 2>(1)
   const [address, setAddress]         = useState('')
   const [phone, setPhone]             = useState('')
   const [whatsapp, setWhatsapp]       = useState('')
@@ -82,6 +83,7 @@ export function OrgSettings({ organizationId }: Props) {
         setSpecialty((o as any).specialty ?? '')
         setPrimaryColor(o.primary_color ?? '#C9A96E')
         setHeadline((o as any).booking_headline ?? '')
+        setBookingWeeks((o as any).booking_weeks === 2 ? 2 : 1)
         setAddress(o.address ?? '')
         setPhone(o.phone ?? '')
         setWhatsapp(o.whatsapp_number ?? '')
@@ -132,6 +134,7 @@ export function OrgSettings({ organizationId }: Props) {
       specialty:        specialty || null,
       primary_color:    primaryColor,
       booking_headline: headline || null,
+      booking_weeks:    bookingWeeks,
       address:          address  || null,
       phone:            phone    || null,
       whatsapp_number:  whatsapp || null,
@@ -301,6 +304,18 @@ export function OrgSettings({ organizationId }: Props) {
             <label style={labelStyle}>Subtítulo en página de reservas</label>
             <input value={headline} onChange={e => setHeadline(e.target.value)} style={inputStyle}
               placeholder="Ej: Reservá tu consulta personalizada" />
+          </div>
+
+          <div style={{ gridColumn:'1/-1' }}>
+            <label style={labelStyle}>Semanas visibles en el calendario</label>
+            <div style={{ display:'flex', gap:'10px' }}>
+              {([1, 2] as const).map(w => (
+                <button key={w} onClick={() => setBookingWeeks(w)} type="button"
+                  style={{ flex:1, padding:'10px', borderRadius:'8px', border:`1.5px solid ${bookingWeeks === w ? P800 : BD}`, backgroundColor: bookingWeeks === w ? P800 : CARD, color: bookingWeeks === w ? '#fff' : T1, fontSize:'13px', fontWeight:600, cursor:'pointer' }}>
+                  {w === 1 ? '1 semana' : '2 semanas'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

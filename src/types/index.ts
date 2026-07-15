@@ -32,6 +32,7 @@ export interface Organization {
   specialty?: string | null
   cover_image_url?: string | null
   booking_headline?: string | null
+  booking_weeks?: 1 | 2 | null
   created_at: string
   updated_at: string
 }

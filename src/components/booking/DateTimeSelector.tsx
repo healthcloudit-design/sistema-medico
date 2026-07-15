@@ -19,12 +19,13 @@ interface Props {
   onBack: () => void
   accentColor?: string
   darkMode?: boolean
+  weeksToShow?: 1 | 2
 }
 
 export function DateTimeSelector({
   professional, selectedDate, selectedTime,
   serviceDurationMinutes = 30, onSelect, onBack,
-  accentColor = '#0ea5e9', darkMode = false,
+  accentColor = '#0ea5e9', darkMode = false, weeksToShow = 1,
 }: Props) {
   const today        = startOfDay(new Date())
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -33,16 +34,16 @@ export function DateTimeSelector({
 
   const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes)
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekDays = Array.from({ length: 7 * weeksToShow }, (_, i) => addDays(weekStart, i))
   const accent   = darkMode ? GOLD : accentColor
 
-  const prevWeek = () => setWeekStart(w => subWeeks(w, 1))
-  const nextWeek = () => setWeekStart(w => addWeeks(w, 1))
-  const isPrevDisabled = isBefore(addDays(weekStart, 6), today) // whole week is past
+  const prevWeek = () => setWeekStart(w => subWeeks(w, weeksToShow))
+  const nextWeek = () => setWeekStart(w => addWeeks(w, weeksToShow))
+  const isPrevDisabled = isBefore(addDays(weekStart, 7 * weeksToShow - 1), today)
 
   const weekLabel = (() => {
     const s = weekStart
-    const e = addDays(weekStart, 6)
+    const e = addDays(weekStart, 7 * weeksToShow - 1)
     if (s.getMonth() === e.getMonth())
       return `${format(s,'d')} – ${format(e,'d')} ${format(e,'MMMM', { locale:es })}`
     return `${format(s,"d MMM",{locale:es})} – ${format(e,"d MMM",{locale:es})}`

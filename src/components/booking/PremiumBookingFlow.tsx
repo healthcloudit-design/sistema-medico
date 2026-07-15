@@ -508,17 +508,27 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             ) : !selectedCat && categories.length > 1 ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 {categories.map(cat => {
-                  const count = services.filter(s => s.category === cat).length
-                  const grad  = CAT_GRADIENT[cat] ?? DEFAULT_GRAD
-                  const isHov = hovCat === cat
+                  const count   = services.filter(s => s.category === cat).length
+                  const isHov   = hovCat === cat
+                  const grad    = isLight
+                    ? (isHov ? 'linear-gradient(135deg, #E3EFF9 0%, #EEF5FC 100%)' : 'linear-gradient(135deg, #EEF5FB 0%, #F5F9FF 100%)')
+                    : (CAT_GRADIENT[cat] ?? DEFAULT_GRAD)
+                  const cardBd  = isLight
+                    ? (isHov ? `1px solid ${gold}` : '1px solid rgba(27,108,168,0.15)')
+                    : (isHov ? `1px solid ${gold}` : `1px solid ${TH_BD}`)
+                  const lineClr = isLight
+                    ? (isHov ? gold : 'rgba(27,108,168,0.25)')
+                    : (isHov ? gold : 'rgba(255,255,255,0.15)')
+                  const catT1   = isLight ? TH_T1 : TEXT_PRI
+                  const catT2   = isLight ? TH_T2 : TEXT_MUTED
                   return (
                     <button key={cat} onClick={() => setSelectedCat(cat)} onMouseEnter={() => setHovCat(cat)} onMouseLeave={() => setHovCat(null)}
-                      style={{ position: 'relative', height: '140px', borderRadius: '16px', overflow: 'hidden', border: isHov ? `1px solid ${gold}` : `1px solid ${TH_BD}`, cursor: 'pointer', background: grad, padding: 0, transition: 'border-color 0.2s, transform 0.15s', transform: isHov ? 'scale(1.02)' : 'scale(1)', textAlign: 'left' }}>
-                      <div style={{ position: 'absolute', inset: 0, background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")', opacity: 0.4 }} />
-                      <div style={{ position: 'absolute', top: 0, left: '20px', width: '24px', height: '2px', backgroundColor: isHov ? gold : 'rgba(255,255,255,0.15)', transition: 'background-color 0.2s, width 0.2s', ...(isHov ? { width: '36px' } : {}) }} />
+                      style={{ position: 'relative', height: '140px', borderRadius: '16px', overflow: 'hidden', border: cardBd, cursor: 'pointer', background: grad, padding: 0, transition: 'all 0.2s', transform: isHov ? 'scale(1.02)' : 'scale(1)', textAlign: 'left', boxShadow: isLight ? (isHov ? '0 4px 20px rgba(27,108,168,0.12)' : '0 1px 4px rgba(15,23,42,0.06)') : 'none' }}>
+                      {!isLight && <div style={{ position: 'absolute', inset: 0, background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")', opacity: 0.4 }} />}
+                      <div style={{ position: 'absolute', top: 0, left: '20px', width: isHov ? '36px' : '24px', height: '2px', backgroundColor: lineClr, transition: 'background-color 0.2s, width 0.2s' }} />
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 18px 16px' }}>
-                        <div style={{ fontFamily: SERIF, fontSize: '18px', fontStyle: 'italic', color: TEXT_PRI, marginBottom: '4px', lineHeight: 1.2 }}>{cat}</div>
-                        <div style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : TEXT_MUTED, transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'} →</div>
+                        <div style={{ fontFamily: SERIF, fontSize: '18px', fontStyle: 'italic', color: catT1, marginBottom: '4px', lineHeight: 1.2 }}>{cat}</div>
+                        <div style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : catT2, transition: 'color 0.2s' }}>{count} {count === 1 ? 'opción' : 'opciones'} →</div>
                       </div>
                     </button>
                   )

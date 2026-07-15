@@ -7,7 +7,7 @@ import {
 import { es } from 'date-fns/locale'
 import {
   LayoutDashboard, Calendar, Users, LogOut, FileText,
-  CalendarX, Settings, ChevronRight, Search, MessageCircle,
+  CalendarX, ChevronRight, Search, MessageCircle,
   CheckCircle, AlertCircle, TrendingUp, Menu, X, ArrowRight,
   Lock, Clock, Activity,
 } from 'lucide-react'
@@ -21,7 +21,6 @@ import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
-import { OrgSettings } from '../components/admin/OrgSettings'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const P900    = '#0B1E24'
@@ -48,7 +47,7 @@ const ST: Record<string, { label: string; color: string; bg: string; dot: string
   en_atencion: { label: 'En atención', color: '#4C1D95', bg: '#F5F3FF', dot: '#8B5CF6' },
 }
 
-type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos' | 'configuracion'
+type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos'
 
 function argTime(iso: string) {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
@@ -78,11 +77,10 @@ function Badge({ status }: { status: string }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { id:'dashboard',     icon:LayoutDashboard, label:'Inicio'        },
-  { id:'agenda',        icon:Calendar,        label:'Mi agenda'     },
-  { id:'pacientes',     icon:Users,           label:'Pacientes'     },
-  { id:'bloqueos',      icon:CalendarX,       label:'Bloqueos'      },
-  { id:'configuracion', icon:Settings,        label:'Configuración' },
+  { id:'dashboard',     icon:LayoutDashboard, label:'Inicio'    },
+  { id:'agenda',        icon:Calendar,        label:'Mi agenda' },
+  { id:'pacientes',     icon:Users,           label:'Pacientes' },
+  { id:'bloqueos',      icon:CalendarX,       label:'Bloqueos'  },
 ] as const
 
 function Sidebar({ view, go, profile, logout, close }: {
@@ -849,9 +847,6 @@ export function MedicoDashboard() {
                 <MiAgendaBloqueos professionalId={profile.professional_id}/>
               </div>
             )}
-            {view === 'configuracion' && (
-              <OrgSettings organizationId={orgId} />
-            )}
           </main>
 
           {/* Right panel — xl+ only */}
@@ -865,7 +860,7 @@ export function MedicoDashboard() {
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around px-1 py-1.5"
         style={{ backgroundColor:CARD, borderTop:`1px solid ${BD}`, boxShadow:'0 -4px 20px rgba(0,0,0,0.08)' }}>
-        {NAV_ITEMS.filter(n => n.id !== 'configuracion').map(({ id, icon:Icon, label }) => {
+        {NAV_ITEMS.map(({ id, icon:Icon, label }) => {
           const active = view === id
           return (
             <button key={id} onClick={() => go(id as View)}

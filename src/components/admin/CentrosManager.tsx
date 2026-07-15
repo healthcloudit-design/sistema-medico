@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Plus, ExternalLink, Copy, Check, Building2, Pencil, X, Upload, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, ExternalLink, Copy, Check, Building2, Pencil, X, Upload, ToggleLeft, ToggleRight, Settings2, ChevronLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { alpha } from '../../lib/color'
 import type { TenantType } from '../../types'
+import { OrgSettings } from './OrgSettings'
 
 interface Org {
   id: string
@@ -301,9 +302,10 @@ function EditModal({ org, onClose, onSaved }: EditModalProps) {
 }
 
 export function CentrosManager({ userRole }: { userRole?: string }) {
-  const [orgs, setOrgs]       = useState<Org[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Org | null>(null)
+  const [orgs, setOrgs]             = useState<Org[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [editing, setEditing]       = useState<Org | null>(null)
+  const [configuringId, setConfiguringId] = useState<string | null>(null)
 
   const isSuperGlobal = userRole === 'superadmin' || userRole === 'globaladmin'
 
@@ -326,6 +328,38 @@ export function CentrosManager({ userRole }: { userRole?: string }) {
       {[1,2,3].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />)}
     </div>
   )
+
+  // ── Vista: configurar apariencia de un tenant ────────────────────────────
+  if (configuringId) {
+    const org = orgs.find(o => o.id === configuringId)
+    return (
+      <div>
+        <button
+          onClick={() => setConfiguringId(null)}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Volver a centros
+        </button>
+        {org && (
+          <div className="mb-4 flex items-center gap-3">
+            {org.logo_url
+              ? <img src={org.logo_url} alt={org.name} className="w-10 h-10 rounded-xl object-cover" />
+              : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                     style={{ backgroundColor: alpha(org.primary_color ?? '#0ea5e9', 0.12) }}>
+                  {TENANT_LABELS[org.tenant_type ?? 'general']?.emoji ?? '🏢'}
+                </div>
+            }
+            <div>
+              <h2 className="font-semibold text-gray-900">{org.name}</h2>
+              <span className="text-xs text-gray-400 font-mono">/{org.slug}</span>
+            </div>
+          </div>
+        )}
+        <OrgSettings organizationId={configuringId} />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -414,14 +448,23 @@ export function CentrosManager({ userRole }: { userRole?: string }) {
                   )}
                   <div className="flex-1" />
                   {isSuperGlobal && (
-                    <button
-                      onClick={() => setEditing(org)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-                      style={{ color: accent, backgroundColor: alpha(accent, 0.08) }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditing(org)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => setConfiguringId(org.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+                        style={{ color: accent, backgroundColor: alpha(accent, 0.08) }}
+                      >
+                        <Settings2 className="w-3.5 h-3.5" />
+                        Configurar
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

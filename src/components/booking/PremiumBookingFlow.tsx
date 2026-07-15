@@ -331,7 +331,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const TH_BARBD = isLight ? 'rgba(15,23,42,0.08)' : BORDER
 
   // ── Tenant-specific hero enhancement (scoped, zero impact on other tenants) ──
-  const isClinicaDelEste = org.slug === 'clinica-del-este'
+  const isClinicaDelEste  = org.slug === 'clinica-del-este'
+  const isAlco            = org.slug === 'alco-rehabilitacion'
+  const isPremiumHero     = isClinicaDelEste || isAlco
 
   const [state, setState]           = useState<BookingState>(INIT)
   const [completed, setCompleted]   = useState(false)
@@ -425,22 +427,22 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         <img src={heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
 
         {/* ── Overlay base: más intenso para CDE, igual para resto ── */}
-        <div style={{ position: 'absolute', inset: 0, background: isClinicaDelEste
+        <div style={{ position: 'absolute', inset: 0, background: isPremiumHero
           ? 'linear-gradient(180deg, rgba(4,12,24,0.28) 0%, rgba(4,12,24,0.60) 42%, rgba(4,12,24,0.93) 100%)'
           : 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)'
         }} />
 
         {/* ── CDE only: viñeta lateral suave ── */}
-        {isClinicaDelEste && (
+        {isPremiumHero && (
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 78% 100% at 50% 50%, transparent 22%, rgba(4,12,24,0.52) 100%)', pointerEvents: 'none' }} />
         )}
 
         {/* ── CDE only: backdrop central que separa texto de la imagen ── */}
-        {isClinicaDelEste && (
+        {isPremiumHero && (
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -54%)', width: 'min(700px, 95%)', height: '440px', background: 'radial-gradient(ellipse at 50% 50%, rgba(4,12,24,0.50) 0%, transparent 68%)', filter: 'blur(18px)', pointerEvents: 'none' }} />
         )}
 
-        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isClinicaDelEste ? '0 32px' : '0 24px', textAlign: 'center' }}>
+        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isPremiumHero ? '0 32px' : '0 24px', textAlign: 'center' }}>
           {logoUrl && (
             <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
@@ -448,13 +450,13 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           {/* Eyebrow / categoría */}
           <div style={{
             fontFamily: SANS,
-            fontSize: isClinicaDelEste ? '11px' : '10px',
-            fontWeight: isClinicaDelEste ? 500 : 400,
-            letterSpacing: isClinicaDelEste ? '0.44em' : '0.35em',
+            fontSize: isPremiumHero ? '11px' : '10px',
+            fontWeight: isPremiumHero ? 500 : 400,
+            letterSpacing: isPremiumHero ? '0.44em' : '0.35em',
             textTransform: 'uppercase',
             color: gold,
-            marginBottom: isClinicaDelEste ? '18px' : '14px',
-            ...(isClinicaDelEste ? {
+            marginBottom: isPremiumHero ? '18px' : '14px',
+            ...(isPremiumHero ? {
               backgroundColor: 'rgba(255,255,255,0.08)',
               border: `1px solid ${gold}30`,
               borderRadius: '100px',
@@ -465,14 +467,14 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           {/* Título principal */}
           <h1 style={{
             fontFamily: SERIF,
-            fontSize: isClinicaDelEste ? 'clamp(36px, 6.5vw, 60px)' : 'clamp(30px, 6vw, 50px)',
+            fontSize: isPremiumHero ? 'clamp(36px, 6.5vw, 60px)' : 'clamp(30px, 6vw, 50px)',
             fontWeight: 400,
             fontStyle: 'italic',
             color: '#fff',
-            margin: isClinicaDelEste ? '0 0 22px' : '0 0 18px',
+            margin: isPremiumHero ? '0 0 22px' : '0 0 18px',
             lineHeight: 1.1,
-            maxWidth: isClinicaDelEste ? '660px' : '580px',
-            ...(isClinicaDelEste ? {
+            maxWidth: isPremiumHero ? '660px' : '580px',
+            ...(isPremiumHero ? {
               textShadow: '0 2px 20px rgba(0,0,0,0.55), 0 0 60px rgba(0,0,0,0.20)',
             } : {}),
           }}>{org.name}</h1>
@@ -480,19 +482,19 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           {/* Subtítulo */}
           <p style={{
             fontFamily: SANS,
-            fontSize: isClinicaDelEste ? '16px' : '15px',
-            fontWeight: isClinicaDelEste ? 400 : 300,
-            color: isClinicaDelEste ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.58)',
-            marginBottom: isClinicaDelEste ? '52px' : '44px',
-            maxWidth: isClinicaDelEste ? '380px' : '320px',
+            fontSize: isPremiumHero ? '16px' : '15px',
+            fontWeight: isPremiumHero ? 400 : 300,
+            color: isPremiumHero ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.58)',
+            marginBottom: isPremiumHero ? '52px' : '44px',
+            maxWidth: isPremiumHero ? '380px' : '320px',
             lineHeight: 1.65,
-            ...(isClinicaDelEste ? {
+            ...(isPremiumHero ? {
               textShadow: '0 1px 10px rgba(0,0,0,0.45)',
             } : {}),
           }}>{org.booking_headline ?? ctx.subtitle}</p>
 
           {/* CTA row */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: isClinicaDelEste ? '36px' : '52px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: isPremiumHero ? '36px' : '52px' }}>
             <button
               onClick={scrollToBooking}
               onMouseEnter={() => setHovCta(true)}
@@ -501,16 +503,16 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                 backgroundColor: gold,
                 color: DARK,
                 border: 'none',
-                borderRadius: isClinicaDelEste ? '10px' : '8px',
-                padding: isClinicaDelEste ? '17px 56px' : '14px 36px',
+                borderRadius: isPremiumHero ? '10px' : '8px',
+                padding: isPremiumHero ? '17px 56px' : '14px 36px',
                 fontFamily: SANS,
                 fontWeight: 600,
-                fontSize: isClinicaDelEste ? '14px' : '13px',
-                letterSpacing: isClinicaDelEste ? '0.10em' : '0.06em',
+                fontSize: isPremiumHero ? '14px' : '13px',
+                letterSpacing: isPremiumHero ? '0.10em' : '0.06em',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                ...(isClinicaDelEste ? {
+                ...(isPremiumHero ? {
                   boxShadow: hovCta
                     ? `0 8px 32px ${gold}60, 0 2px 8px rgba(0,0,0,0.3)`
                     : `0 4px 22px ${gold}40, 0 1px 4px rgba(0,0,0,0.18)`,
@@ -528,19 +530,19 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           </div>
 
           {/* Dirección + WhatsApp */}
-          <div style={{ display: 'flex', gap: isClinicaDelEste ? '10px' : '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: isPremiumHero ? '10px' : '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {orgAddress && (
               <a href={`https://maps.google.com/?q=${encodeURIComponent(orgAddress)}`} target="_blank" rel="noopener noreferrer"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: isClinicaDelEste ? '8px' : '6px',
+                  gap: isPremiumHero ? '8px' : '6px',
                   fontFamily: SANS,
-                  fontSize: isClinicaDelEste ? '13px' : '12px',
-                  fontWeight: isClinicaDelEste ? 400 : 400,
-                  color: isClinicaDelEste ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
+                  fontSize: isPremiumHero ? '13px' : '12px',
+                  fontWeight: isPremiumHero ? 400 : 400,
+                  color: isPremiumHero ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
                   textDecoration: 'none',
-                  ...(isClinicaDelEste ? {
+                  ...(isPremiumHero ? {
                     backgroundColor: 'rgba(255,255,255,0.07)',
                     border: '1px solid rgba(255,255,255,0.11)',
                     borderRadius: '100px',
@@ -548,7 +550,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                     backdropFilter: 'blur(4px)',
                   } : {}),
                 }}>
-                <MapPin size={isClinicaDelEste ? 14 : 13} style={isClinicaDelEste ? { color: gold, flexShrink: 0 } : undefined} />
+                <MapPin size={isPremiumHero ? 14 : 13} style={isPremiumHero ? { color: gold, flexShrink: 0 } : undefined} />
                 {orgAddress}
               </a>
             )}
@@ -559,10 +561,10 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                   alignItems: 'center',
                   gap: '6px',
                   fontFamily: SANS,
-                  fontSize: isClinicaDelEste ? '13px' : '12px',
-                  color: isClinicaDelEste ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
+                  fontSize: isPremiumHero ? '13px' : '12px',
+                  color: isPremiumHero ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
                   textDecoration: 'none',
-                  ...(isClinicaDelEste ? {
+                  ...(isPremiumHero ? {
                     backgroundColor: 'rgba(255,255,255,0.07)',
                     border: '1px solid rgba(255,255,255,0.11)',
                     borderRadius: '100px',
@@ -570,7 +572,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                     backdropFilter: 'blur(4px)',
                   } : {}),
                 }}>
-                <MessageCircle size={13} style={isClinicaDelEste ? { color: '#25D366', flexShrink: 0 } : undefined} />WhatsApp
+                <MessageCircle size={13} style={isPremiumHero ? { color: '#25D366', flexShrink: 0 } : undefined} />WhatsApp
               </a>
             )}
           </div>

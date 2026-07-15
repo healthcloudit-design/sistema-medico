@@ -29,6 +29,10 @@ export interface Organization {
   primary_color?: string | null
   whatsapp_number?: string | null
   instagram_handle?: string | null
+  specialty?: string | null
+  cover_image_url?: string | null
+  booking_headline?: string | null
+  booking_weeks?: 1 | 2 | null
   created_at: string
   updated_at: string
 }
@@ -144,5 +148,4 @@ export interface Profile {
   professional_id: string | null
   organization_id?: string | null
   created_at: string
-  updated_at: string
 }

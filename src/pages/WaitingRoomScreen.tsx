@@ -198,7 +198,7 @@ export function WaitingRoomScreen() {
 
       {/* Footer */}
       <div className="px-10 py-3 border-t border-white/10 flex items-center justify-between">
-        <p className="text-gray-600 text-sm">Sistema de Turnos · TurnOS</p>
+        <p className="text-gray-600 text-sm">PRAXIS Agenda</p>
         <p className="text-gray-600 text-sm">
           {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>

@@ -124,7 +124,7 @@ export function BookingFlow() {
   const STEPS            = getSteps(tenantType)
 
   // Beauty & estética tenants get the premium booking experience
-  if (tenantType === 'beauty' || tenantType === 'estetica') {
+  if (tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'medical') {
     return <PremiumBookingFlow org={org} />
   }
 

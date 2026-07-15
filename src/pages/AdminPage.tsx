@@ -13,6 +13,7 @@ import { UserManager } from '../components/admin/UserManager'
 import { ModulesManager } from '../components/admin/ModulesManager'
 import { CentrosManager } from '../components/admin/CentrosManager'
 import { ReportsView }   from '../components/admin/ReportsView'
+import { OrgSettings }   from '../components/admin/OrgSettings'
 
 export function AdminPage() {
   const [user, setUser]               = useState<User | null>(null)
@@ -53,7 +54,7 @@ export function AdminPage() {
 
   return (
     <AdminLayout activeView={view} onNavigate={setView} userRole={profile?.role ?? 'admin'} userName={profile?.full_name ?? ''}>
-      {view === 'dashboard'     && <Dashboard />}
+      {view === 'dashboard'     && <Dashboard organizationId={(profile as any)?.organization_id ?? null} isSuperAdmin={profile?.role === 'superadmin'} />}
       {view === 'appointments'  && <AppointmentList />}
       {view === 'availability'  && <AvailabilityManager />}
       {view === 'services'      && <ServicesManager />}
@@ -66,7 +67,7 @@ export function AdminPage() {
       )}
       {view === 'modules'       && <ModulesManager />}
       {view === 'centros'       && <CentrosManager userRole={profile?.role} />}
-      {view === 'reportes'      && <ReportsView />}
+      {view === 'configuracion' && <OrgSettings organizationId={(profile as any)?.organization_id ?? null} />}
     </AdminLayout>
   )
 }

@@ -330,6 +330,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const TH_BAR   = isLight ? '#FFFFFF'             : '#0E0E0E'
   const TH_BARBD = isLight ? 'rgba(15,23,42,0.08)' : BORDER
 
+  // ── Tenant-specific hero enhancement (scoped, zero impact on other tenants) ──
+  const isClinicaDelEste = org.slug === 'clinica-del-este'
+
   const [state, setState]           = useState<BookingState>(INIT)
   const [completed, setCompleted]   = useState(false)
   const [services, setServices]     = useState<Service[]>([])
@@ -337,6 +340,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
   const [hovCat, setHovCat]         = useState<string | null>(null)
   const [hovSvc, setHovSvc]         = useState<string | null>(null)
+  const [hovCta, setHovCta]         = useState(false)
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const instagramHandle = org.instagram_handle?.replace(/^@/, '') ?? null
@@ -419,17 +423,100 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
       {/* ─── HERO ─── */}
       <div style={{ position: 'relative', height: '88vh', minHeight: '580px', maxHeight: '900px' }}>
         <img src={heroImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)' }} />
-        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', textAlign: 'center' }}>
+
+        {/* ── Overlay base: más intenso para CDE, igual para resto ── */}
+        <div style={{ position: 'absolute', inset: 0, background: isClinicaDelEste
+          ? 'linear-gradient(180deg, rgba(4,12,24,0.28) 0%, rgba(4,12,24,0.60) 42%, rgba(4,12,24,0.93) 100%)'
+          : 'linear-gradient(180deg, rgba(11,11,11,0.2) 0%, rgba(11,11,11,0.5) 45%, rgba(11,11,11,0.94) 100%)'
+        }} />
+
+        {/* ── CDE only: viñeta lateral suave ── */}
+        {isClinicaDelEste && (
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 78% 100% at 50% 50%, transparent 22%, rgba(4,12,24,0.52) 100%)', pointerEvents: 'none' }} />
+        )}
+
+        {/* ── CDE only: backdrop central que separa texto de la imagen ── */}
+        {isClinicaDelEste && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -54%)', width: 'min(700px, 95%)', height: '440px', background: 'radial-gradient(ellipse at 50% 50%, rgba(4,12,24,0.50) 0%, transparent 68%)', filter: 'blur(18px)', pointerEvents: 'none' }} />
+        )}
+
+        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isClinicaDelEste ? '0 32px' : '0 24px', textAlign: 'center' }}>
           {logoUrl && (
             <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
-          <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 400, letterSpacing: '0.35em', textTransform: 'uppercase', color: gold, marginBottom: '14px' }}>{ctx.eyebrow}</div>
-          <h1 style={{ fontFamily: SERIF, fontSize: 'clamp(30px, 6vw, 50px)', fontWeight: 400, fontStyle: 'italic', color: '#fff', margin: '0 0 18px', lineHeight: 1.15, maxWidth: '580px' }}>{org.name}</h1>
-          <p style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 300, color: 'rgba(255,255,255,0.58)', marginBottom: '44px', maxWidth: '320px', lineHeight: 1.65 }}>{org.booking_headline ?? ctx.subtitle}</p>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '52px' }}>
-            <button onClick={scrollToBooking}
-              style={{ backgroundColor: gold, color: DARK, border: 'none', borderRadius: '8px', padding: '14px 36px', fontFamily: SANS, fontWeight: 600, fontSize: '13px', letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}>
+
+          {/* Eyebrow / categoría */}
+          <div style={{
+            fontFamily: SANS,
+            fontSize: isClinicaDelEste ? '11px' : '10px',
+            fontWeight: isClinicaDelEste ? 500 : 400,
+            letterSpacing: isClinicaDelEste ? '0.44em' : '0.35em',
+            textTransform: 'uppercase',
+            color: gold,
+            marginBottom: isClinicaDelEste ? '18px' : '14px',
+            ...(isClinicaDelEste ? {
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              border: `1px solid ${gold}30`,
+              borderRadius: '100px',
+              padding: '7px 22px',
+            } : {}),
+          }}>{ctx.eyebrow}</div>
+
+          {/* Título principal */}
+          <h1 style={{
+            fontFamily: SERIF,
+            fontSize: isClinicaDelEste ? 'clamp(36px, 6.5vw, 60px)' : 'clamp(30px, 6vw, 50px)',
+            fontWeight: 400,
+            fontStyle: 'italic',
+            color: '#fff',
+            margin: isClinicaDelEste ? '0 0 22px' : '0 0 18px',
+            lineHeight: 1.1,
+            maxWidth: isClinicaDelEste ? '660px' : '580px',
+            ...(isClinicaDelEste ? {
+              textShadow: '0 2px 20px rgba(0,0,0,0.55), 0 0 60px rgba(0,0,0,0.20)',
+            } : {}),
+          }}>{org.name}</h1>
+
+          {/* Subtítulo */}
+          <p style={{
+            fontFamily: SANS,
+            fontSize: isClinicaDelEste ? '16px' : '15px',
+            fontWeight: isClinicaDelEste ? 400 : 300,
+            color: isClinicaDelEste ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.58)',
+            marginBottom: isClinicaDelEste ? '52px' : '44px',
+            maxWidth: isClinicaDelEste ? '380px' : '320px',
+            lineHeight: 1.65,
+            ...(isClinicaDelEste ? {
+              textShadow: '0 1px 10px rgba(0,0,0,0.45)',
+            } : {}),
+          }}>{org.booking_headline ?? ctx.subtitle}</p>
+
+          {/* CTA row */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: isClinicaDelEste ? '36px' : '52px' }}>
+            <button
+              onClick={scrollToBooking}
+              onMouseEnter={() => setHovCta(true)}
+              onMouseLeave={() => setHovCta(false)}
+              style={{
+                backgroundColor: gold,
+                color: DARK,
+                border: 'none',
+                borderRadius: isClinicaDelEste ? '10px' : '8px',
+                padding: isClinicaDelEste ? '17px 56px' : '14px 36px',
+                fontFamily: SANS,
+                fontWeight: 600,
+                fontSize: isClinicaDelEste ? '14px' : '13px',
+                letterSpacing: isClinicaDelEste ? '0.10em' : '0.06em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                ...(isClinicaDelEste ? {
+                  boxShadow: hovCta
+                    ? `0 8px 32px ${gold}60, 0 2px 8px rgba(0,0,0,0.3)`
+                    : `0 4px 22px ${gold}40, 0 1px 4px rgba(0,0,0,0.18)`,
+                  transform: hovCta ? 'translateY(-2px) scale(1.01)' : 'none',
+                } : {}),
+              }}>
               {ctx.ctaLabel}
             </button>
             {instagramHandle && (
@@ -439,17 +526,51 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
               </a>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+
+          {/* Dirección + WhatsApp */}
+          <div style={{ display: 'flex', gap: isClinicaDelEste ? '10px' : '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {orgAddress && (
               <a href={`https://maps.google.com/?q=${encodeURIComponent(orgAddress)}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
-                <MapPin size={13} />{orgAddress}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: isClinicaDelEste ? '8px' : '6px',
+                  fontFamily: SANS,
+                  fontSize: isClinicaDelEste ? '13px' : '12px',
+                  fontWeight: isClinicaDelEste ? 400 : 400,
+                  color: isClinicaDelEste ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
+                  textDecoration: 'none',
+                  ...(isClinicaDelEste ? {
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.11)',
+                    borderRadius: '100px',
+                    padding: '8px 18px',
+                    backdropFilter: 'blur(4px)',
+                  } : {}),
+                }}>
+                <MapPin size={isClinicaDelEste ? 14 : 13} style={isClinicaDelEste ? { color: gold, flexShrink: 0 } : undefined} />
+                {orgAddress}
               </a>
             )}
             {whatsappNumber && (
               <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: 'rgba(255,255,255,0.38)', textDecoration: 'none' }}>
-                <MessageCircle size={13} />WhatsApp
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: SANS,
+                  fontSize: isClinicaDelEste ? '13px' : '12px',
+                  color: isClinicaDelEste ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.38)',
+                  textDecoration: 'none',
+                  ...(isClinicaDelEste ? {
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.11)',
+                    borderRadius: '100px',
+                    padding: '8px 18px',
+                    backdropFilter: 'blur(4px)',
+                  } : {}),
+                }}>
+                <MessageCircle size={13} style={isClinicaDelEste ? { color: '#25D366', flexShrink: 0 } : undefined} />WhatsApp
               </a>
             )}
           </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   TrendingUp, Users, CalendarCheck, XCircle, Clock, Award,
-  Download, Building2, BarChart2, LineChart as LineChartIcon
+  Download, Building2, BarChart2, LineChart as LineChartIcon, Stethoscope
 } from 'lucide-react'
 import { subDays, startOfDay, endOfDay, format, eachDayOfInterval } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -16,14 +16,15 @@ interface RawAppointment {
   status: string
   starts_at: string
   professionals: { full_name: string; organization_id?: string } | null
-  services: { name: string } | null
+  services: { name: string; category?: string } | null
   organizations: { id: string; name: string; primary_color?: string } | null
 }
+interface SvcStat { name: string; category: string; total: number; completados: number; orgId: string; orgName: string; orgColor: string }
 interface OrgStat   { id: string; name: string; color: string; total: number; completados: number; cancelados: number; noAsistio: number }
 interface ProfStat  { name: string; total: number; completados: number; cancelados: number }
 interface DayStat   { date: string; label: string; total: number; completados: number; cancelados: number }
 
-type Vista = 'general' | 'centros' | 'comparativa' | 'tendencia'
+type Vista = 'general' | 'centros' | 'comparativa' | 'tendencia' | 'tratamientos'
 
 const RANGE_OPTIONS = [
   { label: 'Hoy',   days: 0  },
@@ -33,10 +34,11 @@ const RANGE_OPTIONS = [
 ]
 
 const VISTA_OPTIONS: { key: Vista; label: string; icon: React.ElementType }[] = [
-  { key: 'general',     label: 'General',      icon: BarChart2        },
-  { key: 'centros',     label: 'Por centro',   icon: Building2        },
-  { key: 'comparativa', label: 'Comparativa',  icon: Award            },
-  { key: 'tendencia',   label: 'Tendencia',    icon: LineChartIcon    },
+  { key: 'general',       label: 'General',        icon: BarChart2      },
+  { key: 'centros',       label: 'Por centro',     icon: Building2      },
+  { key: 'comparativa',   label: 'Comparativa',    icon: Award          },
+  { key: 'tendencia',     label: 'Tendencia',      icon: LineChartIcon  },
+  { key: 'tratamientos',  label: 'Tratamientos',   icon: Stethoscope    },
 ]
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -66,7 +68,7 @@ export function ReportsView() {
     const to   = endOfDay(new Date()).toISOString()
     supabase
       .from('appointments')
-      .select('status, starts_at, professionals(full_name, organization_id), services(name), organizations(id, name, primary_color)')
+      .select('status, starts_at, professionals(full_name, organization_id), services(name, category), organizations(id, name, primary_color)')
       .gte('starts_at', from)
       .lte('starts_at', to)
       .then(({ data }) => { setRows((data ?? []) as unknown as RawAppointment[]); setLoading(false) })
@@ -118,6 +120,28 @@ export function ReportsView() {
       cancelados:  dRows.filter(r => r.status === 'cancelado').length,
     }
   })
+
+  // Por servicio / tratamiento
+  const svcMap: Record<string, SvcStat> = {}
+  const svcSource = selectedOrg ? rows.filter(r => r.organizations?.id === selectedOrg) : rows
+  svcSource.forEach(r => {
+    if (!r.services?.name) return
+    const org   = r.organizations
+    const key   = `${org?.id ?? ''}__${r.services.name}`
+    if (!svcMap[key]) svcMap[key] = {
+      name:        r.services.name,
+      category:    r.services.category ?? 'Sin categoría',
+      total:       0,
+      completados: 0,
+      orgId:       org?.id    ?? '',
+      orgName:     org?.name  ?? '',
+      orgColor:    org?.primary_color ?? '#0ea5e9',
+    }
+    svcMap[key].total++
+    if (r.status === 'completado') svcMap[key].completados++
+  })
+  const svcStats: SvcStat[] = Object.values(svcMap).sort((a, b) => b.total - a.total)
+  const svcCategories = [...new Set(svcStats.map(s => s.category))]
 
   // Comparativa chart data
   const comparativaData = orgStats.filter(o => o.total > 0).map(o => ({
@@ -359,6 +383,87 @@ export function ReportsView() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── TRATAMIENTOS ── */}
+          {vista === 'tratamientos' && (
+            <div className="space-y-4">
+              {/* Filtro de centro */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <label className="block text-xs font-medium text-gray-500 mb-2">Filtrar por centro</label>
+                <select value={selectedOrg} onChange={e => setSelectedOrg(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                  <option value="">Todos los centros</option>
+                  {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </div>
+
+              {svcStats.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+                  <Stethoscope className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">Sin tratamientos en el período seleccionado</p>
+                </div>
+              ) : (
+                <>
+                  {/* KPI rápido */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-sky-50 rounded-2xl p-5">
+                      <Stethoscope className="w-5 h-5 text-sky-500 mb-3" />
+                      <div className="text-3xl font-bold text-sky-700">{svcStats.length}</div>
+                      <div className="text-xs font-medium text-gray-500 mt-1">Servicios distintos</div>
+                    </div>
+                    <div className="bg-purple-50 rounded-2xl p-5">
+                      <Award className="w-5 h-5 text-purple-500 mb-3" />
+                      <div className="text-3xl font-bold text-purple-700">{svcCategories.length}</div>
+                      <div className="text-xs font-medium text-gray-500 mt-1">Categorías</div>
+                    </div>
+                  </div>
+
+                  {/* Ranking por categoría */}
+                  {svcCategories.map(cat => {
+                    const catSvcs = svcStats.filter(s => s.category === cat)
+                    const maxTotal = catSvcs[0]?.total ?? 1
+                    return (
+                      <div key={cat} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
+                          <h2 className="font-semibold text-gray-900 text-sm">{cat}</h2>
+                          <span className="text-xs text-gray-400">{catSvcs.reduce((a, s) => a + s.total, 0)} turnos</span>
+                        </div>
+                        <div className="divide-y divide-gray-50">
+                          {catSvcs.map((s, i) => {
+                            const pct      = Math.round((s.total / maxTotal) * 100)
+                            const compRate = s.total > 0 ? Math.round((s.completados / s.total) * 100) : 0
+                            return (
+                              <div key={`${s.orgId}-${s.name}`} className="px-5 py-3.5 flex items-center gap-3">
+                                <span className="text-xs font-bold text-gray-300 w-4 flex-shrink-0">{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1.5 gap-2">
+                                    <div className="min-w-0">
+                                      <span className="text-sm font-medium text-gray-900 block truncate">{s.name}</span>
+                                      {!selectedOrg && (
+                                        <span className="text-xs text-gray-400 truncate block">{s.orgName}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+                                      <span className="text-green-600 font-medium">{compRate}%</span>
+                                      <span className="font-bold text-gray-700">{s.total}</span>
+                                    </div>
+                                  </div>
+                                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full transition-all"
+                                      style={{ width: pct + '%', backgroundColor: s.orgColor }} />
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </>
               )}
             </div>

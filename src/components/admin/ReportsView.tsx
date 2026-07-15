@@ -132,12 +132,18 @@ export function ReportsView() {
 
   function handleExport() {
     const style = document.createElement('style')
-    style.textContent = `@media print { body > *:not(#rpt) { display:none!important } #rpt { display:block!important } @page { margin:20mm } .no-print { display:none!important } }`
+    style.textContent = `
+      @media print {
+        @page { margin: 15mm; }
+        body * { visibility: hidden !important; }
+        #rpt-root, #rpt-root * { visibility: visible !important; }
+        #rpt-root { position: fixed !important; inset: 0 !important; width: 100% !important; padding: 0 !important; }
+        .no-print { display: none !important; }
+      }
+    `
     document.head.appendChild(style)
-    const el = document.getElementById('rpt-root')
-    if (el) el.id = 'rpt'
     window.print()
-    setTimeout(() => { document.head.removeChild(style); if (el) el.id = 'rpt-root' }, 1000)
+    setTimeout(() => document.head.removeChild(style), 1500)
   }
 
   return (

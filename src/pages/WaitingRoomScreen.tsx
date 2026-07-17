@@ -15,6 +15,29 @@ interface Org {
   name: string
 }
 
+function DoctorIcon({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      className="text-sky-300"
+    >
+      <circle cx="12" cy="7.5" r="3.6" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M5 21v-1.6a5 5 0 0 1 5-5h.6M19 21v-1.6a5 5 0 0 0-5-5h-.6"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <path
+        d="M9.6 10.2v2.6a2.4 2.4 0 0 0 4.8 0v-2.6"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+      />
+      <circle cx="16.2" cy="15.4" r="0.9" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
+}
+
 function ProfessionalAvatar({ url, size = 32 }: { url?: string | null; size?: number }) {
   return (
     <div
@@ -24,7 +47,7 @@ function ProfessionalAvatar({ url, size = 32 }: { url?: string | null; size?: nu
       {url ? (
         <img src={url} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>😷</span>
+        <DoctorIcon size={size * 0.62} />
       )}
     </div>
   )

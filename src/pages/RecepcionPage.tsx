@@ -109,7 +109,7 @@ export function RecepcionPage() {
     const to   = `${dateFilter}T23:59:59-03:00`
     const { data } = await supabase
       .from('appointments')
-      .select('*, professionals(full_name,specialty), services(name,color,duration_minutes), patients(full_name,phone,email,obra_social,nro_socio)')
+      .select('*, professionals(full_name,specialty,consultorio), services(name,color,duration_minutes), patients(full_name,phone,email,obra_social,nro_socio)')
       .gte('starts_at', from)
       .lte('starts_at', to)
       .order('starts_at')
@@ -331,7 +331,7 @@ export function RecepcionPage() {
               {(() => {
                 const patient = selected.patient as { full_name:string; phone?:string; email?:string; obra_social?:string; nro_socio?:string }|undefined
                 const service = selected.service as { name:string; duration_minutes?:number }|undefined
-                const prof    = selected.professional as { full_name:string; specialty?:string }|undefined
+                const prof    = selected.professional as { full_name:string; specialty?:string; consultorio?:string|null }|undefined
 
                 return (
                   <>
@@ -359,6 +359,7 @@ export function RecepcionPage() {
                         ['Servicio',     service?.name ?? '—'],
                         ['Duración',     service?.duration_minutes ? `${service.duration_minutes} min` : '—'],
                         ['Profesional',  prof?.full_name ?? '—'],
+                        ['Consultorio',  prof?.consultorio ?? '—'],
                         ['Teléfono',     selected.patient_phone ?? '—'],
                         ...(selected.patient_email ? [['Email', selected.patient_email]] as [string,string][] : []),
                         ...(patient?.obra_social && selected.status !== 'pendiente' ? [['Obra social', `${patient.obra_social}${patient.nro_socio ? ` · ${patient.nro_socio}` : ''}`]] as [string,string][] : []),

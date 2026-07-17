@@ -7,7 +7,7 @@ interface Appointment {
   patient_name: string
   starts_at: string
   status: string
-  professional?: { full_name: string }
+  professional?: { full_name: string; consultorio?: string | null }
 }
 
 interface Org {
@@ -59,7 +59,7 @@ export function WaitingRoomScreen() {
 
     const { data } = await supabase
       .from('appointments')
-      .select('id, patient_name, starts_at, status, professionals(full_name)')
+      .select('id, patient_name, starts_at, status, professionals(full_name, consultorio)')
       .eq('organization_id', orgId)
       .gte('starts_at', from)
       .lte('starts_at', to)
@@ -143,8 +143,13 @@ export function WaitingRoomScreen() {
                 {current.patient_name}
               </p>
               {current.professional && (
-                <p className="mt-6 text-sky-300/70 text-xl">
+                <p className="mt-6 text-sky-300/70 text-xl text-center">
                   {current.professional.full_name}
+                  {current.professional.consultorio && (
+                    <span className="block mt-1 text-sky-400 font-bold uppercase tracking-widest text-2xl">
+                      Consultorio {current.professional.consultorio}
+                    </span>
+                  )}
                 </p>
               )}
             </>
@@ -185,7 +190,10 @@ export function WaitingRoomScreen() {
                       {appt.patient_name}
                     </p>
                     {appt.professional && (
-                      <p className="text-gray-500 text-sm truncate">{appt.professional.full_name}</p>
+                      <p className="text-gray-500 text-sm truncate">
+                        {appt.professional.full_name}
+                        {appt.professional.consultorio && ` · Consultorio ${appt.professional.consultorio}`}
+                      </p>
                     )}
                   </div>
                 </div>

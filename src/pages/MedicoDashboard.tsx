@@ -701,11 +701,16 @@ export function MedicoDashboard() {
   const { profile, loading:profileLoading } = useProfile(user)
   const [orgId, setOrgId]   = useState<string|null>(null)
   const [tenant, setTenant] = useState('medical')
+  const [consultorio, setConsultorio] = useState<string|null>(null)
 
   useEffect(() => {
     if (!profile?.professional_id) return
-    supabase.from('professionals').select('organization_id, organizations(tenant_type)').eq('id', profile.professional_id).single()
-      .then(({ data }) => { setOrgId(data?.organization_id ?? null); setTenant((data?.organizations as any)?.tenant_type ?? 'medical') })
+    supabase.from('professionals').select('organization_id, consultorio, organizations(tenant_type)').eq('id', profile.professional_id).single()
+      .then(({ data }) => {
+        setOrgId(data?.organization_id ?? null)
+        setTenant((data?.organizations as any)?.tenant_type ?? 'medical')
+        setConsultorio(data?.consultorio ?? null)
+      })
   }, [profile?.professional_id])
 
   const { featureHc } = useOrgFeatures(orgId)
@@ -811,7 +816,9 @@ export function MedicoDashboard() {
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'5px 12px', borderRadius:'999px', backgroundColor:'#f0fdf4', border:'1px solid #bbf7d0' }}>
               <span style={{ width:'7px', height:'7px', borderRadius:'50%', backgroundColor:'#22c55e' }}/>
-              <span style={{ fontSize:'11px', fontWeight:500, color:'#166534' }}>Consultorio activo</span>
+              <span style={{ fontSize:'11px', fontWeight:500, color:'#166534' }}>
+                {consultorio ? `Consultorio ${consultorio}` : 'Consultorio activo'}
+              </span>
             </div>
             <button onClick={logout}
               style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', borderRadius:'8px', border:`1px solid ${BD}`, backgroundColor:'transparent', fontSize:'12px', fontWeight:500, color:T2, cursor:'pointer' }}

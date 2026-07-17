@@ -44,6 +44,7 @@ export interface Professional {
   user_id?: string
   full_name: string
   specialty?: string
+  consultorio?: string | null
   bio?: string
   avatar_url?: string
   active: boolean

@@ -7,12 +7,27 @@ interface Appointment {
   patient_name: string
   starts_at: string
   status: string
-  professional?: { full_name: string; consultorio?: string | null }
+  professional?: { full_name: string; consultorio?: string | null; avatar_url?: string | null }
 }
 
 interface Org {
   id: string
   name: string
+}
+
+function ProfessionalAvatar({ url, size = 32 }: { url?: string | null; size?: number }) {
+  return (
+    <div
+      className="rounded-full flex items-center justify-center flex-shrink-0 bg-sky-950 border border-sky-400/30 overflow-hidden"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        <img src={url} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <span style={{ fontSize: size * 0.55, lineHeight: 1 }}>😷</span>
+      )}
+    </div>
+  )
 }
 
 function Clock() {
@@ -59,7 +74,7 @@ export function WaitingRoomScreen() {
 
     const { data } = await supabase
       .from('appointments')
-      .select('id, patient_name, starts_at, status, professionals(full_name, consultorio)')
+      .select('id, patient_name, starts_at, status, professionals(full_name, consultorio, avatar_url)')
       .eq('organization_id', orgId)
       .gte('starts_at', from)
       .lte('starts_at', to)
@@ -143,14 +158,17 @@ export function WaitingRoomScreen() {
                 {current.patient_name}
               </p>
               {current.professional && (
-                <p className="mt-6 text-sky-300/70 text-xl text-center">
-                  {current.professional.full_name}
+                <div className="mt-6 flex flex-col items-center">
+                  <div className="flex items-center gap-3">
+                    <ProfessionalAvatar url={current.professional.avatar_url} size={40} />
+                    <p className="text-sky-300/70 text-xl">{current.professional.full_name}</p>
+                  </div>
                   {current.professional.consultorio && (
-                    <span className="block mt-1 text-sky-400 font-bold uppercase tracking-widest text-2xl">
+                    <span className="mt-1 text-sky-400 font-bold uppercase tracking-widest text-2xl">
                       Consultorio {current.professional.consultorio}
                     </span>
                   )}
-                </p>
+                </div>
               )}
             </>
           ) : (
@@ -190,10 +208,13 @@ export function WaitingRoomScreen() {
                       {appt.patient_name}
                     </p>
                     {appt.professional && (
-                      <p className="text-gray-500 text-sm truncate">
-                        {appt.professional.full_name}
-                        {appt.professional.consultorio && ` · Consultorio ${appt.professional.consultorio}`}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1 min-w-0">
+                        <ProfessionalAvatar url={appt.professional.avatar_url} size={20} />
+                        <p className="text-gray-500 text-sm truncate">
+                          {appt.professional.full_name}
+                          {appt.professional.consultorio && ` · Consultorio ${appt.professional.consultorio}`}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>

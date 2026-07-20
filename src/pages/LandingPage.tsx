@@ -71,7 +71,7 @@ export function LandingPage() {
       {/* Header */}
       <header className="px-6 py-4 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <img src="/praxis_logo.png" alt="Praxis Operativa" className="h-9 w-auto" />
+          <img src={`${import.meta.env.BASE_URL}praxis_logo.png`} alt="Praxis Operativa" className="h-9 w-auto" />
           <span
             className="text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full"
             style={{ color: PRAXIS_TEAL, backgroundColor: `${PRAXIS_TEAL}14` }}
@@ -199,7 +199,7 @@ export function LandingPage() {
       <footer className="px-6 py-5 border-t border-gray-100 bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img src="/praxis_logo.png" alt="Praxis Operativa" className="h-6 w-auto opacity-70" />
+            <img src={`${import.meta.env.BASE_URL}praxis_logo.png`} alt="Praxis Operativa" className="h-6 w-auto opacity-70" />
             <span className="text-xs text-gray-400">Sistema de Turnos · {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-4">

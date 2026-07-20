@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Plus, ExternalLink, Copy, Check, Building2, Pencil, X, Upload, ToggleLeft, ToggleRight, Settings2, ChevronLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { alpha } from '../../lib/color'
@@ -370,13 +371,13 @@ export function CentrosManager({ userRole }: { userRole?: string }) {
           <p className="text-sm text-gray-500 mt-0.5">{orgs.length} centros registrados</p>
         </div>
         {isSuperGlobal && (
-          <a
-            href="/superadmin/nuevo-tenant"
+          <Link
+            to="/superadmin/nuevo-tenant"
             className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Nuevo centro
-          </a>
+          </Link>
         )}
       </div>
 

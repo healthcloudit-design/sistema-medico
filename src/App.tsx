@@ -11,7 +11,7 @@ import { NuevoTenantPage } from './pages/superadmin/NuevoTenantPage'
 
 export default function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter basename="/agenda" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/"                        element={<LandingPage />} />
         <Route path="/cancelar"                element={<CancelPage />} />

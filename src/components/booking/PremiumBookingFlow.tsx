@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Instagram } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, MapPin, Calendar, Home, MessageCircle, Instagram } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -314,6 +315,7 @@ const INIT: BookingState = {
 const STEPS = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar']
 
 export function PremiumBookingFlow({ org }: { org: Organization }) {
+  const navigate = useNavigate()
   const ctx     = getOrgContext(org)
   const gold    = org.primary_color ?? ctx.accentHint ?? '#C9A96E'
   const heroImg = org.cover_image_url ?? ctx.heroImg
@@ -405,16 +407,17 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             </div>
           ))}
         </div>
-        {whatsappNumber && (
-          <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 500, cursor: 'pointer', textDecoration: 'none', marginBottom: '10px' }}>
-            <MessageCircle size={15} /> Confirmar por WhatsApp
-          </a>
-        )}
-        <button onClick={() => { setState(INIT); setCompleted(false); setSelectedCat(null) }}
-          style={{ width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-          {ctx.newBooking}
+        <button onClick={() => { setState(INIT); setCompleted(false); setSelectedCat(null); navigate(`/${org.slug}`) }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}>
+          <Home size={15} /> Volver al inicio
         </button>
+        <button onClick={() => navigate(`/totem/${org.slug}`)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: 'transparent', color: TH_T1, border: `1px solid ${TH_BD2}`, borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: '20px' }}>
+          <Calendar size={15} /> Consultar mis turnos
+        </button>
+        <p style={{ fontFamily: SANS, fontSize: '12px', color: TH_T3, margin: 0 }}>
+          Ya podés cerrar esta ventana.
+        </p>
       </div>
     </div>
   )

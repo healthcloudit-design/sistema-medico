@@ -272,6 +272,37 @@ const SPECIALTY_MAP: Record<string, SpecialtyCtx> = {
     heroImg:    'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=1600&h=900&fit=crop&auto=format&q=80',
     accentHint: '#8A7B5A',
   },
+  // ── Mascotas / Deporte ───────────────────────────────────────────────────
+  petshop: {
+    eyebrow:    'Peluquería Canina',
+    subtitle:   'Reservá el baño y cuidado de tu mascota',
+    ctaLabel:   'Reservar Turno',
+    doneTitle:  'Turno confirmado',
+    doneMsg:    'El turno para tu mascota fue registrado. Te contactamos para confirmar.',
+    newBooking: 'Reservar otro turno',
+    heroImg:    'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#C97B3D',
+  },
+  veterinary: {
+    eyebrow:    'Atención Veterinaria',
+    subtitle:   'Reservá la consulta para tu mascota',
+    ctaLabel:   'Reservar Consulta',
+    doneTitle:  'Consulta confirmada',
+    doneMsg:    'La consulta para tu mascota fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra consulta',
+    heroImg:    'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2E7D6B',
+  },
+  cancha: {
+    eyebrow:    'Reserva de Cancha',
+    subtitle:   'Reservá tu cancha en simples pasos',
+    ctaLabel:   'Reservar Cancha',
+    doneTitle:  'Cancha reservada!',
+    doneMsg:    'Tu cancha fue reservada. Te esperamos!',
+    newBooking: 'Reservar otra cancha',
+    heroImg:    'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2E7D32',
+  },
 }
 
 // Slug keyword → specialty key (fallback when org.specialty is null)

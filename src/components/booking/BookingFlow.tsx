@@ -123,8 +123,9 @@ export function BookingFlow() {
   const orgAddress       = org.address ?? null
   const STEPS            = getSteps(tenantType)
 
-  // Beauty & estética tenants get the premium booking experience
-  if (tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'medical') {
+  // Beauty, estética, petshop, veterinary y cancha usan la experiencia premium
+  if (tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'medical'
+   || tenantType === 'petshop' || tenantType === 'veterinary' || tenantType === 'cancha') {
     return <PremiumBookingFlow org={org} />
   }
 
@@ -149,7 +150,7 @@ export function BookingFlow() {
           className="w-full text-white py-3 rounded-xl font-medium transition-opacity hover:opacity-90"
           style={{ backgroundColor: accentColor }}
         >
-          {tenantType === 'cancha' ? 'Reservar otra cancha' : 'Reservar otro turno'}
+          Reservar otro turno
         </button>
         <p className="mt-3 text-gray-400 text-sm">Ya podes cerrar esta ventana.</p>
       </div>
@@ -180,7 +181,7 @@ export function BookingFlow() {
             {/* Name */}
             <h1 className="text-2xl font-bold text-white text-center drop-shadow">{org.name}</h1>
             <p className="text-white/70 text-sm text-center mt-1">
-              {tenantType === 'cancha' ? 'Reservar cancha online' : 'Reservar turno online'}
+              Reservar turno online
             </p>
 
             {/* Social links */}

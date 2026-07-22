@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash } from 'lucide-react'
+import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash, Pencil, CalendarPlus, X, Save } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 interface Patient {
@@ -17,14 +17,23 @@ interface Patient {
 interface Props {
   orgId?: string | null
   professionalId?: string | null
+  /** Permite editar la ficha del paciente (solo recepción/admin) */
+  canEdit?: boolean
+  /** Si se pasa, muestra un botón "Nuevo turno" por paciente */
+  onNewAppointment?: (patient: Patient) => void
 }
 
-export function PatientSearch({ orgId, professionalId }: Props) {
+export function PatientSearch({ orgId, professionalId, canEdit = false, onNewAppointment }: Props) {
   const [query, setQuery]       = useState('')
   const [results, setResults]   = useState<Patient[]>([])
   const [loading, setLoading]   = useState(false)
   const [searched, setSearched] = useState(false)
   const debounceRef             = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [editing, setEditing]   = useState<Patient | null>(null)
+  const [editForm, setEditForm] = useState<Patient | null>(null)
+  const [saving, setSaving]     = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const search = async (q: string) => {
     if (q.trim().length < 2) { setResults([]); setSearched(false); return }
@@ -68,6 +77,39 @@ export function PatientSearch({ orgId, professionalId }: Props) {
 
     setResults(mapped)
     setLoading(false)
+  }
+
+  const openEdit = (p: Patient) => {
+    setEditing(p)
+    setEditForm({ ...p })
+    setSaveError('')
+  }
+
+  const saveEdit = async () => {
+    if (!editing || !editForm) return
+    if (!editForm.full_name?.trim()) { setSaveError('El nombre es obligatorio'); return }
+    setSaving(true); setSaveError('')
+    const { error } = await supabase
+      .from('patients')
+      .update({
+        full_name:   editForm.full_name,
+        phone:       editForm.phone || null,
+        email:       editForm.email || null,
+        dni:         editForm.dni || null,
+        obra_social: editForm.obra_social || null,
+        nro_socio:   editForm.nro_socio || null,
+        notes:       editForm.notes || null,
+      })
+      .eq('id', editing.id)
+    if (error) {
+      setSaveError('No se pudo guardar. Intentá de nuevo.')
+      setSaving(false)
+      return
+    }
+    setResults(prev => prev.map(p => p.id === editing.id ? { ...p, ...editForm } : p))
+    setSaving(false)
+    setEditing(null)
+    setEditForm(null)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,11 +217,94 @@ export function PatientSearch({ orgId, professionalId }: Props) {
                     </span>
                   </div>
                 )}
+                {(canEdit || onNewAppointment) && (
+                  <div className="mt-3 flex gap-2">
+                    {onNewAppointment && (
+                      <button onClick={() => onNewAppointment(p)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors">
+                        <CalendarPlus className="w-3.5 h-3.5" /> Nuevo turno
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button onClick={() => openEdit(p)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
+                        <Pencil className="w-3.5 h-3.5" /> Editar datos
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Modal editar paciente */}
+      {editing && editForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+              <h3 className="font-semibold text-gray-900">Editar paciente</h3>
+              <button onClick={() => { setEditing(null); setEditForm(null) }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                <input value={editForm.full_name} onChange={e => setEditForm(f => f && ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input value={editForm.phone ?? ''} onChange={e => setEditForm(f => f && ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={editForm.email ?? ''} onChange={e => setEditForm(f => f && ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">DNI</label>
+                  <input value={editForm.dni ?? ''} onChange={e => setEditForm(f => f && ({ ...f, dni: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Obra social</label>
+                  <input value={editForm.obra_social ?? ''} onChange={e => setEditForm(f => f && ({ ...f, obra_social: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nro de obra social</label>
+                <input value={editForm.nro_socio ?? ''} onChange={e => setEditForm(f => f && ({ ...f, nro_socio: e.target.value }))}
+                  placeholder="Nro de obra social"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea value={editForm.notes ?? ''} onChange={e => setEditForm(f => f && ({ ...f, notes: e.target.value }))} rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              {saveError && (
+                <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{saveError}</div>
+              )}
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button onClick={() => { setEditing(null); setEditForm(null) }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={saveEdit} disabled={saving}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-50">
+                <Save className="w-4 h-4" /> {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

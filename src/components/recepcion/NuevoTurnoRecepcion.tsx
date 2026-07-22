@@ -10,7 +10,20 @@ const DAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 interface Professional { id: string; full_name: string; specialty?: string }
 interface Service      { id: string; name: string; duration_minutes: number }
 
-interface Props { organizationId: string }
+interface InitialPatient {
+  full_name: string
+  phone?: string
+  email?: string
+  dni?: string
+  obra_social?: string
+  nro_socio?: string
+  notes?: string
+}
+
+interface Props {
+  organizationId: string
+  initialPatient?: InitialPatient | null
+}
 
 type Step = 'profesional' | 'servicio' | 'fecha' | 'paciente' | 'confirmar'
 
@@ -23,7 +36,7 @@ const STEP_LABELS: Record<Step, string> = {
   confirmar:   'Confirmar',
 }
 
-export function NuevoTurnoRecepcion({ organizationId }: Props) {
+export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
   const [step, setStep]                   = useState<Step>('profesional')
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [services, setServices]           = useState<Service[]>([])
@@ -35,14 +48,14 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
   const [success, setSuccess]             = useState(false)
   const [errorMsg, setErrorMsg]           = useState('')
 
-  // Paciente
-  const [patientName,  setPatientName]  = useState('')
-  const [patientPhone, setPatientPhone] = useState('')
-  const [patientEmail, setPatientEmail] = useState('')
-  const [patientDni,   setPatientDni]   = useState('')
-  const [obraSocial,   setObraSocial]   = useState('')
-  const [nroSocio,     setNroSocio]     = useState('')
-  const [notas,        setNotas]        = useState('')
+  // Paciente (precargado si venimos desde la búsqueda de pacientes)
+  const [patientName,  setPatientName]  = useState(initialPatient?.full_name ?? '')
+  const [patientPhone, setPatientPhone] = useState(initialPatient?.phone ?? '')
+  const [patientEmail, setPatientEmail] = useState(initialPatient?.email ?? '')
+  const [patientDni,   setPatientDni]   = useState(initialPatient?.dni ?? '')
+  const [obraSocial,   setObraSocial]   = useState(initialPatient?.obra_social ?? '')
+  const [nroSocio,     setNroSocio]     = useState(initialPatient?.nro_socio ?? '')
+  const [notas,        setNotas]        = useState(initialPatient?.notes ?? '')
 
   // Calendario semanal
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -150,6 +163,12 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
 
   return (
     <div className="space-y-5">
+      {initialPatient && (
+        <div className="flex items-center gap-2 bg-sky-50 border border-sky-100 rounded-xl px-4 py-2.5">
+          <UserPlus className="w-4 h-4 text-sky-600 flex-shrink-0" />
+          <p className="text-sm text-sky-800">Turno nuevo para <span className="font-semibold">{initialPatient.full_name}</span></p>
+        </div>
+      )}
       {/* Stepper */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {STEPS.map((s, i) => (

@@ -16,6 +16,7 @@ export function useAvailability(
   professionalId: string | undefined,
   selectedDate: string | undefined,
   serviceDurationMinutes: number = 30,
+  excludeAppointmentId?: string,
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,13 +47,17 @@ export function useAvailability(
             .select('*')
             .eq('professional_id', professionalId)
             .or(`blocked_date.eq.${selectedDate},and(blocked_start.lte.${dayEnd},blocked_end.gte.${dayStart})`),
-          supabase
-            .from('appointments')
-            .select('starts_at, ends_at')
-            .eq('professional_id', professionalId)
-            .gte('starts_at', dayStart)
-            .lte('starts_at', dayEnd)
-            .neq('status', 'cancelado'),
+          (() => {
+            let q = supabase
+              .from('appointments')
+              .select('id, starts_at, ends_at')
+              .eq('professional_id', professionalId)
+              .gte('starts_at', dayStart)
+              .lte('starts_at', dayEnd)
+              .neq('status', 'cancelado')
+            if (excludeAppointmentId) q = q.neq('id', excludeAppointmentId)
+            return q
+          })(),
         ])
 
         if (scheduleRes.error) throw scheduleRes.error
@@ -130,7 +135,7 @@ export function useAvailability(
     }
 
     load()
-  }, [professionalId, selectedDate])
+  }, [professionalId, selectedDate, excludeAppointmentId])
 
   useEffect(() => {
     if (!professionalId) {

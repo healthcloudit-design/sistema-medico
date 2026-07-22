@@ -5,12 +5,13 @@ import { es } from 'date-fns/locale'
 import {
   Calendar, Search, LogOut, Clock, CheckCircle, XCircle,
   UserX, Users, LayoutList, CalendarX, UserPlus,
-  Banknote, CreditCard, AlertCircle, Stethoscope,
+  Banknote, CreditCard, AlertCircle, Stethoscope, CalendarClock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
+import { RescheduleModal } from '../components/shared/RescheduleModal'
 import { RecepcionBloqueos } from '../components/recepcion/RecepcionBloqueos'
 import { NuevoTurnoRecepcion } from '../components/recepcion/NuevoTurnoRecepcion'
 import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
@@ -84,8 +85,11 @@ export function RecepcionPage() {
   const [selected, setSelected]   = useState<Appointment | null>(null)
   const [updating, setUpdating]   = useState(false)
   const [showTreat, setShowTreat] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
   const [calView, setCalView]     = useState(false)
   const [currentWeek, setCurWeek] = useState(new Date())
+  const [prefillPatient, setPrefillPatient] = useState<{ full_name:string; phone?:string; email?:string; dni?:string; obra_social?:string; nro_socio?:string; notes?:string } | null>(null)
+  const [nuevoKey, setNuevoKey]   = useState(0)
   const navigate = useNavigate()
 
   const { profile, loading: profileLoading } = useProfile(user)
@@ -148,12 +152,24 @@ export function RecepcionPage() {
     setUpdating(false)
   }
 
+  const handleRescheduled = async () => {
+    setShowReschedule(false)
+    setSelected(null)
+    await load()
+  }
+
   const updatePayment = async (id: string, payment_status: string) => {
     setUpdating(true)
     await supabase.from('appointments').update({ payment_status }).eq('id', id)
     setSelected(p => p ? { ...p, payment_status } : null)
     setAppts(p => p.map(a => a.id===id ? { ...a, payment_status } : a))
     setUpdating(false)
+  }
+
+  const handleNewAppointmentFromPatient = (p: { full_name:string; phone?:string; email?:string; dni?:string; obra_social?:string; nro_socio?:string; notes?:string }) => {
+    setPrefillPatient(p)
+    setNuevoKey(k => k + 1)
+    setTab('nuevo')
   }
 
   if (authLoading || profileLoading) return (
@@ -201,7 +217,7 @@ export function RecepcionPage() {
           {TABS.map(({ id, icon:Icon, label }) => {
             const active = tab === id
             return (
-              <button key={id} onClick={() => setTab(id)}
+              <button key={id} onClick={() => { if (id === 'nuevo' && tab !== 'nuevo') { setPrefillPatient(null); setNuevoKey(k => k + 1) }; setTab(id) }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{ backgroundColor: active ? '#fff' : 'transparent', color: active ? '#111827' : '#6b7280', boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
                 <Icon className="w-4 h-4"/>{label}
@@ -218,7 +234,11 @@ export function RecepcionPage() {
         </div>
 
         {tab === 'pacientes' && (
-          <PatientSearch orgId={(profile as any)?.organization_id ?? null}/>
+          <PatientSearch
+            orgId={(profile as any)?.organization_id ?? null}
+            canEdit
+            onNewAppointment={handleNewAppointmentFromPatient}
+          />
         )}
 
         {tab === 'turnos' && <>
@@ -303,7 +323,11 @@ export function RecepcionPage() {
           <RecepcionBloqueos organizationId={(profile as any)?.organization_id ?? ''}/>
         )}
         {tab === 'nuevo' && (
-          <NuevoTurnoRecepcion organizationId={(profile as any)?.organization_id ?? ''}/>
+          <NuevoTurnoRecepcion
+            key={nuevoKey}
+            organizationId={(profile as any)?.organization_id ?? ''}
+            initialPatient={prefillPatient}
+          />
         )}
       </main>
 
@@ -416,6 +440,9 @@ export function RecepcionPage() {
                       {!['cancelado','completado'].includes(selected.status) && (
                         <ActionBtn icon={XCircle} label="Cancelar" color="red" onClick={() => updateStatus(selected.id,'cancelado')} loading={updating}/>
                       )}
+                      {['pendiente','confirmado'].includes(selected.status) && (
+                        <ActionBtn icon={CalendarClock} label="Reprogramar" color="indigo" onClick={() => setShowReschedule(true)} loading={updating}/>
+                      )}
                     </div>
 
                     {/* Treatments button */}
@@ -441,6 +468,18 @@ export function RecepcionPage() {
           onClose={() => setShowTreat(false)}
         />
       )}
+
+      {/* Reprogramar turno */}
+      {selected && showReschedule && (
+        <RescheduleModal
+          appointmentId={selected.id}
+          professionalId={selected.professional_id}
+          serviceDurationMinutes={(selected.service as { duration_minutes?: number } | undefined)?.duration_minutes ?? 30}
+          currentStartsAt={selected.starts_at}
+          onClose={() => setShowReschedule(false)}
+          onRescheduled={handleRescheduled}
+        />
+      )}
     </div>
   )
 }
@@ -449,10 +488,11 @@ function ActionBtn({ icon:Icon, label, color, onClick, loading }: {
   icon:React.ElementType; label:string; color:string; onClick:()=>void; loading:boolean
 }) {
   const COLORS: Record<string,string> = {
-    sky:  'background:#0369a1;color:#fff',
-    teal: 'background:#0d9488;color:#fff',
-    gray: 'background:#f1f5f9;color:#475569',
-    red:  'background:#fef2f2;color:#dc2626',
+    sky:    'background:#0369a1;color:#fff',
+    teal:   'background:#0d9488;color:#fff',
+    gray:   'background:#f1f5f9;color:#475569',
+    red:    'background:#fef2f2;color:#dc2626',
+    indigo: 'background:#eef2ff;color:#4338ca',
   }
   const [bg, fg] = (COLORS[color] ?? COLORS.gray).split(';').map(p => p.split(':')[1])
   return (

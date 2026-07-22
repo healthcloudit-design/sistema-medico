@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Users, LogOut, FileText,
   CalendarX, ChevronRight, Search, MessageCircle,
   CheckCircle, AlertCircle, TrendingUp, Menu, X, ArrowRight,
-  Lock, Clock, Activity,
+  Lock, Clock, Activity, CalendarClock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
@@ -18,7 +18,9 @@ import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsMo
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
+import { RescheduleModal } from '../components/shared/RescheduleModal'
 import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
+import { MiHorarios } from '../components/medico/MiHorarios'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment } from '../types'
 
@@ -80,7 +82,7 @@ const NAV_ITEMS = [
   { id:'dashboard',     icon:LayoutDashboard, label:'Inicio'    },
   { id:'agenda',        icon:Calendar,        label:'Mi agenda' },
   { id:'pacientes',     icon:Users,           label:'Pacientes' },
-  { id:'bloqueos',      icon:CalendarX,       label:'Bloqueos'  },
+  { id:'bloqueos',      icon:CalendarX,       label:'Disponibilidad' },
 ] as const
 
 function Sidebar({ view, go, profile, logout, close }: {
@@ -335,15 +337,17 @@ function RightPanel({ appointments, onSelect, go }: {
 }
 
 // ── Appointment detail modal ──────────────────────────────────────────────────
-function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
+function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onRescheduled }: {
   appt:Appointment; onClose:()=>void;
   onStatus:(id:string,s:string)=>void;
   featureHc:boolean; onShowHC:()=>void; onShowST:()=>void
+  onRescheduled:()=>void
 }) {
   const s     = ST[appt.status] ?? ST.pendiente
   const svc   = appt.service as { name:string; duration_minutes?:number }|undefined
   const pat   = appt.patient as { obra_social?:string }|undefined
   const esHoy = isToday(parseISO(appt.starts_at))
+  const [showReschedule, setShowReschedule] = useState(false)
 
   const INFO = [
     ['Servicio',   svc?.name ?? '—'],
@@ -426,9 +430,27 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
                 </a>
               )}
             </div>
+
+            {(appt.status==='confirmado'||appt.status==='pendiente') && (
+              <button onClick={() => setShowReschedule(true)}
+                style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#eef2ff', color:'#4338ca', border:'1px solid #e0e7ff', cursor:'pointer' }}>
+                <CalendarClock size={14}/> Reprogramar turno
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {showReschedule && (
+        <RescheduleModal
+          appointmentId={appt.id}
+          professionalId={appt.professional_id}
+          serviceDurationMinutes={svc?.duration_minutes ?? 30}
+          currentStartsAt={appt.starts_at}
+          onClose={() => setShowReschedule(false)}
+          onRescheduled={() => { setShowReschedule(false); onRescheduled() }}
+        />
+      )}
     </div>
   )
 }
@@ -858,7 +880,9 @@ export function MedicoDashboard() {
             )}
             {view === 'bloqueos' && profile?.professional_id && (
               <div>
-                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>Bloqueos de agenda</h2>
+                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>Disponibilidad</h2>
+                <MiHorarios professionalId={profile.professional_id}/>
+                <h3 style={{ fontSize:'13px', fontWeight:700, color:T2, textTransform:'uppercase', letterSpacing:'0.06em', margin:'24px 0 12px' }}>Bloqueos puntuales</h3>
                 <MiAgendaBloqueos professionalId={profile.professional_id}/>
               </div>
             )}
@@ -889,7 +913,7 @@ export function MedicoDashboard() {
 
       {/* Modals */}
       {selected && !showHC && (
-        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)} onShowST={() => setShowST(true)}/>
+        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)} onShowST={() => setShowST(true)} onRescheduled={() => setSel(null)}/>
       )}
       {selected && showHC && profile?.professional_id && (
         <ClinicalRecordModal

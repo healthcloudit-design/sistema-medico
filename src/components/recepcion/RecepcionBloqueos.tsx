@@ -9,6 +9,12 @@ interface Professional { id: string; full_name: string; specialty?: string }
 
 interface Props { organizationId: string }
 
+function toArgTime(iso: string): string {
+  const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
+  const d = new Date(ms)
+  return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`
+}
+
 export function RecepcionBloqueos({ organizationId }: Props) {
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [selectedProId, setSelectedProId] = useState('')
@@ -50,7 +56,8 @@ export function RecepcionBloqueos({ organizationId }: Props) {
       })
   }, [selectedProId])
 
-  const futureBlocks = blocks.filter(b => (b.blocked_date ?? '') >= today)
+  const blockSortDate = (b: AvailabilityBlock) => b.blocked_date ?? (b.blocked_start ? b.blocked_start.slice(0, 10) : '')
+  const futureBlocks = blocks.filter(b => blockSortDate(b) >= today)
 
   const handleAdd = async () => {
     if (!newDate || !selectedProId) return
@@ -61,8 +68,9 @@ export function RecepcionBloqueos({ organizationId }: Props) {
       reason:          newReason || null,
     }
     if (mode === 'bloque' && newTimeFrom && newTimeTo) {
-      payload.start_time = newTimeFrom
-      payload.end_time   = newTimeTo
+      payload.blocked_date  = null
+      payload.blocked_start = `${newDate}T${newTimeFrom}:00-03:00`
+      payload.blocked_end   = `${newDate}T${newTimeTo}:00-03:00`
     }
     const { data, error } = await supabase
       .from('availability_blocks')
@@ -71,8 +79,10 @@ export function RecepcionBloqueos({ organizationId }: Props) {
       .single()
     if (!error && data) {
       setBlocks(prev => [...prev, data as AvailabilityBlock].sort((a, b) =>
-        (a.blocked_date ?? '').localeCompare(b.blocked_date ?? '')))
+        (a.blocked_date ?? a.blocked_start ?? '').localeCompare(b.blocked_date ?? b.blocked_start ?? '')))
       setNewDate(''); setNewReason(''); setNewTimeFrom(''); setNewTimeTo('')
+    } else if (error) {
+      console.error(error)
     }
     setSaving(false)
   }
@@ -158,24 +168,27 @@ export function RecepcionBloqueos({ organizationId }: Props) {
             <h3 className="text-sm font-semibold text-gray-700">Próximos bloqueos</h3>
           </div>
           <div className="divide-y divide-gray-50">
-            {futureBlocks.map(b => (
-              <div key={b.id} className="px-5 py-3.5 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900">
-                    {format(parseISO(b.blocked_date ?? ''), "EEEE d 'de' MMMM", { locale: es })}
-                    {(b as any).start_time && (b as any).end_time && (
-                      <span className="text-gray-500 font-normal"> — {(b as any).start_time} a {(b as any).end_time}hs</span>
-                    )}
+            {futureBlocks.map(b => {
+              const dateStr = b.blocked_date ?? (b.blocked_start ? b.blocked_start.slice(0, 10) : '')
+              return (
+                <div key={b.id} className="px-5 py-3.5 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900">
+                      {dateStr && format(parseISO(dateStr), "EEEE d 'de' MMMM", { locale: es })}
+                      {b.blocked_start && b.blocked_end && (
+                        <span className="text-gray-500 font-normal"> — {toArgTime(b.blocked_start)} a {toArgTime(b.blocked_end)}hs</span>
+                      )}
+                    </div>
+                    {b.reason && <div className="text-xs text-gray-400 mt-0.5">{b.reason}</div>}
                   </div>
-                  {b.reason && <div className="text-xs text-gray-400 mt-0.5">{b.reason}</div>}
+                  <button onClick={() => handleDelete(b.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button onClick={() => handleDelete(b.id)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ) : selectedProId ? (

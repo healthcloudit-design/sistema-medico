@@ -478,7 +478,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
 
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isPremiumHero ? '0 32px' : '0 24px', textAlign: 'center' }}>
           {logoUrl && (
-            <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '10px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
+            <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '3px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
 
           {/* Eyebrow / categoría */}

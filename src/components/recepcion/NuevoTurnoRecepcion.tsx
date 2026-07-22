@@ -56,12 +56,16 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
   useEffect(() => {
     if (!selectedPro) return
     supabase
-      .from('services')
-      .select('id, name, duration_minutes')
-      .eq('organization_id', organizationId)
-      .eq('active', true)
-      .order('name')
-      .then(({ data }) => setServices((data ?? []) as Service[]))
+      .from('professional_services')
+      .select('services(id, name, duration_minutes, active)')
+      .eq('professional_id', selectedPro.id)
+      .then(({ data }) => {
+        const svcs = (data ?? [])
+          .map((r: any) => r.services)
+          .filter((s: any) => s?.active)
+          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+        setServices(svcs as Service[])
+      })
   }, [selectedPro, organizationId])
 
   // Generar días disponibles para el mes actual + siguiente

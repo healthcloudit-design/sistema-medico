@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash, Pencil, CalendarPlus, X, Save } from 'lucide-react'
+import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash, Pencil, CalendarPlus, X, Save, UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 interface Patient {
@@ -12,6 +12,12 @@ interface Patient {
   nro_socio?: string
   notes?: string
   last_appointment?: { starts_at: string; status: string; professionals?: { full_name: string } }
+}
+
+type NewPatientForm = Omit<Patient, 'id' | 'last_appointment'>
+
+const BLANK_NEW_PATIENT: NewPatientForm = {
+  full_name: '', phone: '', email: '', dni: '', obra_social: '', nro_socio: '', notes: '',
 }
 
 interface Props {
@@ -34,6 +40,12 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
   const [editForm, setEditForm] = useState<Patient | null>(null)
   const [saving, setSaving]     = useState(false)
   const [saveError, setSaveError] = useState('')
+
+  const [creating, setCreating]         = useState(false)
+  const [createForm, setCreateForm]     = useState<NewPatientForm>(BLANK_NEW_PATIENT)
+  const [createSaving, setCreateSaving] = useState(false)
+  const [createError, setCreateError]   = useState('')
+  const [createdOk, setCreatedOk]       = useState(false)
 
   const search = async (q: string) => {
     if (q.trim().length < 2) { setResults([]); setSearched(false); return }
@@ -83,6 +95,46 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
     setEditing(p)
     setEditForm({ ...p })
     setSaveError('')
+  }
+
+  const openCreate = () => {
+    setCreateForm(BLANK_NEW_PATIENT)
+    setCreateError('')
+    setCreatedOk(false)
+    setCreating(true)
+  }
+
+  const saveCreate = async () => {
+    if (!orgId) { setCreateError('No se encontró el centro. Recargá la página e intentá de nuevo.'); return }
+    if (!createForm.full_name.trim()) { setCreateError('El nombre es obligatorio'); return }
+    setCreateSaving(true); setCreateError('')
+    const { data, error } = await supabase
+      .from('patients')
+      .insert({
+        organization_id: orgId,
+        full_name:   createForm.full_name.trim(),
+        phone:       createForm.phone || null,
+        email:       createForm.email || null,
+        dni:         createForm.dni || null,
+        obra_social: createForm.obra_social || null,
+        nro_socio:   createForm.nro_socio || null,
+        notes:       createForm.notes || null,
+      })
+      .select('id, full_name, phone, email, dni, obra_social, nro_socio, notes')
+      .single()
+    if (error || !data) {
+      setCreateError(
+        error?.code === '23505'
+          ? 'Ya existe un paciente con esos datos.'
+          : 'No se pudo guardar. Intentá de nuevo.'
+      )
+      setCreateSaving(false)
+      return
+    }
+    setResults(prev => [{ ...data } as Patient, ...prev])
+    setCreateSaving(false)
+    setCreatedOk(true)
+    setTimeout(() => { setCreating(false); setCreatedOk(false) }, 900)
   }
 
   const saveEdit = async () => {
@@ -142,18 +194,26 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        {loading && (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          {loading && (
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+          )}
+          <input
+            value={query}
+            onChange={handleChange}
+            placeholder="Buscar por nombre, DNI, telefono, email u obra social..."
+            className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+            autoComplete="off"
+          />
+        </div>
+        {canEdit && (
+          <button onClick={openCreate}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-medium bg-sky-500 hover:bg-sky-600 text-white transition-colors flex-shrink-0">
+            <UserPlus className="w-4 h-4" /> <span className="hidden sm:inline">Agregar paciente</span>
+          </button>
         )}
-        <input
-          value={query}
-          onChange={handleChange}
-          placeholder="Buscar por nombre, DNI, telefono, email u obra social..."
-          className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
-          autoComplete="off"
-        />
       </div>
 
       {!searched && (
@@ -300,6 +360,76 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
               <button onClick={saveEdit} disabled={saving}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-50">
                 <Save className="w-4 h-4" /> {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal agregar paciente */}
+      {creating && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
+              <h3 className="font-semibold text-gray-900">Agregar paciente</h3>
+              <button onClick={() => setCreating(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                <input value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input value={createForm.phone ?? ''} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={createForm.email ?? ''} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">DNI</label>
+                  <input value={createForm.dni ?? ''} onChange={e => setCreateForm(f => ({ ...f, dni: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Obra social</label>
+                  <input value={createForm.obra_social ?? ''} onChange={e => setCreateForm(f => ({ ...f, obra_social: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nro de obra social</label>
+                <input value={createForm.nro_socio ?? ''} onChange={e => setCreateForm(f => ({ ...f, nro_socio: e.target.value }))}
+                  placeholder="Nro de obra social"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea value={createForm.notes ?? ''} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              {createError && (
+                <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{createError}</div>
+              )}
+              {createdOk && (
+                <div className="bg-green-50 text-green-700 text-sm px-4 py-3 rounded-xl">Paciente creado correctamente.</div>
+              )}
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button onClick={() => setCreating(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={saveCreate} disabled={createSaving}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-50">
+                <Save className="w-4 h-4" /> {createSaving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
           </div>

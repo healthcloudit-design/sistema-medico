@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
-import { UserPlus, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react'
+import { UserPlus, ChevronRight, ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react'
+import { format, addDays, startOfWeek, subWeeks, addWeeks, isBefore, startOfDay, isSameDay } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import { useAvailability } from '../../hooks/useAvailability'
+
+const DAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 
 interface Professional { id: string; full_name: string; specialty?: string }
 interface Service      { id: string; name: string; duration_minutes: number }
@@ -37,11 +41,26 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
   const [patientEmail, setPatientEmail] = useState('')
   const [patientDni,   setPatientDni]   = useState('')
   const [obraSocial,   setObraSocial]   = useState('')
+  const [nroSocio,     setNroSocio]     = useState('')
+  const [notas,        setNotas]        = useState('')
+
+  // Calendario semanal
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Slots de disponibilidad
-  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate)
+  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate, selectedSvc?.duration_minutes ?? 30)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const todayStart = startOfDay(new Date())
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const maxDate = (() => { const d = startOfDay(new Date()); d.setMonth(d.getMonth() + 2); return d })()
+  const isPrevWeekDisabled = isBefore(addDays(weekStart, 6), todayStart)
+  const isNextWeekDisabled = isBefore(maxDate, addDays(weekStart, 7))
+  const weekLabel = (() => {
+    const s = weekStart, e = addDays(weekStart, 6)
+    return s.getMonth() === e.getMonth()
+      ? `${format(s, 'd')} – ${format(e, 'd')} ${format(e, 'MMMM', { locale: es })}`
+      : `${format(s, "d MMM", { locale: es })} – ${format(e, "d MMM", { locale: es })}`
+  })()
 
   useEffect(() => {
     supabase
@@ -68,17 +87,6 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
       })
   }, [selectedPro, organizationId])
 
-  // Generar días disponibles para el mes actual + siguiente
-  const availableDateList: string[] = []
-  const cursor = new Date(today)
-  const limit  = new Date(today)
-  limit.setMonth(limit.getMonth() + 2)
-  while (cursor <= limit) {
-    const ds = cursor.toISOString().slice(0, 10)
-    if (availableDates.has(ds)) availableDateList.push(ds)
-    cursor.setDate(cursor.getDate() + 1)
-  }
-
   const handleConfirm = async () => {
     if (!selectedPro || !selectedSvc || !selectedDate || !selectedHora || !patientName || !patientPhone) return
     setSaving(true); setErrorMsg('')
@@ -93,6 +101,8 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
         p_patient_email:       patientEmail || undefined,
         p_patient_dni:         patientDni   || undefined,
         p_patient_obra_social: obraSocial   || undefined,
+        p_patient_nro_socio:   nroSocio     || undefined,
+        p_patient_notes:       notas        || undefined,
       })
       if (error) throw error
       const result = data as { id?: string; error?: string }
@@ -114,7 +124,8 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
     setSelectedPro(null); setSelectedSvc(null)
     setSelectedDate(''); setSelectedHora('')
     setPatientName(''); setPatientPhone(''); setPatientEmail('')
-    setPatientDni(''); setObraSocial('')
+    setPatientDni(''); setObraSocial(''); setNroSocio(''); setNotas('')
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
     setSuccess(false); setErrorMsg('')
   }
 
@@ -190,7 +201,7 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
           <p className="text-xs text-gray-400 mb-4">{selectedPro?.full_name}</p>
           <div className="space-y-2">
             {services.map(s => (
-              <button key={s.id} onClick={() => { setSelectedSvc(s); setSelectedDate(''); setSelectedHora(''); setStep('fecha') }}
+              <button key={s.id} onClick={() => { setSelectedSvc(s); setSelectedDate(''); setSelectedHora(''); setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 })); setStep('fecha') }}
                 className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-sky-400 hover:bg-sky-50 transition-colors">
                 <div className="text-sm font-medium text-gray-900">{s.name}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{s.duration_minutes} min</div>
@@ -206,19 +217,51 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 mb-1">Fecha</h3>
             <p className="text-xs text-gray-400 mb-4">{selectedPro?.full_name} · {selectedSvc?.name}</p>
-            {availableDateList.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">No hay fechas disponibles en los próximos 2 meses</p>
-            ) : (
-              <select
-                value={selectedDate}
-                onChange={e => { setSelectedDate(e.target.value); setSelectedHora('') }}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="">Seleccioná una fecha</option>
-                {availableDateList.map(d => (
-                  <option key={d} value={d}>{new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long' })}</option>
-                ))}
-              </select>
+
+            <div className="flex items-center justify-between mb-3">
+              <button onClick={() => setWeekStart(w => subWeeks(w, 1))} disabled={isPrevWeekDisabled}
+                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 bg-gray-100 hover:bg-gray-200">
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+              <span className="font-semibold text-gray-900 capitalize text-sm">{weekLabel}</span>
+              <button onClick={() => setWeekStart(w => addWeeks(w, 1))} disabled={isNextWeekDisabled}
+                className="p-1.5 rounded-lg transition-colors disabled:opacity-30 bg-gray-100 hover:bg-gray-200">
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1.5">
+              {weekDays.map((day, i) => {
+                const dateStr     = format(day, 'yyyy-MM-dd')
+                const isPast      = isBefore(day, todayStart)
+                const isAvailable = availableDates.has(dateStr)
+                const isSelected  = selectedDate === dateStr
+                const isToday     = isSameDay(day, new Date())
+                return (
+                  <button key={dateStr}
+                    onClick={() => { if (isAvailable && !isPast) { setSelectedDate(dateStr); setSelectedHora('') } }}
+                    disabled={!isAvailable || isPast}
+                    className={`flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all ${
+                      isSelected
+                        ? 'bg-sky-500 text-white'
+                        : isAvailable && !isPast
+                        ? 'bg-sky-50 border border-sky-200 cursor-pointer hover:bg-sky-100'
+                        : 'opacity-35 cursor-not-allowed'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-medium ${isSelected ? 'text-white' : isToday ? 'text-sky-600' : 'text-gray-400'}`}>
+                      {DAYS[i]}
+                    </span>
+                    <span className={`text-sm font-semibold ${isSelected ? 'text-white' : isAvailable && !isPast ? 'text-gray-900' : 'text-gray-300'}`}>
+                      {format(day, 'd')}
+                    </span>
+                    {isAvailable && !isPast && !isSelected && <span className="w-1 h-1 rounded-full bg-sky-500" />}
+                  </button>
+                )
+              })}
+            </div>
+            {!Array.from(availableDates).some(d => d >= format(todayStart, 'yyyy-MM-dd')) && (
+              <p className="text-sm text-gray-400 text-center pt-4">No hay fechas disponibles en los próximos 2 meses</p>
             )}
           </div>
 
@@ -289,6 +332,18 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nro de obra social</label>
+                <input value={nroSocio} onChange={e => setNroSocio(e.target.value)}
+                  placeholder="Nro de obra social"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2}
+                  placeholder="Ej: paciente prefiere turno a la mañana, viene con acompañante, etc."
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              </div>
             </div>
             <button
               onClick={() => { if (patientName && patientPhone) setStep('confirmar') }}
@@ -318,6 +373,8 @@ export function NuevoTurnoRecepcion({ organizationId }: Props) {
               ...(patientEmail ? [['Email', patientEmail] as [string, string]] : []),
               ...(patientDni   ? [['DNI',   patientDni]   as [string, string]] : []),
               ...(obraSocial   ? [['Obra social', obraSocial] as [string, string]] : []),
+              ...(nroSocio     ? [['Nro de obra social', nroSocio] as [string, string]] : []),
+              ...(notas        ? [['Observaciones', notas] as [string, string]] : []),
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between items-start gap-4 py-2 border-b border-gray-50 last:border-0">
                 <span className="text-xs font-medium text-gray-400 flex-shrink-0">{label}</span>

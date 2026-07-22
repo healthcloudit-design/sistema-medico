@@ -340,9 +340,10 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
   onStatus:(id:string,s:string)=>void;
   featureHc:boolean; onShowHC:()=>void; onShowST:()=>void
 }) {
-  const s   = ST[appt.status] ?? ST.pendiente
-  const svc = appt.service as { name:string; duration_minutes?:number }|undefined
-  const pat = appt.patient as { obra_social?:string }|undefined
+  const s     = ST[appt.status] ?? ST.pendiente
+  const svc   = appt.service as { name:string; duration_minutes?:number }|undefined
+  const pat   = appt.patient as { obra_social?:string }|undefined
+  const esHoy = isToday(parseISO(appt.starts_at))
 
   const INFO = [
     ['Servicio',   svc?.name ?? '—'],
@@ -387,10 +388,17 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST }: {
           {/* Primary action */}
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
             {(appt.status==='confirmado'||appt.status==='pendiente') && (
-              <button onClick={() => onStatus(appt.id,'en_atencion')}
-                style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}>
-                Llamar paciente
-              </button>
+              esHoy ? (
+                <button onClick={() => onStatus(appt.id,'en_atencion')}
+                  style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}>
+                  Llamar paciente
+                </button>
+              ) : (
+                <div style={{ display:'flex', alignItems:'center', gap:'7px', width:'100%', padding:'12px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#FEF2F2', color:'#B91C1C', border:'1px solid #FECACA' }}>
+                  <AlertCircle size={14} style={{ flexShrink:0 }}/>
+                  Acción no permitida — la fecha del turno no es la de hoy
+                </div>
+              )
             )}
             {appt.status==='en_atencion' && (
               <button onClick={() => onStatus(appt.id,'completado')}

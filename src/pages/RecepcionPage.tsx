@@ -332,6 +332,7 @@ export function RecepcionPage() {
                 const patient = selected.patient as { full_name:string; phone?:string; email?:string; obra_social?:string; nro_socio?:string }|undefined
                 const service = selected.service as { name:string; duration_minutes?:number }|undefined
                 const prof    = selected.professional as { full_name:string; specialty?:string; consultorio?:string|null }|undefined
+                const esHoy   = toArgDate(selected.starts_at) === toArgDate(new Date().toISOString())
 
                 return (
                   <>
@@ -397,7 +398,14 @@ export function RecepcionPage() {
                         <ActionBtn icon={CheckCircle} label="Confirmar" color="sky" onClick={() => updateStatus(selected.id,'confirmado')} loading={updating}/>
                       )}
                       {['confirmado','pendiente'].includes(selected.status) && (
-                        <ActionBtn icon={CreditCard} label="Llamar" color="teal" onClick={() => updateStatus(selected.id,'en_atencion')} loading={updating}/>
+                        esHoy ? (
+                          <ActionBtn icon={CreditCard} label="Llamar" color="teal" onClick={() => updateStatus(selected.id,'en_atencion')} loading={updating}/>
+                        ) : (
+                          <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#fef2f2', color:'#b91c1c', border:'1px solid #fecaca' }}>
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0"/>
+                            Acción no permitida — la fecha del turno no es la de hoy
+                          </div>
+                        )
                       )}
                       {selected.status === 'en_atencion' && (
                         <ActionBtn icon={CheckCircle} label="Completado" color="sky" onClick={() => updateStatus(selected.id,'completado')} loading={updating}/>

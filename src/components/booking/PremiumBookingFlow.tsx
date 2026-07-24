@@ -303,6 +303,16 @@ const SPECIALTY_MAP: Record<string, SpecialtyCtx> = {
     heroImg:    'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=1600&h=900&fit=crop&auto=format&q=80',
     accentHint: '#2E7D32',
   },
+  pilates: {
+    eyebrow:    'Pilates Reformer',
+    subtitle:   'Reservá tu clase individual o grupal',
+    ctaLabel:   'Reservar Clase',
+    doneTitle:  'Clase reservada',
+    doneMsg:    'Tu clase fue registrada. Te contactamos para confirmar.',
+    newBooking: 'Reservar otra clase',
+    heroImg:    'https://images.unsplash.com/photo-1747240549807-fc3962949818?w=1600&h=900&fit=crop&auto=format&q=80',
+    accentHint: '#2D8B55',
+  },
 }
 
 // Slug keyword → specialty key (fallback when org.specialty is null)
@@ -324,6 +334,7 @@ const SLUG_KEYWORDS: [RegExp, string][] = [
   [/endocrin/i,            'endocrinologia'],
   [/clinica|medico-gral/i, 'clinicamedica'],
   [/masaje|spa|zen/i,      'masajes'],
+  [/pilates|reformer/i,    'pilates'],
 ]
 
 function getOrgContext(org: Organization): SpecialtyCtx {

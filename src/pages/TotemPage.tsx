@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 
 type View = 'home' | 'lookup' | 'results' | 'cancel-confirm' | 'done'
 
-interface OrgInfo { name: string; primary_color: string | null }
+interface OrgInfo { name: string; primary_color: string | null; tenant_type: string | null }
 interface ApptResult {
   id: string
   patient_name: string
@@ -45,7 +45,7 @@ export function TotemPage() {
   // Cargar org
   useEffect(() => {
     if (!slug) return
-    supabase.from('organizations').select('name, primary_color')
+    supabase.from('organizations').select('name, primary_color, tenant_type')
       .eq('slug', slug).eq('active', true).single()
       .then(({ data }) => { if (data) setOrg(data as OrgInfo) })
   }, [slug])
@@ -106,6 +106,9 @@ export function TotemPage() {
   }
 
   const accent = org?.primary_color ?? '#0284c7'
+  const usePhone   = !!org?.tenant_type && !['medical', 'veterinary'].includes(org.tenant_type)
+  const fieldLabel = usePhone ? 'Ingresa tu celular' : 'Ingresa tu DNI'
+  const fieldMax   = usePhone ? 13 : 8
 
   // Teclado numerico virtual
   const numpad = ['1','2','3','4','5','6','7','8','9','←','0','✓']
@@ -114,7 +117,7 @@ export function TotemPage() {
     resetIdle()
     if (k === '←') { setDni(prev => prev.slice(0,-1)); return }
     if (k === '✓') { handleSearch(); return }
-    if (dni.length < 10) setDni(prev => prev + k)
+    if (dni.length < fieldMax) setDni(prev => prev + k)
   }
 
   // ─────────── HOME ───────────
@@ -152,7 +155,7 @@ export function TotemPage() {
           </div>
           <div className="text-left">
             <div>Ver / Cancelar turno</div>
-            <div className="text-sm font-normal text-gray-400 mt-0.5">Consulta o cancela por DNI</div>
+            <div className="text-sm font-normal text-gray-400 mt-0.5">Consulta o cancela por {usePhone ? 'celular' : 'DNI'}</div>
           </div>
           <ChevronRight className="w-6 h-6 ml-auto text-gray-300" />
         </button>
@@ -173,9 +176,9 @@ export function TotemPage() {
       <main className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-md p-6 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Ingresa tu DNI</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-2">{fieldLabel}</label>
             <div className="text-4xl font-mono font-bold text-center tracking-widest text-gray-900 bg-gray-50 rounded-2xl py-4 min-h-[4rem] flex items-center justify-center">
-              {dni || <span className="text-gray-300">_ _ _ _ _ _ _ _</span>}
+              {dni || <span className="text-gray-300">{Array.from({ length: fieldMax }).map(() => '_').join(' ')}</span>}
             </div>
           </div>
 
@@ -224,7 +227,7 @@ export function TotemPage() {
           <div className="bg-white rounded-3xl shadow-sm p-10 text-center">
             <Search className="w-12 h-12 text-gray-200 mx-auto mb-3" />
             <div className="text-gray-500 font-medium">No encontramos turnos proximos</div>
-            <div className="text-gray-400 text-sm mt-1">para el DNI {dni}</div>
+            <div className="text-gray-400 text-sm mt-1">para el {usePhone ? 'celular' : 'DNI'} {dni}</div>
             <button
               onClick={() => setView('lookup')}
               className="mt-5 px-6 py-3 rounded-2xl text-white font-semibold text-sm"

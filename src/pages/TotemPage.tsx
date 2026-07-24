@@ -160,42 +160,85 @@ export function TotemPage() {
 
   // ─────────── HOME ───────────
   if (view === 'home') return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#f8fafc' }}>
-      <header className="py-8 px-6 text-center text-white" style={{ background: accent }}>
-        <div className="text-3xl font-bold tracking-tight">{org?.name ?? '...'}</div>
-        <div className="text-sm opacity-80 mt-1">Sistema de turnos</div>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: isDark ? DARK : '#F8FAFC' }}>
+      <style>{`
+        .totem-home-btn { transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+        .totem-home-btn.is-dark:hover { transform: translateY(-3px); border-color: ${accent}55; box-shadow: 0 12px 28px rgba(0,0,0,0.35); }
+        .totem-home-btn.is-light:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15,23,42,0.10); border-color: ${accent}45; }
+        .totem-home-btn:active { transform: translateY(-1px) scale(0.99); }
+      `}</style>
+
+      <header className="py-5 px-6 text-center" style={{ borderBottom: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}` }}>
+        <span style={{ fontFamily: SANS, fontSize: '13px', fontWeight: 500, color: isDark ? T_TEXT_SEC : '#6B7280' }}>
+          {org?.name ?? '...'}
+        </span>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
-        <p className="text-gray-500 text-lg">Selecciona una opcion</p>
+      <main className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+        <div className="text-center">
+          <h1 style={{
+            fontFamily: isDark ? SERIF : 'inherit', fontStyle: isDark ? 'italic' : 'normal',
+            fontWeight: isDark ? 400 : 700, fontSize: isDark ? '30px' : '26px',
+            color: isDark ? T_TEXT_PRI : '#111827', margin: '0 0 8px',
+          }}>
+            Bienvenido
+          </h1>
+          <p style={{ fontFamily: SANS, fontSize: '14px', color: isDark ? T_TEXT_SEC : '#6B7280', margin: 0 }}>
+            Seleccioná una opción para continuar
+          </p>
+        </div>
 
         <button
           onClick={() => navigate(`/${slug}`)}
-          className="w-full max-w-sm flex items-center gap-5 rounded-3xl shadow-lg p-7 text-white text-xl font-bold transition-transform active:scale-95"
-          style={{ background: accent }}
+          className={`totem-home-btn ${isDark ? 'is-dark' : 'is-light'} w-full flex items-center gap-4 text-left`}
+          style={{
+            maxWidth: '380px', borderRadius: '24px', padding: '26px', cursor: 'pointer',
+            backgroundColor: isDark ? T_CARD : '#FFFFFF',
+            border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+          }}
         >
-          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <Calendar className="w-7 h-7" />
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '16px', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: `${accent}16`,
+          }}>
+            <Calendar size={26} style={{ color: accent }} />
           </div>
-          <div className="text-left">
-            <div>Sacar turno</div>
-            <div className="text-sm font-normal opacity-80 mt-0.5">Reserva tu proximo turno</div>
+          <div>
+            <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: '17px', color: isDark ? T_TEXT_PRI : '#111827' }}>
+              Sacar turno
+            </div>
+            <div style={{ fontFamily: SANS, fontSize: '13px', color: isDark ? T_TEXT_SEC : '#6B7280', marginTop: '2px' }}>
+              Reservá tu próximo turno
+            </div>
           </div>
-          <ChevronRight className="w-6 h-6 ml-auto opacity-70" />
+          <ChevronRight size={20} style={{ marginLeft: 'auto', color: isDark ? T_TEXT_MUT : '#D1D5DB', flexShrink: 0 }} />
         </button>
 
         <button
           onClick={() => { setView('lookup'); setDni(''); setError('') }}
-          className="w-full max-w-sm flex items-center gap-5 rounded-3xl shadow-md p-7 bg-white border-2 border-gray-200 text-gray-800 text-xl font-bold transition-transform active:scale-95"
+          className={`totem-home-btn ${isDark ? 'is-dark' : 'is-light'} w-full flex items-center gap-4 text-left`}
+          style={{
+            maxWidth: '380px', borderRadius: '24px', padding: '26px', cursor: 'pointer',
+            backgroundColor: isDark ? T_CARD : '#FFFFFF',
+            border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+          }}
         >
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <Search className="w-7 h-7 text-gray-500" />
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '16px', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: isDark ? T_CARD2 : '#F8FAFC',
+          }}>
+            <Search size={24} style={{ color: isDark ? T_TEXT_SEC : '#6B7280' }} />
           </div>
-          <div className="text-left">
-            <div>Ver / Cancelar turno</div>
-            <div className="text-sm font-normal text-gray-400 mt-0.5">Consulta o cancela por {usePhone ? 'celular' : 'DNI'}</div>
+          <div>
+            <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: '17px', color: isDark ? T_TEXT_PRI : '#111827' }}>
+              Ver / Cancelar turno
+            </div>
+            <div style={{ fontFamily: SANS, fontSize: '13px', color: isDark ? T_TEXT_SEC : '#6B7280', marginTop: '2px' }}>
+              Consultá o cancelá por {usePhone ? 'celular' : 'DNI'}
+            </div>
           </div>
-          <ChevronRight className="w-6 h-6 ml-auto text-gray-300" />
+          <ChevronRight size={20} style={{ marginLeft: 'auto', color: isDark ? T_TEXT_MUT : '#D1D5DB', flexShrink: 0 }} />
         </button>
       </main>
     </div>
@@ -203,43 +246,62 @@ export function TotemPage() {
 
   // ─────────── LOOKUP ───────────
   if (view === 'lookup') return (
-    <div className="min-h-screen flex flex-col bg-gray-50" onClick={resetIdle}>
-      <header className="py-5 px-6 flex items-center gap-3 text-white" style={{ background: accent }}>
-        <button onClick={resetToHome} className="p-2 rounded-xl bg-white/20 hover:bg-white/30">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: isDark ? DARK : '#F8FAFC' }} onClick={resetIdle}>
+      <header className="py-4 px-5 flex items-center gap-3" style={{ borderBottom: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}` }}>
+        <button onClick={resetToHome} className="p-2 rounded-xl"
+          style={{ backgroundColor: isDark ? T_CARD2 : '#F3F4F6', color: isDark ? T_TEXT_SEC : '#6B7280' }}>
           <X className="w-5 h-5" />
         </button>
-        <span className="font-semibold text-lg">Buscar mis turnos</span>
+        <span style={{ fontFamily: SANS, fontSize: '14px', fontWeight: 500, color: isDark ? T_TEXT_SEC : '#6B7280' }}>
+          Buscar mis turnos
+        </span>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-md p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">{fieldLabel}</label>
-            <div className="text-4xl font-mono font-bold text-center tracking-widest text-gray-900 bg-gray-50 rounded-2xl py-4 min-h-[4rem] flex items-center justify-center">
-              {dni || <span className="text-gray-300">{Array.from({ length: fieldMax }).map(() => '_').join(' ')}</span>}
-            </div>
+        <div style={{
+          width: '100%', maxWidth: '380px', borderRadius: '24px', padding: '24px',
+          backgroundColor: isDark ? T_CARD : '#FFFFFF', border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+        }}>
+          <label style={{
+            fontFamily: SANS, fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '10px',
+            color: isDark ? T_TEXT_SEC : '#6B7280',
+          }}>
+            {fieldLabel}
+          </label>
+          <div style={{
+            fontFamily: SANS, fontSize: '32px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.08em',
+            color: isDark ? T_TEXT_PRI : '#111827',
+            backgroundColor: isDark ? T_CARD2 : '#F8FAFC',
+            borderRadius: '16px', padding: '18px 0', minHeight: '4rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {dni || <span style={{ color: isDark ? T_TEXT_MUT : '#D1D5DB' }}>{Array.from({ length: fieldMax }).map(() => '_').join(' ')}</span>}
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div style={{
+              fontFamily: SANS, fontSize: '13px', textAlign: 'center', marginTop: '14px', padding: '10px 16px', borderRadius: '12px',
+              backgroundColor: isDark ? 'rgba(220,38,38,0.14)' : '#FEF2F2', color: isDark ? '#F87171' : '#DC2626',
+            }}>
+              {error}
+            </div>
           )}
 
           {/* Teclado numerico */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3" style={{ marginTop: '18px' }}>
             {numpad.map(k => (
               <button
                 key={k}
                 onClick={() => handleKey(k)}
                 disabled={k === '✓' && (!dni.trim() || searching)}
-                className={[
-                  'rounded-2xl py-4 text-xl font-semibold transition-all active:scale-95',
-                  k === '✓'
-                    ? 'text-white col-span-1'
-                    : k === '←'
-                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-                ].join(' ')}
-                style={k === '✓' ? { background: accent } : {}}
+                className="transition-transform active:scale-95"
+                style={{
+                  fontFamily: SANS, borderRadius: '16px', padding: '16px 0', fontSize: '19px', fontWeight: 600,
+                  cursor: 'pointer', border: 'none',
+                  backgroundColor: k === '✓' ? accent : (isDark ? T_CARD2 : '#F8FAFC'),
+                  color: k === '✓' ? (isDark ? '#0B0B0B' : '#FFFFFF') : (isDark ? T_TEXT_PRI : '#111827'),
+                  opacity: k === '✓' && (!dni.trim() || searching) ? 0.5 : 1,
+                }}
               >
                 {k === '✓' ? (searching ? '...' : 'Buscar') : k}
               </button>

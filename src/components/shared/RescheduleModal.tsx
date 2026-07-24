@@ -11,13 +11,14 @@ interface Props {
   appointmentId: string
   professionalId: string
   serviceDurationMinutes: number
+  serviceId?: string
   currentStartsAt: string
   onClose: () => void
   onRescheduled: (newStartsAt: string, newEndsAt: string) => void
 }
 
 export function RescheduleModal({
-  appointmentId, professionalId, serviceDurationMinutes, currentStartsAt, onClose, onRescheduled,
+  appointmentId, professionalId, serviceDurationMinutes, serviceId, currentStartsAt, onClose, onRescheduled,
 }: Props) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [selectedDate, setSelectedDate] = useState('')
@@ -25,7 +26,7 @@ export function RescheduleModal({
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const { slots, availableDates } = useAvailability(professionalId, selectedDate, serviceDurationMinutes, appointmentId)
+  const { slots, availableDates } = useAvailability(professionalId, selectedDate, serviceDurationMinutes, appointmentId, serviceId)
 
   const todayStart = startOfDay(new Date())
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -54,7 +55,7 @@ export function RescheduleModal({
     }
     const result = data as { id?: string; starts_at?: string; ends_at?: string; error?: string }
     if (result?.error === 'slot_taken') {
-      setErrorMsg('Ese horario ya fue reservado. Elegí otro.')
+      setErrorMsg('Ese horario ya fue reservado o alcanzó el cupo máximo. Elegí otro.')
       setSaving(false)
       return
     }
@@ -147,7 +148,7 @@ export function RescheduleModal({
                     <button key={s.hora}
                       disabled={!s.disponible}
                       onClick={() => setSelectedHora(s.hora)}
-                      className={`py-2 rounded-xl text-sm font-medium transition-colors ${
+                      className={`py-2 rounded-xl text-sm font-medium transition-colors flex flex-col items-center gap-0.5 ${
                         s.disponible
                           ? selectedHora === s.hora
                             ? 'bg-sky-500 text-white'
@@ -155,7 +156,8 @@ export function RescheduleModal({
                           : 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
                       }`}
                     >
-                      {s.hora}
+                      <span>{s.hora}</span>
+                      {s.disponible && typeof s.cuposRestantes === 'number' && <span className="text-[9px] opacity-70">{s.cuposRestantes} cupos</span>}
                     </button>
                   ))}
                 </div>

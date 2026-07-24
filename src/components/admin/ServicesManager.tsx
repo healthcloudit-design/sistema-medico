@@ -1,24 +1,30 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Power, Clock } from 'lucide-react'
+import { Plus, Pencil, Power, Clock, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Service, Professional } from '../../types'
 import { Button } from '../ui/Button'
 
-const DEFAULT_ORG_ID = 'a0000000-0000-0000-0000-000000000001'
+interface Props {
+  organizationId?: string | null
+}
 
-export function ServicesManager() {
+export function ServicesManager({ organizationId }: Props) {
   const [services, setServices] = useState<Service[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Service> | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [assignedIds, setAssignedIds] = useState<string[]>([])
 
   const load = async () => {
-    const [sRes, pRes] = await Promise.all([
-      supabase.from('services').select('*').order('name'),
-      supabase.from('professionals').select('*').eq('active', true).order('full_name'),
-    ])
+    let sQuery = supabase.from('services').select('*').order('name')
+    let pQuery = supabase.from('professionals').select('*').eq('active', true).order('full_name')
+    if (organizationId) {
+      sQuery = sQuery.eq('organization_id', organizationId)
+      pQuery = pQuery.eq('organization_id', organizationId)
+    }
+    const [sRes, pRes] = await Promise.all([sQuery, pQuery])
     setServices((sRes.data ?? []) as Service[])
     setProfessionals((pRes.data ?? []) as Professional[])
     setLoading(false)
@@ -36,7 +42,7 @@ export function ServicesManager() {
     } else {
       setAssignedIds([])
     }
-    setEditing(s ?? { duration_minutes: 30, active: true, color: '#0ea5e9' })
+    setEditing(s ?? { duration_minutes: 30, active: true, color: '#0ea5e9', capacity: 1, waitlist_limit: 0 })
   }
 
   const toggleAssign = (profId: string) => {
@@ -47,21 +53,27 @@ export function ServicesManager() {
 
   const save = async () => {
     if (!editing?.name) return
+    if (!organizationId) { setSaveError('No se encontró el centro. Recargá la página e intentá de nuevo.'); return }
     setSaving(true)
+    setSaveError('')
     const payload = {
-      organization_id:  DEFAULT_ORG_ID,
+      organization_id:  organizationId,
       name:             editing.name,
       description:      editing.description ?? null,
       duration_minutes: editing.duration_minutes ?? 30,
       price:            editing.price ?? null,
       color:            editing.color ?? '#0ea5e9',
       active:           editing.active ?? true,
+      capacity:         editing.capacity ?? 1,
+      waitlist_limit:   editing.capacity && editing.capacity > 1 ? (editing.waitlist_limit ?? 0) : 0,
     }
     let serviceId = editing.id
     if (serviceId) {
-      await supabase.from('services').update(payload).eq('id', serviceId)
+      const { error } = await supabase.from('services').update(payload).eq('id', serviceId)
+      if (error) { setSaveError('No se pudo guardar. Intentá de nuevo.'); setSaving(false); return }
     } else {
-      const { data } = await supabase.from('services').insert(payload).select('id').single()
+      const { data, error } = await supabase.from('services').insert(payload).select('id').single()
+      if (error || !data) { setSaveError('No se pudo guardar. Intentá de nuevo.'); setSaving(false); return }
       serviceId = (data as { id: string })?.id
     }
     if (serviceId) {
@@ -107,6 +119,12 @@ export function ServicesManager() {
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{s.duration_minutes} min</span>
                   {s.price && <span>${s.price.toLocaleString('es-AR')}</span>}
+                  {s.capacity > 1 && (
+                    <span className="flex items-center gap-1 text-sky-600">
+                      <Users className="w-3 h-3" />
+                      Cupo: {s.capacity}{s.waitlist_limit > 0 ? ` (+${s.waitlist_limit} en espera)` : ''}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -172,6 +190,31 @@ export function ServicesManager() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Cupo por turno</label>
+                  <input
+                    type="number" value={editing.capacity ?? 1} min={1} step={1}
+                    onChange={e => setEditing(p => ({ ...p, capacity: Math.max(1, Number(e.target.value)) }))}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">1 = turno individual. Más de 1 = clase grupal (varias personas pueden reservar el mismo horario).</p>
+                </div>
+                {(editing.capacity ?? 1) > 1 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Límite de lista de espera</label>
+                    <input
+                      type="number" value={editing.waitlist_limit ?? 0} min={0} step={1}
+                      onChange={e => setEditing(p => ({ ...p, waitlist_limit: Math.max(0, Number(e.target.value)) }))}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">0 = sin lista de espera. Al llenarse el cupo, se ofrece anotarse hasta este límite.</p>
+                  </div>
+                )}
+              </div>
+              {saveError && (
+                <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{saveError}</div>
+              )}
               {professionals.length > 0 && (
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-2">Profesionales que lo atienden</label>

@@ -8,6 +8,10 @@ export interface Service {
   color: string
   category?: string | null
   active: boolean
+  /** Cantidad de personas que pueden reservar el mismo horario (1 = turno individual, >1 = clase grupal con cupo) */
+  capacity: number
+  /** Cantidad máxima de personas en lista de espera cuando el cupo está lleno (0 = sin lista de espera) */
+  waitlist_limit: number
   created_at: string
 }
 
@@ -93,6 +97,7 @@ export type AppointmentStatus =
   | 'no_asistio'
   | 'completado'
   | 'en_atencion'
+  | 'lista_espera'
 
 export interface Appointment {
   id: string
@@ -138,6 +143,10 @@ export interface BookingState {
 export interface TimeSlot {
   hora: string
   disponible: boolean
+  /** Solo para servicios con cupo (capacity > 1): cupos que quedan libres en este horario */
+  cuposRestantes?: number
+  /** Solo para servicios con cupo: el cupo está lleno pero se puede anotar en lista de espera */
+  enListaDeEspera?: boolean
 }
 
 export type UserRole = 'paciente' | 'medico' | 'recepcion' | 'admin' | 'superadmin' | 'globaladmin' | 'comercial'

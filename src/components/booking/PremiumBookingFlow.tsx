@@ -728,7 +728,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         {state.step === 3 && state.professional && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 3</div>
-            <DateTimeSelector professional={state.professional} selectedDate={state.fecha} selectedTime={state.hora} serviceDurationMinutes={state.service?.duration_minutes ?? 30} onSelect={(fecha, hora) => update({ fecha, hora, step: 4 })} onBack={() => update({ step: 2 })} accentColor={gold} darkMode={!isLight} weeksToShow={(org as any).booking_weeks ?? 1} />
+            <DateTimeSelector professional={state.professional} selectedDate={state.fecha} selectedTime={state.hora} serviceDurationMinutes={state.service?.duration_minutes ?? 30} serviceId={state.service?.id} onSelect={(fecha, hora) => update({ fecha, hora, step: 4 })} onBack={() => update({ step: 2 })} accentColor={gold} darkMode={!isLight} weeksToShow={(org as any).booking_weeks ?? 1} />
           </div>
         )}
 

@@ -15,6 +15,7 @@ interface Props {
   selectedDate?: string
   selectedTime?: string
   serviceDurationMinutes?: number
+  serviceId?: string
   onSelect: (fecha: string, hora: string) => void
   onBack: () => void
   accentColor?: string
@@ -24,7 +25,7 @@ interface Props {
 
 export function DateTimeSelector({
   professional, selectedDate, selectedTime,
-  serviceDurationMinutes = 30, onSelect, onBack,
+  serviceDurationMinutes = 30, serviceId, onSelect, onBack,
   accentColor = '#0ea5e9', darkMode = false, weeksToShow = 1,
 }: Props) {
   const today        = startOfDay(new Date())
@@ -32,7 +33,7 @@ export function DateTimeSelector({
   const [localDate, setLocalDate] = useState(selectedDate)
   const [localTime, setLocalTime] = useState(selectedTime)
 
-  const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes)
+  const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes, undefined, serviceId)
 
   const weekDays = Array.from({ length: 7 * weeksToShow }, (_, i) => addDays(weekStart, i))
   const accent   = darkMode ? GOLD : accentColor
@@ -128,17 +129,24 @@ export function DateTimeSelector({
             <p style={{ textAlign:'center', fontSize:'13px', color:DK.muted, padding:'16px 0' }}>No hay horarios disponibles</p>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
-              {slots.map(slot => (
-                <button key={slot.hora} onClick={() => slot.disponible && setLocalTime(slot.hora)} disabled={!slot.disponible}
-                  style={{ padding:'10px 4px', borderRadius:'8px', fontSize:'13px', fontWeight:500, border:'none', cursor: slot.disponible ? 'pointer' : 'default', transition:'all 0.15s',
-                    ...(!slot.disponible
+              {slots.map(slot => {
+                const seleccionable = slot.disponible || slot.enListaDeEspera
+                return (
+                <button key={slot.hora} onClick={() => seleccionable && setLocalTime(slot.hora)} disabled={!seleccionable}
+                  style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'8px 4px', borderRadius:'8px', fontSize:'13px', fontWeight:500, border:'none', cursor: seleccionable ? 'pointer' : 'default', transition:'all 0.15s',
+                    ...(!seleccionable
                       ? { backgroundColor:'transparent', color:'rgba(255,255,255,0.12)', textDecoration:'line-through' }
                       : localTime === slot.hora
-                        ? { backgroundColor:GOLD, color:'#0B0B0B' }
-                        : { backgroundColor:'rgba(201,169,110,0.07)', color:GOLD, border:'1px solid rgba(201,169,110,0.2)' }) }}>
-                  {slot.hora}
+                        ? { backgroundColor: slot.enListaDeEspera && !slot.disponible ? '#d97706' : GOLD, color:'#0B0B0B' }
+                        : slot.enListaDeEspera && !slot.disponible
+                          ? { backgroundColor:'rgba(217,119,6,0.1)', color:'#d97706', border:'1px solid rgba(217,119,6,0.3)' }
+                          : { backgroundColor:'rgba(201,169,110,0.07)', color:GOLD, border:'1px solid rgba(201,169,110,0.2)' }) }}>
+                  <span>{slot.hora}</span>
+                  {slot.enListaDeEspera && !slot.disponible && <span style={{ fontSize:'9px', opacity:0.85 }}>Lista de espera</span>}
+                  {slot.disponible && typeof slot.cuposRestantes === 'number' && <span style={{ fontSize:'9px', opacity:0.7 }}>{slot.cuposRestantes} cupos</span>}
                 </button>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -225,17 +233,25 @@ export function DateTimeSelector({
             <p className="text-sm text-gray-400 text-center py-4">No hay horarios disponibles</p>
           ) : (
             <div className="grid grid-cols-4 gap-2">
-              {slots.map(slot => (
-                <button key={slot.hora} onClick={() => slot.disponible && setLocalTime(slot.hora)} disabled={!slot.disponible}
-                  className="py-2 rounded-xl text-sm font-medium transition-all"
-                  style={!slot.disponible
+              {slots.map(slot => {
+                const seleccionable = slot.disponible || slot.enListaDeEspera
+                const esEspera = slot.enListaDeEspera && !slot.disponible
+                return (
+                <button key={slot.hora} onClick={() => seleccionable && setLocalTime(slot.hora)} disabled={!seleccionable}
+                  className="py-2 rounded-xl text-sm font-medium transition-all flex flex-col items-center gap-0.5"
+                  style={!seleccionable
                     ? { backgroundColor:'#f9fafb', color:'#d1d5db', textDecoration:'line-through', cursor:'not-allowed' }
                     : localTime === slot.hora
-                      ? { backgroundColor:accent, color:'#fff' }
-                      : { backgroundColor:alpha(accent,0.08), color:accent }}>
-                  {slot.hora}
+                      ? { backgroundColor: esEspera ? '#d97706' : accent, color:'#fff' }
+                      : esEspera
+                        ? { backgroundColor:'#fffbeb', color:'#d97706', border:'1px solid #fde68a' }
+                        : { backgroundColor:alpha(accent,0.08), color:accent }}>
+                  <span>{slot.hora}</span>
+                  {esEspera && <span className="text-[9px] opacity-80">Lista de espera</span>}
+                  {slot.disponible && typeof slot.cuposRestantes === 'number' && <span className="text-[9px] opacity-70">{slot.cuposRestantes} cupos</span>}
                 </button>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

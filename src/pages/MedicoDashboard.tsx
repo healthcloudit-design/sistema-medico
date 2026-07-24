@@ -446,6 +446,7 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
           appointmentId={appt.id}
           professionalId={appt.professional_id}
           serviceDurationMinutes={svc?.duration_minutes ?? 30}
+          serviceId={appt.service_id}
           currentStartsAt={appt.starts_at}
           onClose={() => setShowReschedule(false)}
           onRescheduled={() => { setShowReschedule(false); onRescheduled() }}

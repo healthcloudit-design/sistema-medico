@@ -475,6 +475,7 @@ export function RecepcionPage() {
           appointmentId={selected.id}
           professionalId={selected.professional_id}
           serviceDurationMinutes={(selected.service as { duration_minutes?: number } | undefined)?.duration_minutes ?? 30}
+          serviceId={selected.service_id}
           currentStartsAt={selected.starts_at}
           onClose={() => setShowReschedule(false)}
           onRescheduled={handleRescheduled}

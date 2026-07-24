@@ -177,19 +177,21 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
   }
 
   const STATUS_LABEL: Record<string, string> = {
-    pendiente:  'Pendiente',
-    confirmado: 'Confirmado',
-    cancelado:  'Cancelado',
-    no_asistio: 'No asistio',
-    completado: 'Completado',
+    pendiente:    'Pendiente',
+    confirmado:   'Confirmado',
+    cancelado:    'Cancelado',
+    no_asistio:   'No asistio',
+    completado:   'Completado',
+    lista_espera: 'En lista de espera',
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    pendiente:  'bg-yellow-100 text-yellow-800',
-    confirmado: 'bg-green-100 text-green-800',
-    cancelado:  'bg-red-100 text-red-800',
-    no_asistio: 'bg-gray-100 text-gray-600',
-    completado: 'bg-blue-100 text-blue-800',
+    pendiente:    'bg-yellow-100 text-yellow-800',
+    confirmado:   'bg-green-100 text-green-800',
+    cancelado:    'bg-red-100 text-red-800',
+    no_asistio:   'bg-gray-100 text-gray-600',
+    completado:   'bg-blue-100 text-blue-800',
+    lista_espera: 'bg-amber-100 text-amber-800',
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { UserPlus, ChevronRight, ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react'
+import { UserPlus, ChevronRight, ChevronLeft, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 import { format, addDays, startOfWeek, subWeeks, addWeeks, isBefore, startOfDay, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -46,6 +46,7 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
   const [selectedHora, setSelectedHora]   = useState('')
   const [saving, setSaving]               = useState(false)
   const [success, setSuccess]             = useState(false)
+  const [wasWaitlisted, setWasWaitlisted] = useState(false)
   const [errorMsg, setErrorMsg]           = useState('')
 
   // Paciente (precargado si venimos desde la búsqueda de pacientes)
@@ -61,7 +62,7 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Slots de disponibilidad
-  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate, selectedSvc?.duration_minutes ?? 30)
+  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate, selectedSvc?.duration_minutes ?? 30, undefined, selectedSvc?.id)
 
   const todayStart = startOfDay(new Date())
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -89,7 +90,7 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
     if (!selectedPro) return
     supabase
       .from('professional_services')
-      .select('services(id, name, duration_minutes, active)')
+      .select('services(id, name, duration_minutes, active, capacity, waitlist_limit)')
       .eq('professional_id', selectedPro.id)
       .then(({ data }) => {
         const svcs = (data ?? [])
@@ -118,12 +119,17 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
         p_patient_notes:       notas        || undefined,
       })
       if (error) throw error
-      const result = data as { id?: string; error?: string }
+      const result = data as { id?: string; status?: string; error?: string }
       if (result?.error === 'slot_taken') {
         setErrorMsg('Ese horario ya fue reservado. Elegí otro.')
         setStep('fecha'); setSaving(false); return
       }
+      if (result?.error === 'cupo_completo') {
+        setErrorMsg('Ese horario alcanzó el cupo máximo y la lista de espera también está completa. Elegí otro.')
+        setStep('fecha'); setSaving(false); return
+      }
       if (result?.error) throw new Error(result.error)
+      setWasWaitlisted(result?.status === 'lista_espera')
       setSuccess(true)
     } catch (e: any) {
       setErrorMsg(e.message ?? 'Error al crear el turno')
@@ -139,18 +145,23 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
     setPatientName(''); setPatientPhone(''); setPatientEmail('')
     setPatientDni(''); setObraSocial(''); setNroSocio(''); setNotas('')
     setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
-    setSuccess(false); setErrorMsg('')
+    setSuccess(false); setWasWaitlisted(false); setErrorMsg('')
   }
 
   if (success) return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-      <h3 className="font-semibold text-gray-900 text-lg mb-1">Turno creado</h3>
+      {wasWaitlisted ? (
+        <Clock className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+      ) : (
+        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+      )}
+      <h3 className="font-semibold text-gray-900 text-lg mb-1">{wasWaitlisted ? 'Anotado en lista de espera' : 'Turno creado'}</h3>
       <p className="text-sm text-gray-500 mb-1">
         {patientName} — {selectedPro?.full_name}
       </p>
       <p className="text-sm text-gray-500 mb-6">
         {selectedDate} a las {selectedHora}hs · {selectedSvc?.name}
+        {wasWaitlisted && ' · Se le avisará por mail si se libera un cupo.'}
       </p>
       <button onClick={reset}
         className="px-6 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-xl transition-colors">
@@ -291,21 +302,29 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
                 <p className="text-sm text-gray-400 text-center py-2">No hay turnos disponibles ese día</p>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
-                  {slots.map(s => (
+                  {slots.map(s => {
+                    const seleccionable = s.disponible || s.enListaDeEspera
+                    const esEspera = s.enListaDeEspera && !s.disponible
+                    return (
                     <button key={s.hora}
-                      disabled={!s.disponible}
-                      onClick={() => { setSelectedHora(s.hora); setStep('paciente') }}
-                      className={`py-2 rounded-xl text-sm font-medium transition-colors ${
-                        s.disponible
-                          ? selectedHora === s.hora
-                            ? 'bg-sky-500 text-white'
-                            : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
-                          : 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                      disabled={!seleccionable}
+                      onClick={() => { if (seleccionable) { setSelectedHora(s.hora); setStep('paciente') } }}
+                      className={`py-2 rounded-xl text-sm font-medium transition-colors flex flex-col items-center gap-0.5 ${
+                        !seleccionable
+                          ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                          : esEspera
+                            ? selectedHora === s.hora ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                            : selectedHora === s.hora
+                              ? 'bg-sky-500 text-white'
+                              : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
                       }`}
                     >
-                      {s.hora}
+                      <span>{s.hora}</span>
+                      {esEspera && <span className="text-[9px] opacity-80">Lista de espera</span>}
+                      {s.disponible && typeof s.cuposRestantes === 'number' && <span className="text-[9px] opacity-70">{s.cuposRestantes} cupos</span>}
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

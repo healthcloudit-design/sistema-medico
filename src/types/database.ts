@@ -1,4 +1,4 @@
-export type AppointmentStatusEnum = 'pendiente' | 'confirmado' | 'cancelado' | 'no_asistio' | 'completado'
+export type AppointmentStatusEnum = 'pendiente' | 'confirmado' | 'cancelado' | 'no_asistio' | 'completado' | 'en_atencion' | 'lista_espera'
 
 export type Database = {
   public: {

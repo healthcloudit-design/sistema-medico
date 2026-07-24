@@ -18,12 +18,13 @@ const TOTAL_MINS = (HOUR_END - HOUR_START) * 60
 const PX_PER_MIN = 2   // 2px por minuto → 60px por hora
 
 const STATUS_COLORS: Record<string, string> = {
-  confirmado:  '#0ea5e9',
-  pendiente:   '#f59e0b',
-  en_atencion: '#8b5cf6',
-  completado:  '#22c55e',
-  cancelado:   '#ef4444',
-  no_asistio:  '#6b7280',
+  confirmado:   '#0ea5e9',
+  pendiente:    '#f59e0b',
+  en_atencion:  '#8b5cf6',
+  completado:   '#22c55e',
+  cancelado:    '#ef4444',
+  no_asistio:   '#6b7280',
+  lista_espera: '#d97706',
 }
 
 function toArgMins(iso: string): number {

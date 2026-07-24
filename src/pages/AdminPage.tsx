@@ -57,7 +57,7 @@ export function AdminPage() {
       {view === 'dashboard'     && <Dashboard organizationId={(profile as any)?.organization_id ?? null} isSuperAdmin={profile?.role === 'superadmin'} />}
       {view === 'appointments'  && <AppointmentList />}
       {view === 'availability'  && <AvailabilityManager />}
-      {view === 'services'      && <ServicesManager />}
+      {view === 'services'      && <ServicesManager organizationId={(profile as any)?.organization_id ?? null} />}
       {view === 'professionals' && <ProfessionalsManager />}
       {view === 'users'         && (
         <UserManager

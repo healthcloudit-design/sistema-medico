@@ -17,6 +17,7 @@ export function useAvailability(
   selectedDate: string | undefined,
   serviceDurationMinutes: number = 30,
   excludeAppointmentId?: string,
+  serviceId?: string,
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
@@ -35,7 +36,7 @@ export function useAvailability(
         const dayStart = `${selectedDate}T00:00:00-03:00`
         const dayEnd   = `${selectedDate}T23:59:59-03:00`
 
-        const [scheduleRes, blockRes, apptRes] = await Promise.all([
+        const [scheduleRes, blockRes, apptRes, serviceRes] = await Promise.all([
           supabase
             .from('schedules')
             .select('*')
@@ -50,7 +51,7 @@ export function useAvailability(
           (() => {
             let q = supabase
               .from('appointments')
-              .select('id, starts_at, ends_at')
+              .select('id, starts_at, ends_at, service_id, status')
               .eq('professional_id', professionalId)
               .gte('starts_at', dayStart)
               .lte('starts_at', dayEnd)
@@ -58,6 +59,9 @@ export function useAvailability(
             if (excludeAppointmentId) q = q.neq('id', excludeAppointmentId)
             return q
           })(),
+          serviceId
+            ? supabase.from('services').select('capacity, waitlist_limit').eq('id', serviceId).single()
+            : Promise.resolve({ data: null, error: null }),
         ])
 
         if (scheduleRes.error) throw scheduleRes.error
@@ -71,13 +75,23 @@ export function useAvailability(
           return
         }
 
-        const schedules = (scheduleRes.data ?? []) as Schedule[]
+        const capacity      = (serviceRes?.data as { capacity?: number } | null)?.capacity ?? 1
+        const waitlistLimit = (serviceRes?.data as { waitlist_limit?: number } | null)?.waitlist_limit ?? 0
+        const isGroupService = !!serviceId && capacity > 1
+
+        const allAppts = (apptRes.data ?? []) as { id: string; starts_at: string; ends_at: string | null; service_id: string; status: string }[]
+
+        // Para servicios con cupo: los turnos del MISMO servicio no bloquean el horario entre sí
+        // (cuentan contra el cupo en vez de "ocupar" el slot); los de otros servicios sí bloquean como siempre.
+        const otherServiceAppts = isGroupService ? allAppts.filter(a => a.service_id !== serviceId) : allAppts
+        const sameServiceAppts  = isGroupService ? allAppts.filter(a => a.service_id === serviceId) : []
+
+        const toMin = (iso: string) => { const t = toArgTime(iso); const [h,m] = t.split(':').map(Number); return h*60+m }
+
         // Cada turno existente ocupa [starts_at, ends_at) — marcamos todos los slots dentro de ese rango
-        const bookedRanges = (apptRes.data ?? []).map((a: { starts_at: string; ends_at: string | null }) => ({
-          startMin: (() => { const t = toArgTime(a.starts_at); const [h,m] = t.split(':').map(Number); return h*60+m })(),
-          endMin:   a.ends_at
-            ? (() => { const t = toArgTime(a.ends_at!); const [h,m] = t.split(':').map(Number); return h*60+m })()
-            : (() => { const t = toArgTime(a.starts_at); const [h,m] = t.split(':').map(Number); return h*60+m+30 })(),
+        const bookedRanges = otherServiceAppts.map(a => ({
+          startMin: toMin(a.starts_at),
+          endMin:   a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + 30,
         }))
 
         // Un slot (hora) está tomado si cae dentro de algún rango existente
@@ -91,6 +105,18 @@ export function useAvailability(
           return false
         }
 
+        // Cupos ocupados / en lista de espera del mismo servicio, agrupados por horario exacto (minuto de inicio)
+        const activeCountBySlot    = new Map<number, number>()
+        const waitlistCountBySlot  = new Map<number, number>()
+        for (const a of sameServiceAppts) {
+          const m = toMin(a.starts_at)
+          if (a.status === 'lista_espera') {
+            waitlistCountBySlot.set(m, (waitlistCountBySlot.get(m) ?? 0) + 1)
+          } else {
+            activeCountBySlot.set(m, (activeCountBySlot.get(m) ?? 0) + 1)
+          }
+        }
+
         const blockedRanges = blocks
           .filter(b => b.blocked_start && b.blocked_end)
           .map(b => ({
@@ -101,6 +127,7 @@ export function useAvailability(
         const isBlockedByRange = (hora: string) =>
           blockedRanges.some(r => hora >= r.start && hora < r.end)
 
+        const schedules = (scheduleRes.data ?? []) as Schedule[]
         const now = new Date()
         const slotMap = new Map<string, TimeSlot>()
 
@@ -123,7 +150,20 @@ export function useAvailability(
             const isBlocked = isBlockedByRange(hora)
 
             if (!slotMap.has(hora)) {
-              slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
+              if (isGroupService) {
+                const activos  = activeCountBySlot.get(slotMin) ?? 0
+                const enEspera = waitlistCountBySlot.get(slotMin) ?? 0
+                const hayCupo       = activos < capacity
+                const hayListaEspera = !hayCupo && enEspera < waitlistLimit
+                slotMap.set(hora, {
+                  hora,
+                  disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
+                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activos, 0) : undefined,
+                  enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
+                })
+              } else {
+                slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
+              }
             }
           }
         }
@@ -135,7 +175,7 @@ export function useAvailability(
     }
 
     load()
-  }, [professionalId, selectedDate, excludeAppointmentId])
+  }, [professionalId, selectedDate, excludeAppointmentId, serviceId])
 
   useEffect(() => {
     if (!professionalId) {

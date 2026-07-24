@@ -59,6 +59,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
   const [redirecting, setRedirecting]     = useState(false)
   const [modoQrUrl, setModoQrUrl]         = useState<string | null>(null)
   const [modoBookingDone, setModoBookingDone] = useState(false)
+  const [waitlisted, setWaitlisted]       = useState(false)
 
   const labels         = getTenantLabels(tenantType)
   const orgId          = state.professional?.organization_id ?? null
@@ -96,15 +97,24 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
         p_patient_notes:       state.observaciones || undefined,
       })
       if (rpcError) throw rpcError
-      const result = rpcResult as { id?: string; error?: string; cancellation_token?: string }
+      const result = rpcResult as { id?: string; status?: string; error?: string; cancellation_token?: string }
       if (result?.error === 'slot_taken') { setError('Ese horario ya fue reservado. Por favor elegí otro.'); setLoading(false); return }
+      if (result?.error === 'cupo_completo') { setError('Este horario alcanzó el cupo máximo y la lista de espera también está completa. Por favor elegí otro horario.'); setLoading(false); return }
       if (result?.error) throw new Error(result.error)
 
+      const isWaitlisted = result?.status === 'lista_espera'
+
       if (result?.id && state.email) {
-        supabase.functions.invoke('send-confirmation', { body: { appointment_id: result.id, patient_name: state.nombre, patient_email: state.email, professional_name: state.professional.full_name, service_name: state.service.name, starts_at: startsAt, cancellation_token: result.cancellation_token } }).catch(() => {})
+        supabase.functions.invoke('send-confirmation', { body: { appointment_id: result.id, patient_name: state.nombre, patient_email: state.email, professional_name: state.professional.full_name, service_name: state.service.name, starts_at: startsAt, cancellation_token: result.cancellation_token, notification_type: isWaitlisted ? 'waitlist_joined' : 'confirmed' } }).catch(() => {})
       }
-      if (result?.id && state.telefono) {
+      if (result?.id && state.telefono && !isWaitlisted) {
         supabase.functions.invoke('send-whatsapp', { body: { appointment_id: result.id, message_type: 'confirmation' } }).catch(() => {})
+      }
+
+      if (isWaitlisted) {
+        setWaitlisted(true)
+        setLoading(false)
+        return
       }
 
       if (paymentMethod === 'mercadopago' && result?.id) {
@@ -132,6 +142,27 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── Waitlisted screen ─────────────────────────────────────────────────────
+  if (waitlisted) {
+    const bg = darkMode ? '#141414' : '#f9fafb'
+    const tc = darkMode ? '#fff' : '#111827'
+    const sc = darkMode ? 'rgba(255,255,255,0.5)' : '#6b7280'
+    return (
+      <div style={{ padding: '32px 24px', textAlign: 'center', backgroundColor: darkMode ? '#141414' : 'transparent' }}>
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <Clock size={28} style={{ color: '#d97706' }} />
+        </div>
+        <h2 style={{ fontFamily: darkMode ? "'Playfair Display', Georgia, serif" : 'inherit', fontSize: '20px', fontStyle: darkMode ? 'italic' : 'normal', fontWeight: 400, color: tc, marginBottom: '8px' }}>Quedaste en lista de espera</h2>
+        <p style={{ fontSize: '13px', color: sc, marginBottom: '24px', lineHeight: 1.6 }}>
+          Este horario está completo por ahora. Te anotamos en la lista de espera{state.email ? ' y te avisaremos por mail' : ''} apenas se libere un lugar.
+        </p>
+        <button onClick={onComplete} style={{ background: 'none', border: `1px solid ${darkMode ? 'rgba(217,119,6,0.4)' : '#fde68a'}`, borderRadius: '12px', padding: '12px 24px', color: '#d97706', fontSize: '13px', fontWeight: 600, cursor: 'pointer', backgroundColor: bg }}>
+          Entendido
+        </button>
+      </div>
+    )
   }
 
   // ── MODO payment screen ───────────────────────────────────────────────────

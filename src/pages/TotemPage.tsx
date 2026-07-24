@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Calendar, Search, X, CheckCircle, XCircle, ChevronRight, Clock, User, Scissors } from 'lucide-react'
+import { Calendar, Search, X, CheckCircle, XCircle, ChevronRight, User, CalendarOff, ArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 type View = 'home' | 'lookup' | 'results' | 'cancel-confirm' | 'done'
@@ -15,12 +15,49 @@ interface ApptResult {
   status: string
   service_name: string
   professional_name: string
+  service_color: string | null
+}
+
+// Tenants que usan la experiencia premium (misma regla que BookingFlow/PremiumBookingFlow)
+const PREMIUM_TENANT_TYPES = ['beauty', 'estetica', 'medical', 'petshop', 'veterinary', 'cancha']
+
+// ── Tokens del tema oscuro (mismos que PremiumBookingFlow) ──────────────────
+const DARK       = '#0B0B0B'
+const T_CARD     = '#141414'
+const T_CARD2    = '#1A1A1A'
+const T_BORDER   = 'rgba(255,255,255,0.08)'
+const T_BORDER2  = 'rgba(255,255,255,0.14)'
+const T_TEXT_PRI = '#FFFFFF'
+const T_TEXT_SEC = 'rgba(255,255,255,0.55)'
+const T_TEXT_MUT = 'rgba(255,255,255,0.32)'
+const SERIF       = "'Playfair Display', Georgia, serif"
+const SANS        = "'Inter', sans-serif"
+
+function toArgDate(iso: string): Date {
+  return new Date(new Date(iso).getTime() - 3 * 60 * 60 * 1000)
 }
 
 function toArgTime(iso: string) {
-  const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
-  const d  = new Date(ms)
+  const d = toArgDate(iso)
   return `${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`
+}
+
+function capitalize(s: string) { return s.charAt(0).toUpperCase() + s.slice(1) }
+
+// "Hoy" / "Mañana" / null, comparando fechas en huso horario argentino
+function getDayBadge(iso: string): string | null {
+  const d   = toArgDate(iso)
+  const now = toArgDate(new Date().toISOString())
+  const dayStart = (x: Date) => Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate())
+  const diff = Math.round((dayStart(d) - dayStart(now)) / 86400000)
+  if (diff === 0) return 'Hoy'
+  if (diff === 1) return 'Mañana'
+  return null
+}
+
+const STATUS_META: Record<string, { label: string; dark: { bg: string; fg: string }; light: { bg: string; fg: string } }> = {
+  confirmado: { label: 'Confirmado', dark: { bg: 'rgba(74,175,120,0.16)', fg: '#7FD9A3' }, light: { bg: '#ECFDF5', fg: '#047857' } },
+  pendiente:  { label: 'Pendiente',  dark: { bg: 'rgba(217,150,60,0.16)', fg: '#F0BE7C' }, light: { bg: '#FFFBEB', fg: '#B45309' } },
 }
 
 const IDLE_SECONDS = 60
@@ -105,7 +142,8 @@ export function TotemPage() {
     setView('done')
   }
 
-  const accent = org?.primary_color ?? '#0284c7'
+  const isDark     = !!org?.tenant_type && PREMIUM_TENANT_TYPES.includes(org.tenant_type)
+  const accent     = org?.primary_color ?? (isDark ? '#C9A96E' : '#0284c7')
   const usePhone   = !!org?.tenant_type && !['medical', 'veterinary'].includes(org.tenant_type)
   const fieldLabel = usePhone ? 'Ingresa tu celular' : 'Ingresa tu DNI'
   const fieldMax   = usePhone ? 13 : 8
@@ -213,117 +251,334 @@ export function TotemPage() {
   )
 
   // ─────────── RESULTS ───────────
-  if (view === 'results') return (
-    <div className="min-h-screen flex flex-col bg-gray-50" onClick={resetIdle}>
-      <header className="py-5 px-6 flex items-center gap-3 text-white" style={{ background: accent }}>
-        <button onClick={() => setView('lookup')} className="p-2 rounded-xl bg-white/20 hover:bg-white/30">
-          <X className="w-5 h-5" />
-        </button>
-        <span className="font-semibold text-lg">Tus proximos turnos</span>
-      </header>
+  if (view === 'results') {
+    const count = appts.length
 
-      <main className="flex-1 p-6 space-y-4 max-w-lg mx-auto w-full">
-        {appts.length === 0 ? (
-          <div className="bg-white rounded-3xl shadow-sm p-10 text-center">
-            <Search className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <div className="text-gray-500 font-medium">No encontramos turnos proximos</div>
-            <div className="text-gray-400 text-sm mt-1">para el {usePhone ? 'celular' : 'DNI'} {dni}</div>
-            <button
-              onClick={() => setView('lookup')}
-              className="mt-5 px-6 py-3 rounded-2xl text-white font-semibold text-sm"
-              style={{ background: accent }}
-            >
-              Intentar de nuevo
-            </button>
+    // ── Estado vacío (compartido, con variante de color) ──────────────────
+    const emptyState = (
+      <div style={{
+        borderRadius: '28px', padding: '48px 32px', textAlign: 'center',
+        backgroundColor: isDark ? T_CARD : '#FFFFFF',
+        border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+      }}>
+        <div style={{
+          width: '72px', height: '72px', borderRadius: '50%', margin: '0 auto 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: isDark ? T_CARD2 : `${accent}12`,
+        }}>
+          <CalendarOff size={30} style={{ color: isDark ? T_TEXT_SEC : accent }} />
+        </div>
+        <p style={{
+          fontFamily: isDark ? SERIF : 'inherit', fontStyle: isDark ? 'italic' : 'normal',
+          fontSize: '19px', fontWeight: isDark ? 400 : 600,
+          color: isDark ? T_TEXT_PRI : '#111827', margin: '0 0 8px',
+        }}>
+          No encontramos turnos asociados a este número
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: '13px', color: isDark ? T_TEXT_SEC : '#6B7280', margin: '0 0 28px' }}>
+          Revisá que el número esté bien escrito, o reservá un turno nuevo.
+        </p>
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={() => navigate(`/${slug}`)}
+            style={{
+              fontFamily: SANS, fontWeight: 600, fontSize: '14px', width: '100%', maxWidth: '280px',
+              padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+              backgroundColor: accent, color: isDark ? '#0B0B0B' : '#FFFFFF',
+            }}
+          >
+            Reservar un turno
+          </button>
+          <button
+            onClick={() => { setView('lookup'); setDni('') }}
+            style={{
+              fontFamily: SANS, fontWeight: 500, fontSize: '13px', background: 'none', border: 'none',
+              cursor: 'pointer', color: isDark ? T_TEXT_SEC : '#6B7280', textDecoration: 'underline',
+            }}
+          >
+            Buscar nuevamente
+          </button>
+        </div>
+      </div>
+    )
+
+    // ── Tema oscuro ─────────────────────────────────────────────────────────
+    if (isDark) return (
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: DARK }} onClick={resetIdle}>
+        <style>{`
+          .totem-card-dark { transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+          .totem-card-dark:hover { transform: translateY(-3px); border-color: ${accent}55; box-shadow: 0 12px 28px rgba(0,0,0,0.35); }
+          .totem-card-dark:active { transform: translateY(-1px) scale(0.99); }
+        `}</style>
+
+        <header className="py-4 px-5 flex items-center gap-3" style={{ borderBottom: `1px solid ${T_BORDER}` }}>
+          <button onClick={() => setView('lookup')}
+            className="p-2 rounded-xl"
+            style={{ backgroundColor: T_CARD2, color: T_TEXT_SEC }}>
+            <X className="w-5 h-5" />
+          </button>
+          <span style={{ fontFamily: SANS, fontSize: '14px', fontWeight: 500, color: T_TEXT_SEC }}>{org?.name}</span>
+        </header>
+
+        <main className="flex-1 p-6 max-w-lg mx-auto w-full">
+          <div style={{ marginBottom: '28px' }}>
+            <h1 style={{ fontFamily: SERIF, fontStyle: 'italic', fontWeight: 400, fontSize: '28px', color: T_TEXT_PRI, margin: '0 0 8px' }}>
+              Tus reservas
+            </h1>
+            <p style={{ fontFamily: SANS, fontSize: '13px', color: T_TEXT_SEC, margin: 0 }}>
+              {count > 0
+                ? `Encontramos ${count} ${count === 1 ? 'turno asociado' : 'turnos asociados'} a tu número. Seleccioná uno para ver el detalle o gestionarlo.`
+                : 'Gestioná tus próximas reservas desde acá.'}
+            </p>
           </div>
-        ) : (
-          <>
-            <p className="text-sm text-gray-400 text-center">Toca un turno para cancelarlo</p>
-            {appts.map(a => (
-              <div
-                key={a.id}
-                onClick={() => { setSelected(a); setView('cancel-confirm') }}
-                className="bg-white rounded-3xl shadow-sm p-5 flex items-center gap-4 cursor-pointer active:scale-95 transition-transform"
-              >
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}18` }}>
-                  <Calendar className="w-6 h-6" style={{ color: accent }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900">
-                    {format(parseISO(a.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })}
-                    {' — '}{toArgTime(a.starts_at)}hs
+
+          {count === 0 ? emptyState : (
+            <div className="space-y-3">
+              {appts.map(a => {
+                const dayBadge = getDayBadge(a.starts_at)
+                const statusMeta = STATUS_META[a.status]
+                const d = toArgDate(a.starts_at)
+                return (
+                  <div key={a.id} onClick={() => { setSelected(a); setView('cancel-confirm') }}
+                    className="totem-card-dark"
+                    style={{
+                      backgroundColor: T_CARD, border: `1px solid ${T_BORDER}`, borderRadius: '20px',
+                      padding: '18px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer',
+                    }}>
+                    {/* Fecha destacada */}
+                    <div style={{
+                      flexShrink: 0, width: '60px', borderRadius: '14px', padding: '10px 0',
+                      backgroundColor: `${accent}14`, border: `1px solid ${accent}30`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    }}>
+                      <span style={{ fontFamily: SERIF, fontSize: '22px', fontWeight: 600, color: T_TEXT_PRI, lineHeight: 1 }}>
+                        {format(d, 'd')}
+                      </span>
+                      <span style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', color: accent, marginTop: '3px' }}>
+                        {format(d, 'MMM', { locale: es }).replace('.', '').toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Contenido */}
+                    <div className="flex-1 min-w-0">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: a.service_color ?? accent, flexShrink: 0 }} />
+                        <span style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 600, color: T_TEXT_PRI, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {a.service_name}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                        <User size={12} style={{ color: T_TEXT_MUT }} />
+                        <span style={{ fontFamily: SANS, fontSize: '12.5px', color: T_TEXT_SEC }}>Con {a.professional_name}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontFamily: SANS, fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '999px',
+                          backgroundColor: T_CARD2, color: T_TEXT_SEC, border: `1px solid ${T_BORDER2}`,
+                        }}>
+                          {toArgTime(a.starts_at)}hs
+                        </span>
+                        {dayBadge && (
+                          <span style={{
+                            fontFamily: SANS, fontSize: '11px', fontWeight: 600, padding: '3px 9px', borderRadius: '999px',
+                            backgroundColor: `${accent}18`, color: accent,
+                          }}>
+                            {dayBadge}
+                          </span>
+                        )}
+                        {statusMeta && (
+                          <span style={{
+                            fontFamily: SANS, fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '999px',
+                            backgroundColor: statusMeta.dark.bg, color: statusMeta.dark.fg,
+                          }}>
+                            {statusMeta.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Acción */}
+                    <div style={{
+                      flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 12px',
+                      borderRadius: '999px', backgroundColor: `${accent}12`, color: accent,
+                    }}>
+                      <span style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>Gestionar</span>
+                      <ArrowRight size={13} />
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-500 flex items-center gap-2 mt-0.5">
-                    <Scissors className="w-3.5 h-3.5" /> {a.service_name}
-                    <User className="w-3.5 h-3.5 ml-1" /> {a.professional_name}
+                )
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    )
+
+    // ── Tema claro ────────────────────────────────────────────────────────
+    return (
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8FAFC' }} onClick={resetIdle}>
+        <style>{`
+          .totem-card-light { transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
+          .totem-card-light:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(15,23,42,0.10); border-color: ${accent}45; }
+          .totem-card-light:active { transform: translateY(-1px) scale(0.99); }
+        `}</style>
+
+        <header className="py-4 px-5 flex items-center gap-3 bg-white" style={{ borderBottom: '1px solid #F1F5F9' }}>
+          <button onClick={() => setView('lookup')} className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200">
+            <X className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-medium text-gray-500">{org?.name}</span>
+        </header>
+
+        <main className="flex-1 p-6 max-w-lg mx-auto w-full">
+          <div className="mb-7">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1.5">Tus reservas</h1>
+            <p className="text-sm text-gray-500">
+              {count > 0
+                ? `Encontramos ${count} ${count === 1 ? 'turno asociado' : 'turnos asociados'} a tu número. Seleccioná uno para ver el detalle o gestionarlo.`
+                : 'Gestioná tus próximas reservas desde acá.'}
+            </p>
+          </div>
+
+          {count === 0 ? emptyState : (
+            <div className="space-y-3">
+              {appts.map(a => {
+                const dayBadge = getDayBadge(a.starts_at)
+                const statusMeta = STATUS_META[a.status]
+                const d = toArgDate(a.starts_at)
+                return (
+                  <div key={a.id} onClick={() => { setSelected(a); setView('cancel-confirm') }}
+                    className="totem-card-light bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 p-4 cursor-pointer">
+                    <div className="flex-shrink-0 w-[60px] rounded-xl py-2.5 flex flex-col items-center"
+                      style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}28` }}>
+                      <span className="text-xl font-bold text-gray-900 leading-none">{format(d, 'd')}</span>
+                      <span className="text-[10px] font-semibold tracking-wide mt-1" style={{ color: accent }}>
+                        {format(d, 'MMM', { locale: es }).replace('.', '').toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ backgroundColor: a.service_color ?? accent }} />
+                        <span className="text-[15px] font-semibold text-gray-900 truncate">{a.service_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <User size={12} className="text-gray-400" />
+                        <span className="text-[12.5px] text-gray-500">Con {a.professional_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          {toArgTime(a.starts_at)}hs
+                        </span>
+                        {dayBadge && (
+                          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${accent}15`, color: accent }}>
+                            {dayBadge}
+                          </span>
+                        )}
+                        {statusMeta && (
+                          <span className="text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ backgroundColor: statusMeta.light.bg, color: statusMeta.light.fg }}>
+                            {statusMeta.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-full" style={{ backgroundColor: `${accent}10`, color: accent }}>
+                      <span className="text-xs font-semibold whitespace-nowrap">Gestionar</span>
+                      <ArrowRight size={13} />
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
-              </div>
-            ))}
-          </>
-        )}
-      </main>
-    </div>
-  )
+                )
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    )
+  }
 
   // ─────────── CANCEL CONFIRM ───────────
-  if (view === 'cancel-confirm' && selected) return (
-    <div className="min-h-screen flex flex-col bg-gray-50" onClick={resetIdle}>
-      <header className="py-5 px-6 flex items-center gap-3 text-white" style={{ background: accent }}>
-        <button onClick={() => setView('results')} className="p-2 rounded-xl bg-white/20 hover:bg-white/30">
+  if (view === 'cancel-confirm' && selected) {
+    const d = toArgDate(selected.starts_at)
+    return (
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: isDark ? DARK : '#F8FAFC' }} onClick={resetIdle}>
+      <header className="py-4 px-5 flex items-center gap-3" style={isDark ? { borderBottom: `1px solid ${T_BORDER}` } : { borderBottom: '1px solid #F1F5F9', backgroundColor: '#fff' }}>
+        <button onClick={() => setView('results')} className="p-2 rounded-xl"
+          style={isDark ? { backgroundColor: T_CARD2, color: T_TEXT_SEC } : { backgroundColor: '#F3F4F6', color: '#6B7280' }}>
           <X className="w-5 h-5" />
         </button>
-        <span className="font-semibold text-lg">Cancelar turno</span>
+        <span style={{ fontFamily: SANS, fontSize: '14px', fontWeight: 500, color: isDark ? T_TEXT_SEC : '#6B7280' }}>Gestionar turno</span>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="bg-white rounded-3xl shadow-md p-8 max-w-sm w-full space-y-5 text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-            <XCircle className="w-8 h-8 text-red-500" />
+        <div style={{
+          borderRadius: '24px', padding: '32px', maxWidth: '380px', width: '100%', textAlign: 'center',
+          backgroundColor: isDark ? T_CARD : '#FFFFFF', border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+        }}>
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 18px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: isDark ? `${accent}14` : `${accent}10`,
+          }}>
+            <span style={{ fontFamily: SERIF, fontSize: '20px', fontWeight: 600, color: isDark ? T_TEXT_PRI : '#111827' }}>{format(d, 'd')}</span>
           </div>
-          <div>
-            <div className="font-bold text-gray-900 text-lg">Confirmar cancelacion</div>
-            <div className="text-gray-500 text-sm mt-1">
-              {format(parseISO(selected.starts_at.slice(0,10)), "EEEE d 'de' MMMM", { locale: es })}
-              {' — '}{toArgTime(selected.starts_at)}hs
-            </div>
-            <div className="text-gray-500 text-sm">{selected.service_name} con {selected.professional_name}</div>
-          </div>
+          <p style={{ fontFamily: SANS, fontSize: '16px', fontWeight: 600, color: isDark ? T_TEXT_PRI : '#111827', margin: '0 0 4px' }}>
+            {capitalize(format(d, "EEEE d 'de' MMMM", { locale: es }))}
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: '13px', color: isDark ? T_TEXT_SEC : '#6B7280', margin: '0 0 14px' }}>
+            {toArgTime(selected.starts_at)}hs · {selected.service_name} con {selected.professional_name}
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: '13px', color: isDark ? T_TEXT_SEC : '#9CA3AF', margin: '0 0 22px' }}>
+            ¿Confirmás que querés cancelar este turno?
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setView('results')}
-              className="py-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 active:scale-95 transition-transform"
+              style={{
+                fontFamily: SANS, fontWeight: 600, fontSize: '13px', padding: '14px', borderRadius: '14px', cursor: 'pointer',
+                backgroundColor: 'transparent', border: `1px solid ${isDark ? T_BORDER2 : '#E5E7EB'}`, color: isDark ? T_TEXT_SEC : '#6B7280',
+              }}
             >
               Volver
             </button>
             <button
               onClick={handleConfirmCancel}
               disabled={cancelling}
-              className="py-4 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm active:scale-95 transition-transform disabled:opacity-50"
+              style={{
+                fontFamily: SANS, fontWeight: 600, fontSize: '13px', padding: '14px', borderRadius: '14px', cursor: cancelling ? 'default' : 'pointer',
+                backgroundColor: '#DC2626', border: 'none', color: '#fff', opacity: cancelling ? 0.6 : 1,
+              }}
             >
-              {cancelling ? 'Cancelando...' : 'Si, cancelar'}
+              {cancelling ? 'Cancelando...' : 'Sí, cancelar'}
             </button>
           </div>
         </div>
       </main>
     </div>
-  )
+  )}
 
   // ─────────── DONE ───────────
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-      <div className="bg-white rounded-3xl shadow-md p-10 max-w-sm w-full text-center space-y-5">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: isDark ? DARK : '#F8FAFC' }}>
+      <div style={{
+        borderRadius: '24px', padding: '40px 32px', maxWidth: '380px', width: '100%', textAlign: 'center',
+        backgroundColor: isDark ? T_CARD : '#FFFFFF', border: `1px solid ${isDark ? T_BORDER : '#F1F5F9'}`,
+      }}>
         {doneOk
-          ? <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-          : <XCircle    className="w-16 h-16 text-red-400 mx-auto" />
+          ? <CheckCircle className="w-14 h-14 mx-auto" style={{ color: isDark ? '#7FD9A3' : '#22C55E' }} />
+          : <XCircle    className="w-14 h-14 mx-auto" style={{ color: isDark ? '#F0BE7C' : '#F87171' }} />
         }
-        <div className="font-bold text-xl text-gray-900">{doneOk ? 'Listo!' : 'Algo salio mal'}</div>
-        <div className="text-gray-500">{doneMsg}</div>
+        <p style={{ fontFamily: SANS, fontWeight: 700, fontSize: '19px', color: isDark ? T_TEXT_PRI : '#111827', margin: '16px 0 6px' }}>
+          {doneOk ? '¡Listo!' : 'Algo salió mal'}
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: '13.5px', color: isDark ? T_TEXT_SEC : '#6B7280', margin: '0 0 24px' }}>{doneMsg}</p>
         <button
           onClick={resetToHome}
-          className="w-full py-4 rounded-2xl text-white font-semibold"
-          style={{ background: accent }}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+            fontFamily: SANS, fontWeight: 600, fontSize: '13.5px',
+            backgroundColor: accent, color: isDark ? '#0B0B0B' : '#FFFFFF',
+          }}
         >
           Volver al inicio ({countdown}s)
         </button>

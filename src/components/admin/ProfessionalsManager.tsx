@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Power, UserCircle, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Power, UserCircle, Trash2, Search, X, CalendarClock, UserPlus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Professional } from '../../types'
 import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
+import { WeeklyScheduleEditor } from './WeeklyScheduleEditor'
+import { CreateUserForm } from './CreateUserForm'
 
 interface ServiceOption { id: string; name: string }
+
+type WizardStep = 'availability-prompt' | 'availability-editing' | 'user-prompt' | 'user-editing'
+
+interface WizardState {
+  step: WizardStep
+  professionalId: string
+  professionalName: string
+  organizationId: string
+}
 
 export function ProfessionalsManager() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
@@ -18,6 +29,7 @@ export function ProfessionalsManager() {
   const [deleting, setDeleting]           = useState(false)
   const [deleteError, setDeleteError]     = useState('')
   const [search, setSearch]               = useState('')
+  const [wizard, setWizard]               = useState<WizardState | null>(null)
 
   // Services for current editing org
   const [orgServices, setOrgServices]       = useState<ServiceOption[]>([])
@@ -83,6 +95,7 @@ export function ProfessionalsManager() {
       active:     editing.active ?? true,
     }
 
+    const wasCreate = !editing.id
     let professionalId = editing.id ?? null
 
     if (editing.id) {
@@ -107,6 +120,16 @@ export function ProfessionalsManager() {
     setEditing(null)
     setSelectedServices([])
     setSaving(false)
+
+    // Recién creado (no edición) → ofrecer configurar disponibilidad y usuario
+    if (wasCreate && professionalId) {
+      setWizard({
+        step: 'availability-prompt',
+        professionalId,
+        professionalName: payload.full_name,
+        organizationId: payload.organization_id,
+      })
+    }
   }
 
   const toggle = async (p: Professional) => {
@@ -341,6 +364,86 @@ export function ProfessionalsManager() {
               <Button variant="secondary" className="flex-1" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
               <Button className="flex-1 !bg-red-600 hover:!bg-red-700" loading={deleting} onClick={handleDelete}>Eliminar</Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wizard post-creación: disponibilidad + usuario */}
+      {wizard && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-sky-600 mb-0.5">
+                  {wizard.step === 'user-prompt' || wizard.step === 'user-editing' ? 'Paso 2 de 2 · Usuario' : 'Paso 1 de 2 · Disponibilidad'}
+                </p>
+                <h3 className="font-semibold text-gray-900">{wizard.professionalName}</h3>
+              </div>
+              <button onClick={() => setWizard(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {wizard.step === 'availability-prompt' && (
+              <div className="p-6 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center mx-auto mb-4">
+                  <CalendarClock className="w-7 h-7 text-sky-600" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1.5">Profesional creado con éxito</p>
+                <p className="text-sm text-gray-500 mb-6">¿Querés configurar sus horarios de disponibilidad ahora?</p>
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setWizard(w => w && { ...w, step: 'user-prompt' })}>
+                    Configurar más tarde
+                  </Button>
+                  <Button className="flex-1" onClick={() => setWizard(w => w && { ...w, step: 'availability-editing' })}>
+                    Configurar disponibilidad
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {wizard.step === 'availability-editing' && (
+              <div className="p-5">
+                <div className="mb-4">
+                  <WeeklyScheduleEditor professionalId={wizard.professionalId} />
+                </div>
+                <Button className="w-full" onClick={() => setWizard(w => w && { ...w, step: 'user-prompt' })}>
+                  Continuar
+                </Button>
+              </div>
+            )}
+
+            {wizard.step === 'user-prompt' && (
+              <div className="p-6 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center mx-auto mb-4">
+                  <UserPlus className="w-7 h-7 text-sky-600" />
+                </div>
+                <p className="text-gray-900 font-medium mb-1.5">¿Creamos su usuario de acceso?</p>
+                <p className="text-sm text-gray-500 mb-6">Va a poder iniciar sesión y ver sus propios turnos.</p>
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setWizard(null)}>
+                    Crear más tarde
+                  </Button>
+                  <Button className="flex-1" onClick={() => setWizard(w => w && { ...w, step: 'user-editing' })}>
+                    Crear usuario
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {wizard.step === 'user-editing' && (
+              <div className="p-5">
+                <CreateUserForm
+                  fixedRole="medico"
+                  fixedProfessionalId={wizard.professionalId}
+                  fixedProfessionalName={wizard.professionalName}
+                  fixedOrganizationId={wizard.organizationId}
+                  submitLabel="Crear usuario"
+                  onCancel={() => setWizard(w => w && { ...w, step: 'user-prompt' })}
+                  onSuccess={() => setWizard(null)}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

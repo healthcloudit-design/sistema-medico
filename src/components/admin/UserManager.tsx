@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Plus, UserCircle, Trash2, KeyRound, Pencil, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import type { Profile, Professional, UserRole } from '../../types'
+import type { Profile, UserRole } from '../../types'
 import type { Organization } from '../../types'
 import { Button } from '../ui/Button'
+import { CreateUserForm } from './CreateUserForm'
 
 const ROLE_CONFIG: Record<UserRole, { label: string; className: string }> = {
   superadmin:  { label: 'Superadmin',   className: 'bg-purple-100 text-purple-800' },
@@ -28,11 +29,9 @@ interface Props {
 
 export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props) {
   const [users, setUsers]                 = useState<UserRow[]>([])
-  const [professionals, setProfessionals] = useState<Professional[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading]             = useState(true)
   const [creating, setCreating]           = useState(false)
-  const [saving, setSaving]               = useState(false)
   const [error, setError]                 = useState('')
   const [confirmDelete, setConfirmDelete]   = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting]             = useState(false)
@@ -40,76 +39,30 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
   const [newPassword, setNewPassword]       = useState('')
   const [resetting, setResetting]           = useState(false)
   const [resetSuccess, setResetSuccess]     = useState(false)
-  const [editTarget, setEditTarget]         = useState<{ id: string; full_name: string } | null>(null)
+  const [editTarget, setEditTarget]         = useState<{ id: string; full_name: string; email: string } | null>(null)
   const [editName, setEditName]             = useState('')
+  const [editEmail, setEditEmail]           = useState('')
+  const [editError, setEditError]           = useState('')
   const [editSaving, setEditSaving]         = useState(false)
   const [search, setSearch]                 = useState('')
-  // Filtro de centro para el selector de profesional (solo superadmin + medico)
-  const [orgFilterForPro, setOrgFilterForPro] = useState('')
-
-  const [form, setForm] = useState({
-    email: '', password: '', full_name: '',
-    role: 'medico' as UserRole,
-    professional_id: '',
-    organization_id: '',
-  })
-
-  const needsOrg = form.role === 'recepcion' || form.role === 'admin'
-  const needsProfessional = form.role === 'medico'
-
-  // Profesionales visibles según contexto:
-  // - superadmin: todos, o filtrados por orgFilterForPro si eligió un centro
-  // - admin/recepción: solo los de su propio centro
-  const availableProfessionals = professionals.filter(p => {
-    if (isSuperAdmin) return !orgFilterForPro || p.organization_id === orgFilterForPro
-    return p.organization_id === (currentOrgId ?? '')
-  })
 
   const load = async () => {
     setLoading(true)
-    const [pRes, profRes, orgRes] = await Promise.all([
+    const [pRes, orgRes, emailRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-      supabase.from('professionals').select('id, full_name, organization_id').eq('active', true).order('full_name'),
       supabase.from('organizations').select('id, name').eq('active', true).order('name'),
+      supabase.rpc('get_user_emails'),
     ])
-    setUsers((pRes.data ?? []) as UserRow[])
-    setProfessionals((profRes.data ?? []) as Professional[])
+    const emailById = new Map(
+      ((emailRes.data ?? []) as { id: string; email: string }[]).map(r => [r.id, r.email])
+    )
+    const rows = ((pRes.data ?? []) as UserRow[]).map(u => ({ ...u, email: emailById.get(u.id) }))
+    setUsers(rows)
     setOrganizations((orgRes.data ?? []) as Organization[])
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!form.email || !form.password) { setError('Email y contrasena son obligatorios'); return }
-    if (needsProfessional && !form.professional_id) {
-      setError('Selecciona el profesional asociado'); return
-    }
-    if (needsOrg && !form.organization_id) {
-      setError('Selecciona el centro al que pertenece el usuario'); return
-    }
-    setSaving(true)
-    const { error: fnErr } = await supabase.functions.invoke('admin-create-user', {
-      body: {
-        email:           form.email,
-        password:        form.password,
-        full_name:       form.full_name,
-        role:            form.role,
-        professional_id: needsProfessional ? form.professional_id : null,
-        organization_id: needsOrg ? form.organization_id : null,
-      },
-    })
-    if (fnErr) {
-      setError(fnErr.message ?? 'Error al crear el usuario')
-    } else {
-      setCreating(false)
-      setForm({ email: '', password: '', full_name: '', role: 'medico', professional_id: '', organization_id: '' })
-      await load()
-    }
-    setSaving(false)
-  }
 
   const handleDelete = async () => {
     if (!confirmDelete) return
@@ -152,12 +105,25 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
   }
 
-  const handleEditName = async (e: React.FormEvent) => {
+  const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editTarget) return
+    setEditError('')
     setEditSaving(true)
-    await supabase.from('profiles').update({ full_name: editName }).eq('id', editTarget.id)
-    setUsers(prev => prev.map(u => u.id === editTarget.id ? { ...u, full_name: editName } : u))
+
+    if (editName !== editTarget.full_name) {
+      const { error: nameErr } = await supabase.from('profiles').update({ full_name: editName }).eq('id', editTarget.id)
+      if (nameErr) { setEditError('No se pudo actualizar el nombre: ' + nameErr.message); setEditSaving(false); return }
+    }
+
+    if (editEmail !== editTarget.email) {
+      const { error: fnErr } = await supabase.functions.invoke('admin-update-email', {
+        body: { user_id: editTarget.id, new_email: editEmail },
+      })
+      if (fnErr) { setEditError(fnErr.message ?? 'No se pudo actualizar el email'); setEditSaving(false); return }
+    }
+
+    setUsers(prev => prev.map(u => u.id === editTarget.id ? { ...u, full_name: editName, email: editEmail } : u))
     setEditTarget(null)
     setEditSaving(false)
   }
@@ -217,8 +183,8 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 text-sm">{u.full_name ?? '—'}</div>
-                      <div className="text-xs text-gray-400">
-                        {org ? org : u.id.slice(0,8) + '…'}
+                      <div className="text-xs text-gray-400 truncate">
+                        {[((u as any).email as string | undefined), org].filter(Boolean).join(' · ') || u.id.slice(0,8) + '…'}
                       </div>
                     </div>
                     <select
@@ -234,9 +200,15 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
                       {cfg.label}
                     </span>
                     <button
-                      onClick={() => { setEditTarget({ id: u.id, full_name: u.full_name ?? '' }); setEditName(u.full_name ?? '') }}
+                      onClick={() => {
+                        const email = (u as any).email ?? ''
+                        setEditTarget({ id: u.id, full_name: u.full_name ?? '', email })
+                        setEditName(u.full_name ?? '')
+                        setEditEmail(email)
+                        setEditError('')
+                      }}
                       className="p-1.5 text-gray-300 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
-                      title="Editar nombre"
+                      title="Editar usuario"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -262,20 +234,36 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
         </div>
       )}
 
-      {/* Modal editar nombre */}
+      {/* Modal editar usuario */}
       {editTarget && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
             <h3 className="font-semibold text-gray-900 mb-1">Editar usuario</h3>
-            <p className="text-sm text-gray-500 mb-4">Modificá el nombre de <span className="font-medium text-gray-900">{editTarget.full_name || 'este usuario'}</span></p>
-            <form onSubmit={handleEditName} className="space-y-4">
-              <input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                placeholder="Nombre completo"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+            <p className="text-sm text-gray-500 mb-4">Modificá los datos de <span className="font-medium text-gray-900">{editTarget.full_name || 'este usuario'}</span></p>
+            <form onSubmit={handleEditSave} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5">Nombre completo</label>
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Nombre completo"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={e => setEditEmail(e.target.value)}
+                  placeholder="usuario@email.com"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">El usuario deberá usar este email para iniciar sesión.</p>
+              </div>
+              {editError && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{editError}</div>}
               <div className="flex gap-3">
                 <Button type="button" variant="secondary" className="flex-1" onClick={() => setEditTarget(null)}>Cancelar</Button>
                 <Button type="submit" className="flex-1" loading={editSaving}>Guardar</Button>
@@ -342,133 +330,18 @@ export function UserManager({ isSuperAdmin = true, currentOrgId = null }: Props)
 
       {creating && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="px-5 py-4 border-b border-gray-100">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
               <h3 className="font-semibold text-gray-900">Nuevo usuario</h3>
             </div>
-            <form onSubmit={handleCreate}>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Nombre completo</label>
-                  <input
-                    value={form.full_name}
-                    onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    placeholder="Ej: Brenda Lopez"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Email *</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    placeholder="usuario@email.com"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Contrasena *</label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    placeholder="Minimo 6 caracteres"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Rol *</label>
-                  <select
-                    value={form.role}
-                    onChange={e => {
-                      setOrgFilterForPro('')
-                      setForm(f => ({ ...f, role: e.target.value as UserRole, professional_id: '', organization_id: '' }))
-                    }}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  >
-                    {isSuperAdmin && <option value="globaladmin">Global Admin (Cofundador)</option>}
-                    {isSuperAdmin && <option value="comercial">Comercial (Sales)</option>}
-                    <option value="admin">Admin de centro</option>
-                    <option value="recepcion">Recepción</option>
-                    <option value="medico">Profesional</option>
-                  </select>
-                </div>
-
-                {/* Superadmin: elige Centro primero → filtra profesionales */}
-                {needsProfessional && isSuperAdmin && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
-                    <select
-                      value={orgFilterForPro}
-                      onChange={e => {
-                        setOrgFilterForPro(e.target.value)
-                        setForm(f => ({ ...f, professional_id: '' }))
-                      }}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    >
-                      <option value="">Selecciona un centro</option>
-                      {organizations.map(o => (
-                        <option key={o.id} value={o.id}>{o.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {needsProfessional && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Profesional asociado *</label>
-                    <select
-                      value={form.professional_id}
-                      onChange={e => {
-                        const profId = e.target.value
-                        const prof = professionals.find(p => p.id === profId)
-                        setForm(f => ({ ...f, professional_id: profId, organization_id: prof?.organization_id ?? '' }))
-                      }}
-                      disabled={isSuperAdmin && !orgFilterForPro}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">
-                        {isSuperAdmin && !orgFilterForPro ? 'Primero elegí un centro' : 'Selecciona un profesional'}
-                      </option>
-                      {availableProfessionals.map(p => (
-                        <option key={p.id} value={p.id}>{p.full_name}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-400 mt-1">Solo verá sus propios turnos.</p>
-                  </div>
-                )}
-
-                {needsOrg && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1.5">Centro *</label>
-                    <select
-                      value={form.organization_id}
-                      onChange={e => setForm(f => ({ ...f, organization_id: e.target.value }))}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    >
-                      <option value="">Selecciona el centro</option>
-                      {organizations.map(o => (
-                        <option key={o.id} value={o.id}>{o.name}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-400 mt-1">Solo vera los turnos de este centro.</p>
-                  </div>
-                )}
-
-                {error && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
-              </div>
-              <div className="px-5 pb-5 flex gap-3">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => { setCreating(false); setError('') }}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="flex-1" loading={saving}>
-                  Crear usuario
-                </Button>
-              </div>
-            </form>
+            <div className="p-5">
+              <CreateUserForm
+                isSuperAdmin={isSuperAdmin}
+                currentOrgId={currentOrgId}
+                onCancel={() => setCreating(false)}
+                onSuccess={() => { setCreating(false); load() }}
+              />
+            </div>
           </div>
         </div>
       )}

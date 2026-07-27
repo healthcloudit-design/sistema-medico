@@ -17,6 +17,7 @@ export function AvailabilityManager() {
     day_of_week: 1, start_time: '09:00', end_time: '17:00', interval_minutes: 30,
   })
   const [newBlock, setNewBlock] = useState({ blocked_date: '', reason: '' })
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     supabase
@@ -34,6 +35,7 @@ export function AvailabilityManager() {
 
   useEffect(() => {
     if (!selectedId) return
+    setSaveError('')
     Promise.all([
       supabase.from('schedules').select('*').eq('professional_id', selectedId).order('day_of_week'),
       supabase.from('availability_blocks').select('*').eq('professional_id', selectedId)
@@ -45,8 +47,9 @@ export function AvailabilityManager() {
   }, [selectedId])
 
   const addSchedule = async () => {
-    setSaving(true)
-    const { data } = await supabase
+    if (!selectedId) { setSaveError('Elegi un profesional antes de agregar un horario.'); return }
+    setSaving(true); setSaveError('')
+    const { data, error } = await supabase
       .from('schedules')
       .insert({
         professional_id:  selectedId,
@@ -58,24 +61,30 @@ export function AvailabilityManager() {
       })
       .select()
       .single()
+    if (error) setSaveError('No se pudo guardar el horario: ' + error.message)
     if (data) setSchedules(prev => [...prev, data as Schedule].sort((a, b) => a.day_of_week - b.day_of_week))
     setSaving(false)
   }
 
   const deleteSchedule = async (id: string) => {
-    await supabase.from('schedules').delete().eq('id', id)
+    setSaveError('')
+    const { error } = await supabase.from('schedules').delete().eq('id', id)
+    if (error) { setSaveError('No se pudo eliminar el horario: ' + error.message); return }
     setSchedules(prev => prev.filter(s => s.id !== id))
   }
 
   const toggleSchedule = async (s: Schedule) => {
-    await supabase.from('schedules').update({ active: !s.active }).eq('id', s.id)
+    setSaveError('')
+    const { error } = await supabase.from('schedules').update({ active: !s.active }).eq('id', s.id)
+    if (error) { setSaveError('No se pudo actualizar el horario: ' + error.message); return }
     setSchedules(prev => prev.map(x => x.id === s.id ? { ...x, active: !s.active } : x))
   }
 
   const addBlock = async () => {
     if (!newBlock.blocked_date) return
-    setSaving(true)
-    const { data } = await supabase
+    if (!selectedId) { setSaveError('Elegi un profesional antes de bloquear una fecha.'); return }
+    setSaving(true); setSaveError('')
+    const { data, error } = await supabase
       .from('availability_blocks')
       .insert({
         professional_id: selectedId,
@@ -84,15 +93,20 @@ export function AvailabilityManager() {
       })
       .select()
       .single()
+    if (error) setSaveError('No se pudo bloquear la fecha: ' + error.message)
     if (data) setBlocks(prev => [...prev, data as AvailabilityBlock].sort((a, b) => (a.blocked_date ?? '').localeCompare(b.blocked_date ?? '')))
     setNewBlock({ blocked_date: '', reason: '' })
     setSaving(false)
   }
 
   const deleteBlock = async (id: string) => {
-    await supabase.from('availability_blocks').delete().eq('id', id)
+    setSaveError('')
+    const { error } = await supabase.from('availability_blocks').delete().eq('id', id)
+    if (error) { setSaveError('No se pudo eliminar el bloqueo: ' + error.message); return }
     setBlocks(prev => prev.filter(b => b.id !== id))
   }
+
+  const selectedProfessional = professionals.find(p => p.id === selectedId)
 
   if (loading) return <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
 
@@ -115,6 +129,21 @@ export function AvailabilityManager() {
           ))}
         </select>
       </div>
+
+      {selectedProfessional && (
+        <div className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl bg-sky-50 border border-sky-100">
+          <span className="text-sm text-sky-700">
+            Estas editando el horario de <span className="font-semibold">{selectedProfessional.full_name}</span>
+            {selectedProfessional.specialty ? ` (${selectedProfessional.specialty})` : ''}
+          </span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="mb-5 px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-5">
         <div className="px-5 py-4 border-b border-gray-100">

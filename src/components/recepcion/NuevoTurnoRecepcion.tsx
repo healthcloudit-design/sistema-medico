@@ -128,6 +128,10 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
         setErrorMsg('Ese horario alcanzó el cupo máximo y la lista de espera también está completa. Elegí otro.')
         setStep('fecha'); setSaving(false); return
       }
+      if (result?.error === 'service_conflict') {
+        setErrorMsg('Ese horario no está disponible por un turno de otro servicio que ocupa a la profesional en ese momento. Elegí otro.')
+        setStep('fecha'); setSaving(false); return
+      }
       if (result?.error) throw new Error(result.error)
       setWasWaitlisted(result?.status === 'lista_espera')
       setSuccess(true)

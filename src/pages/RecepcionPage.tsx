@@ -125,18 +125,31 @@ export function RecepcionPage() {
 
   useEffect(() => { if (profile) load() }, [dateFilter, profile])
 
-  useEffect(() => {
+  const loadWeek = async () => {
     if (!profile) return
     const ws  = startOfWeek(currentWeek, { weekStartsOn:1 })
     const from = startOfDay(ws).toISOString()
     const to   = endOfDay(addDays(ws, 27)).toISOString()
-    supabase.from('appointments')
+    const { data } = await supabase.from('appointments')
       .select('*, professionals(full_name), services(name,color,duration_minutes), patients(full_name)')
       .gte('starts_at', from).lte('starts_at', to).order('starts_at')
-      .then(({ data }) => setAllAppts((data ?? []).map((r: Record<string,unknown>) => ({
-        ...r, professional:r.professionals, service:r.services, patient:r.patients,
-      })) as Appointment[]))
-  }, [profile, currentWeek])
+    setAllAppts((data ?? []).map((r: Record<string,unknown>) => ({
+      ...r, professional:r.professionals, service:r.services, patient:r.patients,
+    })) as Appointment[])
+  }
+
+  useEffect(() => { loadWeek() }, [profile, currentWeek])
+
+  useEffect(() => {
+    if (!profile?.organization_id) return
+    // Escucha altas, bajas y cambios de turnos de todo el centro para que la
+    // pantalla se actualice sola (ej: un turno cargado desde el celular de un profesional).
+    const ch = supabase.channel(`recepcion-${profile.organization_id}`)
+      .on('postgres_changes', { event:'*', schema:'public', table:'appointments', filter:`organization_id=eq.${profile.organization_id}` },
+        () => { load(); loadWeek() })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [profile?.organization_id, dateFilter, currentWeek])
 
   const filtered = appointments.filter(a => {
     if (!search) return true

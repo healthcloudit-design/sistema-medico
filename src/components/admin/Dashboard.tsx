@@ -94,7 +94,7 @@ export function Dashboard({ organizationId, isSuperAdmin }: Props) {
   const [weekAppts,     setWeek]   = useState<Appointment[]>([])
   const [loading, setLoading]      = useState(true)
 
-  useEffect(() => {
+  const loadToday = async () => {
     const today    = format(new Date(), 'yyyy-MM-dd')
     const dayStart = `${today}T00:00:00-03:00`
     const dayEnd   = `${today}T23:59:59-03:00`
@@ -112,15 +112,16 @@ export function Dashboard({ organizationId, isSuperAdmin }: Props) {
       q = q.eq('organization_id', organizationId)
     }
 
-    q.then(({ data }) => {
-      setAppts((data ?? []).map((r: Record<string,unknown>) => ({
-        ...r, professional: r.professionals, service: r.services, patient: r.patients,
-      })) as Appointment[])
-      setLoading(false)
-    })
-  }, [organizationId, isSuperAdmin])
+    const { data } = await q
+    setAppts((data ?? []).map((r: Record<string,unknown>) => ({
+      ...r, professional: r.professionals, service: r.services, patient: r.patients,
+    })) as Appointment[])
+    setLoading(false)
+  }
 
-  useEffect(() => {
+  useEffect(() => { loadToday() }, [organizationId, isSuperAdmin])
+
+  const loadWeek = async () => {
     const ws   = startOfWeek(new Date(), { weekStartsOn: 1 })
     const we   = endOfWeek(new Date(),   { weekStartsOn: 1 })
     let q = supabase.from('appointments')
@@ -128,8 +129,22 @@ export function Dashboard({ organizationId, isSuperAdmin }: Props) {
       .gte('starts_at', ws.toISOString())
       .lte('starts_at', we.toISOString())
     if (organizationId) q = q.eq('organization_id', organizationId)
-    q.then(({ data }) => setWeek((data ?? []) as any))
-  }, [organizationId])
+    const { data } = await q
+    setWeek((data ?? []) as any)
+  }
+
+  useEffect(() => { loadWeek() }, [organizationId])
+
+  useEffect(() => {
+    // Escucha altas, bajas y cambios de turnos para que el dashboard se actualice
+    // solo (ej: un turno cargado desde el celular de un profesional o recepción).
+    const filter = organizationId ? `organization_id=eq.${organizationId}` : undefined
+    const channel = supabase.channel(`admin-dashboard-${organizationId ?? 'all'}`)
+      .on('postgres_changes', { event:'*', schema:'public', table:'appointments', ...(filter ? { filter } : {}) },
+        () => { loadToday(); loadWeek() })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [organizationId, isSuperAdmin])
 
   const total       = appointments.length
   const confirmados = appointments.filter(a => a.status === 'confirmado').length

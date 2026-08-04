@@ -59,6 +59,11 @@ export function RescheduleModal({
       setSaving(false)
       return
     }
+    if (result?.error === 'service_conflict') {
+      setErrorMsg('Ese horario no está disponible por un turno de otro servicio que ocupa a la profesional en ese momento. Elegí otro.')
+      setSaving(false)
+      return
+    }
     if (result?.error) {
       setErrorMsg('No se pudo reprogramar el turno.')
       setSaving(false)

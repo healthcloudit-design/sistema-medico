@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Users, LogOut, FileText,
   CalendarX, ChevronRight, Search, MessageCircle,
   CheckCircle, AlertCircle, TrendingUp, Menu, X, ArrowRight,
-  Lock, Clock, Activity, CalendarClock,
+  Lock, Clock, Activity, CalendarClock, UserX, XCircle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
@@ -437,6 +437,22 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
                 <CalendarClock size={14}/> Reprogramar turno
               </button>
             )}
+
+            {/* No asistió / Cancelar — disponibles sin importar la fecha del turno */}
+            <div style={{ display:'flex', gap:'8px' }}>
+              {!['no_asistio','completado','cancelado'].includes(appt.status) && (
+                <button onClick={() => onStatus(appt.id,'no_asistio')}
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#F9FAFB', color:'#374151', border:'1px solid #E5E7EB', cursor:'pointer' }}>
+                  <UserX size={13}/> No asistió
+                </button>
+              )}
+              {!['cancelado','completado'].includes(appt.status) && (
+                <button onClick={() => { if (confirm('¿Cancelar este turno?')) onStatus(appt.id,'cancelado') }}
+                  style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#FEF2F2', color:'#B91C1C', border:'1px solid #FECACA', cursor:'pointer' }}>
+                  <XCircle size={13}/> Cancelar turno
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -759,30 +775,37 @@ export function MedicoDashboard() {
     if (profile.role === 'recepcion') navigate('/recepcion', { replace:true })
   }, [user, authLoading, profile])
 
-  useEffect(() => {
+  const loadAppts = async () => {
     if (!profile?.professional_id) return
     const wkStart = startOfWeek(new Date(), { weekStartsOn:1 })
-    supabase.from('appointments')
+    const { data } = await supabase.from('appointments')
       .select('*, services(name, color, duration_minutes), patients(id, full_name, phone, email, obra_social)')
       .eq('professional_id', profile.professional_id)
       .gte('starts_at', startOfDay(wkStart).toISOString())
       .lte('starts_at', endOfDay(addDays(wkStart, 27)).toISOString())
       .order('starts_at')
-      .then(({ data }) => {
-        setAppts((data ?? []).map((r:any) => ({ ...r, service:r.services, patient:r.patients })) as Appointment[])
-        setLoading(false)
-      })
-  }, [profile?.professional_id])
+    const fresh = (data ?? []).map((r:any) => ({ ...r, service:r.services, patient:r.patients })) as Appointment[]
+    setAppts(fresh)
+    setLoading(false)
+    // Si hay un turno abierto en el modal, lo actualiza con los datos frescos
+    // (o lo cierra si ya no existe / fue cancelado por otro lado).
+    setSel(p => {
+      if (!p) return p
+      const match = fresh.find(a => a.id === p.id)
+      return match ?? null
+    })
+  }
+
+  useEffect(() => { loadAppts() }, [profile?.professional_id])
 
   useEffect(() => {
     if (!profile?.professional_id) return
+    // Escucha inserciones, actualizaciones y bajas de turnos de este profesional.
+    // Se vuelve a pedir la lista completa (con relaciones) en cada cambio: así un turno
+    // nuevo cargado desde otro dispositivo aparece solo, sin recargar la página.
     const ch = supabase.channel(`medico-${profile.professional_id}`)
-      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'appointments', filter:`professional_id=eq.${profile.professional_id}` },
-        payload => {
-          const u = payload.new as any
-          if (u.status === 'cancelado') { setAppts(p => p.filter(a => a.id !== u.id)); setSel(p => p?.id===u.id ? null : p) }
-          else { setAppts(p => p.map(a => a.id===u.id ? { ...a, ...u } : a)); setSel(p => p?.id===u.id ? { ...p, ...u } as any : p) }
-        })
+      .on('postgres_changes', { event:'*', schema:'public', table:'appointments', filter:`professional_id=eq.${profile.professional_id}` },
+        () => { loadAppts() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [profile?.professional_id])

@@ -100,6 +100,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
       const result = rpcResult as { id?: string; status?: string; error?: string; cancellation_token?: string }
       if (result?.error === 'slot_taken') { setError('Ese horario ya fue reservado. Por favor elegí otro.'); setLoading(false); return }
       if (result?.error === 'cupo_completo') { setError('Este horario alcanzó el cupo máximo y la lista de espera también está completa. Por favor elegí otro horario.'); setLoading(false); return }
+      if (result?.error === 'service_conflict') { setError('Ese horario no está disponible por un turno de otro servicio que ocupa a la profesional en ese momento. Por favor elegí otro horario.'); setLoading(false); return }
       if (result?.error) throw new Error(result.error)
 
       const isWaitlisted = result?.status === 'lista_espera'

@@ -438,9 +438,10 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
               </button>
             )}
 
-            {/* No asistió / Cancelar — disponibles sin importar la fecha del turno */}
+            {/* No asistió: misma condición que "Llamar paciente" (solo el día del turno).
+                Cancelar: disponible siempre, sin importar la fecha. */}
             <div style={{ display:'flex', gap:'8px' }}>
-              {!['no_asistio','completado','cancelado'].includes(appt.status) && (
+              {!['no_asistio','completado','cancelado'].includes(appt.status) && esHoy && (
                 <button onClick={() => onStatus(appt.id,'no_asistio')}
                   style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px', borderRadius:'10px', fontSize:'12px', fontWeight:500, backgroundColor:'#F9FAFB', color:'#374151', border:'1px solid #E5E7EB', cursor:'pointer' }}>
                   <UserX size={13}/> No asistió

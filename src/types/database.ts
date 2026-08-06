@@ -19,7 +19,7 @@ export type Database = {
         Update: { [key: string]: unknown }
       }
       services: {
-        Row: { id: string; organization_id: string; name: string; description: string | null; duration_minutes: number; price: number | null; color: string; category: string | null; active: boolean; created_at: string; updated_at: string }
+        Row: { id: string; organization_id: string; name: string; description: string | null; duration_minutes: number; display_duration_minutes: number | null; price: number | null; color: string; category: string | null; active: boolean; created_at: string; updated_at: string }
         Insert: { organization_id: string; name: string; [key: string]: unknown }
         Update: { [key: string]: unknown }
       }

@@ -262,7 +262,7 @@ export function ServiceSelector({ selected, onSelect, orgId, tenantType = 'medic
                     )}
                     <div className="flex items-center gap-3 mt-2">
                       <span className="flex items-center gap-1 text-xs text-gray-400">
-                        <Clock className="w-3 h-3" />{s.duration_minutes} min
+                        <Clock className="w-3 h-3" />{s.display_duration_minutes ?? s.duration_minutes} min
                       </span>
                       {s.price != null && s.price > 0 && (
                         <span className="text-xs font-medium" style={{ color: accentColor }}>

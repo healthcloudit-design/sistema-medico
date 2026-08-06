@@ -244,7 +244,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
         border: darkMode ? '1px solid rgba(201,169,110,0.18)' : 'none',
       }}>
         {[
-          { icon: <ServiceIcon tenantType={tenantType} />, main: state.service?.name, sub: `${state.service?.duration_minutes} min` },
+          { icon: <ServiceIcon tenantType={tenantType} />, main: state.service?.name, sub: `${state.service?.display_duration_minutes ?? state.service?.duration_minutes} min` },
           { icon: <UserCircle size={14} />, main: state.professional?.full_name, sub: state.professional?.specialty },
           { icon: <Calendar size={14} />, main: dateLabel, sub: null },
           { icon: <Clock size={14} />, main: state.hora ? `${state.hora}hs` : '', sub: null },

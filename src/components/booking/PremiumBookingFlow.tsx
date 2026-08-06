@@ -714,7 +714,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                         <div style={{ fontFamily: SANS, fontWeight: 500, fontSize: '14px', color: TH_T1, marginBottom: '3px' }}>{svc.name}</div>
                         {svc.description && <div style={{ fontFamily: SANS, fontSize: '12px', color: TH_T2, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{svc.description}</div>}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: SANS, fontSize: '11px', color: TH_T3 }}><Clock size={11} />{svc.duration_minutes} min</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: SANS, fontSize: '11px', color: TH_T3 }}><Clock size={11} />{svc.display_duration_minutes ?? svc.duration_minutes} min</span>
                           {svc.price != null && svc.price > 0 && <span style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 600, color: gold }}>${svc.price.toLocaleString('es-AR')}</span>}
                         </div>
                       </div>

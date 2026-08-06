@@ -61,6 +61,7 @@ export function ServicesManager({ organizationId }: Props) {
       name:             editing.name,
       description:      editing.description ?? null,
       duration_minutes: editing.duration_minutes ?? 30,
+      display_duration_minutes: editing.display_duration_minutes ?? null,
       price:            editing.price ?? null,
       color:            editing.color ?? '#0ea5e9',
       active:           editing.active ?? true,
@@ -117,7 +118,11 @@ export function ServicesManager({ organizationId }: Props) {
                 <div className="font-semibold text-gray-900">{s.name}</div>
                 {s.description && <div className="text-sm text-gray-400 mt-0.5">{s.description}</div>}
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{s.duration_minutes} min</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{s.display_duration_minutes ?? s.duration_minutes} min
+                    {s.display_duration_minutes != null && s.display_duration_minutes !== s.duration_minutes && (
+                      <span className="text-amber-600"> (bloquea {s.duration_minutes} min)</span>
+                    )}
+                  </span>
                   {s.price && <span>${s.price.toLocaleString('es-AR')}</span>}
                   {s.capacity > 1 && (
                     <span className="flex items-center gap-1 text-sky-600">
@@ -166,7 +171,7 @@ export function ServicesManager({ organizationId }: Props) {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Duracion (min)</label>
+                  <label className="text-sm font-medium text-gray-700 block mb-1.5">Duración que bloquea agenda (min)</label>
                   <input
                     type="number" value={editing.duration_minutes ?? 30} min={5} step={5}
                     onChange={e => setEditing(p => ({ ...p, duration_minutes: Number(e.target.value) }))}
@@ -189,6 +194,16 @@ export function ServicesManager({ organizationId }: Props) {
                     className="w-full h-10 rounded-xl border border-gray-200 cursor-pointer px-1 py-1"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1.5">Duración a mostrar al paciente (min)</label>
+                <input
+                  type="number" value={editing.display_duration_minutes ?? ''} min={5} step={5}
+                  placeholder={`Opcional — si está vacío, se muestra ${editing.duration_minutes ?? 30} min`}
+                  onChange={e => setEditing(p => ({ ...p, display_duration_minutes: e.target.value ? Number(e.target.value) : null }))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">Usalo cuando el servicio dura más de lo que realmente ocupa la agenda (ej: color, que solo bloquea la hora de preparación).</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

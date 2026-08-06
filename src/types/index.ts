@@ -4,6 +4,8 @@ export interface Service {
   name: string
   description?: string
   duration_minutes: number
+  /** Duración informativa a mostrar al paciente/staff; si no está, se muestra duration_minutes. No afecta el bloqueo de agenda. */
+  display_duration_minutes?: number | null
   price?: number
   color: string
   category?: string | null

@@ -184,7 +184,7 @@ function WeekChart({ appointments }: { appointments:Appointment[] }) {
 
 // ── Appointment card (timeline style) ────────────────────────────────────────
 function ApptCard({ appt, onClick }: { appt:Appointment; onClick:()=>void }) {
-  const svc = appt.service as { name:string; duration_minutes?:number }|undefined
+  const svc = appt.service as { name:string; duration_minutes?:number; display_duration_minutes?:number|null }|undefined
   const s   = ST[appt.status] ?? ST.pendiente
   const [hov, setHov] = useState(false)
   return (
@@ -193,7 +193,7 @@ function ApptCard({ appt, onClick }: { appt:Appointment; onClick:()=>void }) {
       style={{ display:'flex', gap:'12px', padding:'13px 14px', borderRadius:'10px', border:`1px solid ${hov ? BD2 : BD}`, backgroundColor: hov ? '#F8FAFC' : CARD, cursor:'pointer', transition:'all 0.12s', boxShadow: hov ? '0 4px 12px rgba(0,0,0,0.07)' : '0 1px 2px rgba(0,0,0,0.03)' }}>
       <div style={{ textAlign:'center', width:'38px', flexShrink:0 }}>
         <div style={{ fontSize:'12px', fontWeight:700, color:TEXT, fontFamily:'monospace' }}>{argTime(appt.starts_at)}</div>
-        {svc?.duration_minutes && <div style={{ fontSize:'10px', color:T3, marginTop:'2px' }}>{svc.duration_minutes}′</div>}
+        {svc?.duration_minutes && <div style={{ fontSize:'10px', color:T3, marginTop:'2px' }}>{svc.display_duration_minutes ?? svc.duration_minutes}′</div>}
       </div>
       <div style={{ width:'2px', borderRadius:'2px', backgroundColor:s.dot, flexShrink:0, alignSelf:'stretch' }}/>
       <div style={{ flex:1, minWidth:0 }}>
@@ -344,14 +344,14 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
   onRescheduled:()=>void
 }) {
   const s     = ST[appt.status] ?? ST.pendiente
-  const svc   = appt.service as { name:string; duration_minutes?:number }|undefined
+  const svc   = appt.service as { name:string; duration_minutes?:number; display_duration_minutes?:number|null }|undefined
   const pat   = appt.patient as { obra_social?:string }|undefined
   const esHoy = isToday(parseISO(appt.starts_at))
   const [showReschedule, setShowReschedule] = useState(false)
 
   const INFO = [
     ['Servicio',   svc?.name ?? '—'],
-    ['Duración',   svc?.duration_minutes ? `${svc.duration_minutes} min` : '—'],
+    ['Duración',   svc?.duration_minutes ? `${svc.display_duration_minutes ?? svc.duration_minutes} min` : '—'],
     ['Teléfono',   appt.patient_phone ?? '—'],
     ['Email',      appt.patient_email ?? '—'],
     ...(pat?.obra_social ? [['Obra social', pat.obra_social]] : []),
@@ -780,7 +780,7 @@ export function MedicoDashboard() {
     if (!profile?.professional_id) return
     const wkStart = startOfWeek(new Date(), { weekStartsOn:1 })
     const { data } = await supabase.from('appointments')
-      .select('*, services(name, color, duration_minutes), patients(id, full_name, phone, email, obra_social)')
+      .select('*, services(name, color, duration_minutes, display_duration_minutes), patients(id, full_name, phone, email, obra_social)')
       .eq('professional_id', profile.professional_id)
       .gte('starts_at', startOfDay(wkStart).toISOString())
       .lte('starts_at', endOfDay(addDays(wkStart, 27)).toISOString())

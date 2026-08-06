@@ -8,7 +8,7 @@ import { useAvailability } from '../../hooks/useAvailability'
 const DAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 
 interface Professional { id: string; full_name: string; specialty?: string }
-interface Service      { id: string; name: string; duration_minutes: number }
+interface Service      { id: string; name: string; duration_minutes: number; display_duration_minutes?: number | null }
 
 interface InitialPatient {
   full_name: string
@@ -90,7 +90,7 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
     if (!selectedPro) return
     supabase
       .from('professional_services')
-      .select('services(id, name, duration_minutes, active, capacity, waitlist_limit)')
+      .select('services(id, name, duration_minutes, display_duration_minutes, active, capacity, waitlist_limit)')
       .eq('professional_id', selectedPro.id)
       .then(({ data }) => {
         const svcs = (data ?? [])
@@ -238,7 +238,7 @@ export function NuevoTurnoRecepcion({ organizationId, initialPatient }: Props) {
               <button key={s.id} onClick={() => { setSelectedSvc(s); setSelectedDate(''); setSelectedHora(''); setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 })); setStep('fecha') }}
                 className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-sky-400 hover:bg-sky-50 transition-colors">
                 <div className="text-sm font-medium text-gray-900">{s.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{s.duration_minutes} min</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.display_duration_minutes ?? s.duration_minutes} min</div>
               </button>
             ))}
           </div>

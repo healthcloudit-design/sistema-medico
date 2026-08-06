@@ -113,7 +113,7 @@ export function RecepcionPage() {
     const to   = `${dateFilter}T23:59:59-03:00`
     const { data } = await supabase
       .from('appointments')
-      .select('*, professionals(full_name,specialty,consultorio), services(name,color,duration_minutes), patients(full_name,phone,email,obra_social,nro_socio)')
+      .select('*, professionals(full_name,specialty,consultorio), services(name,color,duration_minutes,display_duration_minutes), patients(full_name,phone,email,obra_social,nro_socio)')
       .gte('starts_at', from)
       .lte('starts_at', to)
       .order('starts_at')
@@ -367,7 +367,7 @@ export function RecepcionPage() {
             <div style={{ padding:'20px', display:'flex', flexDirection:'column', gap:'16px' }}>
               {(() => {
                 const patient = selected.patient as { full_name:string; phone?:string; email?:string; obra_social?:string; nro_socio?:string }|undefined
-                const service = selected.service as { name:string; duration_minutes?:number }|undefined
+                const service = selected.service as { name:string; duration_minutes?:number; display_duration_minutes?:number|null }|undefined
                 const prof    = selected.professional as { full_name:string; specialty?:string; consultorio?:string|null }|undefined
                 const esHoy   = toArgDate(selected.starts_at) === toArgDate(new Date().toISOString())
 
@@ -395,7 +395,7 @@ export function RecepcionPage() {
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
                       {[
                         ['Servicio',     service?.name ?? '—'],
-                        ['Duración',     service?.duration_minutes ? `${service.duration_minutes} min` : '—'],
+                        ['Duración',     service?.duration_minutes ? `${service.display_duration_minutes ?? service.duration_minutes} min` : '—'],
                         ['Profesional',  prof?.full_name ?? '—'],
                         ['Consultorio',  prof?.consultorio ?? '—'],
                         ['Teléfono',     selected.patient_phone ?? '—'],

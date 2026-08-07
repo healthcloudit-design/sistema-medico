@@ -105,16 +105,30 @@ export function useAvailability(
           return false
         }
 
-        // Cupos ocupados / en lista de espera del mismo servicio, agrupados por horario exacto (minuto de inicio)
-        const activeCountBySlot    = new Map<number, number>()
-        const waitlistCountBySlot  = new Map<number, number>()
-        for (const a of sameServiceAppts) {
-          const m = toMin(a.starts_at)
-          if (a.status === 'lista_espera') {
-            waitlistCountBySlot.set(m, (waitlistCountBySlot.get(m) ?? 0) + 1)
-          } else {
-            activeCountBySlot.set(m, (activeCountBySlot.get(m) ?? 0) + 1)
-          }
+        // Cupos ocupados / en lista de espera del mismo servicio: se cuentan por SUPERPOSICIÓN de rango
+        // (no por horario exacto), para permitir turnos escalonados dentro del mismo cupo
+        // (ej: Color con capacity=2 — un turno a las 14:00 y otro a las 14:30 comparten cupo igual).
+        const sameServiceActiveRanges = sameServiceAppts
+          .filter(a => a.status !== 'lista_espera')
+          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + serviceDurationMinutes }))
+        const sameServiceWaitlistRanges = sameServiceAppts
+          .filter(a => a.status === 'lista_espera')
+          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + serviceDurationMinutes }))
+
+        // Cuenta cuántos turnos existentes están activos EXACTAMENTE en el instante t (no en todo el rango)
+        const activeAt = (ranges: { startMin: number; endMin: number }[], t: number) =>
+          ranges.filter(r => r.startMin <= t && r.endMin > t).length
+
+        // Un turno nuevo [slotMin, slotMin+duration) excede el cupo si en ALGÚN instante dentro de ese
+        // rango la concurrencia real (turnos existentes activos en ese instante + el nuevo) supera capacity.
+        // Esto permite turnos escalonados (ej: 14:00 y 14:30 con bloques de 60') que nunca coinciden
+        // los 3 a la vez, aunque cada uno individualmente "toque" a los otros dos en distintos momentos.
+        const wouldExceedCapacity = (ranges: { startMin: number; endMin: number }[], slotMin: number) => {
+          const newEnd = slotMin + serviceDurationMinutes
+          const overlapping = ranges.filter(r => r.startMin < newEnd && r.endMin > slotMin)
+          if (overlapping.length + 1 <= capacity) return false
+          const points = [slotMin, ...overlapping.map(r => Math.max(r.startMin, slotMin))]
+          return points.some(t => activeAt(overlapping, t) + 1 > capacity)
         }
 
         const blockedRanges = blocks
@@ -151,14 +165,15 @@ export function useAvailability(
 
             if (!slotMap.has(hora)) {
               if (isGroupService) {
-                const activos  = activeCountBySlot.get(slotMin) ?? 0
-                const enEspera = waitlistCountBySlot.get(slotMin) ?? 0
-                const hayCupo       = activos < capacity
+                const activosAhora  = activeAt(sameServiceActiveRanges, slotMin)
+                const excedeCupo    = wouldExceedCapacity(sameServiceActiveRanges, slotMin)
+                const enEspera      = activeAt(sameServiceWaitlistRanges, slotMin)
+                const hayCupo       = !excedeCupo
                 const hayListaEspera = !hayCupo && enEspera < waitlistLimit
                 slotMap.set(hora, {
                   hora,
                   disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
-                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activos, 0) : undefined,
+                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activosAhora, 0) : undefined,
                   enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
                 })
               } else {

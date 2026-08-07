@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Plus, Trash2, CalendarX } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import type { Professional, AvailabilityBlock } from '../../types'
 import { Button } from '../ui/Button'
 import { WeeklyScheduleEditor } from './WeeklyScheduleEditor'
+
+function toArgTime(iso: string): string {
+  const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
+  const d = new Date(ms)
+  return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`
+}
 
 export function AvailabilityManager() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
@@ -28,12 +36,18 @@ export function AvailabilityManager() {
       })
   }, [])
 
-  useEffect(() => {
+  const blockSortDate = (b: AvailabilityBlock) => b.blocked_date ?? (b.blocked_start ? b.blocked_start.slice(0, 10) : '')
+
+  const loadBlocks = async () => {
     if (!selectedId) return
+    const { data } = await supabase.from('availability_blocks').select('*').eq('professional_id', selectedId)
+    setBlocks(((data ?? []) as AvailabilityBlock[]).sort((a, b) => blockSortDate(a).localeCompare(blockSortDate(b))))
+  }
+
+  useEffect(() => {
     setBlockError('')
-    supabase.from('availability_blocks').select('*').eq('professional_id', selectedId)
-      .not('blocked_date', 'is', null).order('blocked_date')
-      .then(({ data }) => setBlocks((data ?? []) as AvailabilityBlock[]))
+    loadBlocks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
 
   const addBlock = async () => {
@@ -50,15 +64,16 @@ export function AvailabilityManager() {
       .select()
       .single()
     if (error) setBlockError('No se pudo bloquear la fecha: ' + error.message)
-    if (data) setBlocks(prev => [...prev, data as AvailabilityBlock].sort((a, b) => (a.blocked_date ?? '').localeCompare(b.blocked_date ?? '')))
+    if (data) setBlocks(prev => [...prev, data as AvailabilityBlock].sort((a, b) => blockSortDate(a).localeCompare(blockSortDate(b))))
     setNewBlock({ blocked_date: '', reason: '' })
     setSaving(false)
   }
 
   const deleteBlock = async (id: string) => {
     setBlockError('')
-    const { error } = await supabase.from('availability_blocks').delete().eq('id', id)
+    const { error, count } = await supabase.from('availability_blocks').delete({ count: 'exact' }).eq('id', id)
     if (error) { setBlockError('No se pudo eliminar el bloqueo: ' + error.message); return }
+    if (!count) { setBlockError('No se pudo eliminar el bloqueo (sin permisos o ya no existe). Recargá la página e intentá de nuevo.'); await loadBlocks(); return }
     setBlocks(prev => prev.filter(b => b.id !== id))
   }
 
@@ -117,18 +132,26 @@ export function AvailabilityManager() {
           <div className="p-6 text-center text-gray-400 text-sm">No hay dias bloqueados</div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {blocks.map(b => (
-              <div key={b.id} className="px-5 py-3 flex items-center gap-3">
-                <div className="text-sm font-medium text-gray-700 w-28">{b.blocked_date}</div>
-                <div className="flex-1 text-sm text-gray-400">{b.reason ?? 'Sin motivo'}</div>
-                <button
-                  onClick={() => deleteBlock(b.id)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+            {blocks.map(b => {
+              const dateStr = blockSortDate(b)
+              return (
+                <div key={b.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="text-sm font-medium text-gray-700 w-40">
+                    {dateStr ? format(parseISO(dateStr), "d 'de' MMMM", { locale: es }) : '—'}
+                    {b.blocked_start && b.blocked_end && (
+                      <span className="text-gray-400 font-normal"> {toArgTime(b.blocked_start)}–{toArgTime(b.blocked_end)}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 text-sm text-gray-400">{b.reason ?? 'Sin motivo'}</div>
+                  <button
+                    onClick={() => deleteBlock(b.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
         <div className="p-5 border-t border-gray-50 flex gap-3">

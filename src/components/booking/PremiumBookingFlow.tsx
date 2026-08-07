@@ -67,6 +67,14 @@ const CAT_GRADIENT: Record<string, string> = {
 
 const DEFAULT_GRAD = 'linear-gradient(135deg, #1A1A1A 0%, #0F0F0F 100%)'
 
+// ── Avisos por categoría, por organización (no afecta a otros tenants) ─────
+const CATEGORY_NOTICES: Record<string, Record<string, string>> = {
+  '302fd304-98cb-4611-b510-63c8a95047b0': { // Acqua
+    'Manicuría': 'Deco / Nail art: Cargo extra',
+    'Manicuria': 'Deco / Nail art: Cargo extra',
+  },
+}
+
 // ── Per-specialty context ────────────────────────────────────────────────────
 interface SpecialtyCtx {
   eyebrow:    string
@@ -667,6 +675,12 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: gold, background: 'none', border: `1px solid ${bord(gold)}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
                 <ChevronLeft size={14} /> {selectedCat}
               </button>
+            )}
+
+            {selectedCat && CATEGORY_NOTICES[org.id]?.[selectedCat] && (
+              <div style={{ fontFamily: SANS, fontSize: '12px', color: gold, backgroundColor: fade(gold), border: `1px solid ${bord(gold)}`, borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
+                {CATEGORY_NOTICES[org.id][selectedCat]}
+              </div>
             )}
 
             {loadingSvc ? (

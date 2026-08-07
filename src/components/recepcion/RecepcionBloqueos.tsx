@@ -87,8 +87,15 @@ export function RecepcionBloqueos({ organizationId }: Props) {
     setSaving(false)
   }
 
+  const [deleteError, setDeleteError] = useState('')
+
   const handleDelete = async (id: string) => {
-    await supabase.from('availability_blocks').delete().eq('id', id)
+    setDeleteError('')
+    const { error, count } = await supabase.from('availability_blocks').delete({ count: 'exact' }).eq('id', id)
+    if (error || !count) {
+      setDeleteError('No se pudo eliminar el bloqueo. Recargá la página e intentá de nuevo.')
+      return
+    }
     setBlocks(prev => prev.filter(b => b.id !== id))
   }
 
@@ -157,6 +164,12 @@ export function RecepcionBloqueos({ organizationId }: Props) {
               {saving ? 'Guardando...' : mode === 'dia' ? 'Bloquear día' : 'Bloquear horario'}
             </button>
           </div>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+          {deleteError}
         </div>
       )}
 

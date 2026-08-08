@@ -13,10 +13,9 @@ serve(async (req) => {
     const { appointment_id } = await req.json()
     if (!appointment_id) throw new Error('appointment_id requerido')
 
-    const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')
-    const APP_URL         = Deno.env.get('APP_URL')
-    if (!MP_ACCESS_TOKEN) throw new Error('MP_ACCESS_TOKEN no configurado')
-    if (!APP_URL)         throw new Error('APP_URL no configurado')
+    const APP_URL          = Deno.env.get('APP_URL')
+    const ENV_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') // fallback global, solo si el tenant no tiene token propio
+    if (!APP_URL) throw new Error('APP_URL no configurado')
 
     // Obtener datos del turno
     const supabase = createClient(
@@ -31,6 +30,19 @@ serve(async (req) => {
       .single()
 
     if (error || !appt) throw new Error('Turno no encontrado')
+
+    const orgId = appt.organization_id as string
+
+    // Token de Mercado Pago propio del tenant (tabla aislada, no expuesta a anon). Si no tiene uno
+    // configurado, cae al token global de la variable de entorno (comportamiento anterior).
+    const { data: cred } = await supabase
+      .from('organization_payment_credentials')
+      .select('mp_access_token')
+      .eq('organization_id', orgId)
+      .maybeSingle()
+
+    const MP_ACCESS_TOKEN = (cred?.mp_access_token as string | null) || ENV_ACCESS_TOKEN
+    if (!MP_ACCESS_TOKEN) throw new Error('MP_ACCESS_TOKEN no configurado para esta organización')
 
     const service     = appt.services as { name: string; price: number | null }
     const profesional = appt.professionals as { full_name: string }
@@ -72,7 +84,9 @@ serve(async (req) => {
       },
       auto_return:          'approved',
       external_reference:   appointment_id,
-      notification_url:     `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook`,
+      // org_id viaja en la notification_url para que el webhook sepa con qué token de MP
+      // consultar el pago (cada tenant puede tener su propia cuenta de Mercado Pago).
+      notification_url:     `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook?org_id=${orgId}`,
       statement_descriptor: 'TURNOS MEDICOS',
       expires:              true,
       expiration_date_to:   new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24hs

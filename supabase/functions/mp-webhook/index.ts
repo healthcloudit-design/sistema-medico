@@ -3,7 +3,26 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
   try {
-    const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!
+    const url   = new URL(req.url)
+    const orgId = url.searchParams.get('org_id')
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    // Token propio del tenant si lo tiene configurado; si no, cae al token global (comportamiento anterior).
+    let MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
+    if (orgId) {
+      const { data: cred } = await supabase
+        .from('organization_payment_credentials')
+        .select('mp_access_token')
+        .eq('organization_id', orgId)
+        .maybeSingle()
+      if (cred?.mp_access_token) MP_ACCESS_TOKEN = cred.mp_access_token
+    }
+    if (!MP_ACCESS_TOKEN) throw new Error('MP_ACCESS_TOKEN no configurado')
+
     const body = await req.json()
 
     // MP envía notificaciones tipo "payment" con id del pago
@@ -37,11 +56,6 @@ serve(async (req) => {
     }
 
     const paymentStatus = statusMap[payment.status] ?? payment.status
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
 
     await supabase
       .from('appointments')

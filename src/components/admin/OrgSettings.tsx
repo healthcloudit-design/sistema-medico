@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Upload, X, Check, ImageIcon, Palette, Globe, Stethoscope } from 'lucide-react'
+import { Upload, X, Check, ImageIcon, Palette, Globe, Stethoscope, CreditCard, Lock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import type { Organization } from '../../types'
 
@@ -68,6 +68,11 @@ export function OrgSettings({ organizationId }: Props) {
 
   const [saveState, setSaveState] = useState<SaveState>('idle')
 
+  // Mercado Pago (por tenant) — el token nunca se lee de vuelta al frontend, solo se sabe si hay uno configurado.
+  const [mpConfigured, setMpConfigured] = useState(false)
+  const [mpTokenInput, setMpTokenInput] = useState('')
+  const [mpSaveState, setMpSaveState]   = useState<SaveState>('idle')
+
   const coverRef = useRef<HTMLInputElement>(null)
   const logoRef  = useRef<HTMLInputElement>(null)
 
@@ -92,7 +97,32 @@ export function OrgSettings({ organizationId }: Props) {
         setLogoUrl(o.logo_url ?? null)
         setLoading(false)
       })
+
+    // Solo chequea si existe un token propio, nunca trae el valor real.
+    supabase
+      .from('organization_payment_credentials')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .maybeSingle()
+      .then(({ data }) => setMpConfigured(!!data))
   }, [organizationId])
+
+  async function saveMpToken() {
+    if (!organizationId || !mpTokenInput.trim()) return
+    setMpSaveState('saving')
+    const { error } = await supabase
+      .from('organization_payment_credentials')
+      .upsert({
+        organization_id: organizationId,
+        mp_access_token: mpTokenInput.trim(),
+        updated_at: new Date().toISOString(),
+      })
+    if (error) { setMpSaveState('error'); return }
+    setMpConfigured(true)
+    setMpTokenInput('')
+    setMpSaveState('saved')
+    setTimeout(() => setMpSaveState('idle'), 2500)
+  }
 
   // ── Upload helper ─────────────────────────────────────────────────────────
   async function uploadImage(
@@ -345,6 +375,47 @@ export function OrgSettings({ organizationId }: Props) {
             <input value={address} onChange={e => setAddress(e.target.value)} style={inputStyle} placeholder="Av. Corrientes 1234, CABA" />
           </div>
         </div>
+      </div>
+
+      {/* ── COBROS / MERCADO PAGO ── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          <CreditCard size={16} color={P600} />
+          Cobros — Mercado Pago
+        </div>
+        <p style={{ fontSize:'13px', color:T2, marginBottom:'16px', lineHeight:1.6 }}>
+          Access Token de producción de la cuenta de Mercado Pago de este centro. Se usa para cobrar
+          señas y pagos online. Lo obtenés en el panel de desarrolladores de Mercado Pago, con la cuenta
+          de MP del centro ya logueada: developers → Tus integraciones → tu aplicación → Credenciales de producción.
+        </p>
+
+        <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'14px', fontSize:'13px', fontWeight:600, color: mpConfigured ? OK : T3 }}>
+          {mpConfigured
+            ? <><Check size={15} /> Token configurado</>
+            : <><Lock size={15} /> Sin token propio — usa la cuenta global por defecto</>
+          }
+        </div>
+
+        <label style={labelStyle}>{mpConfigured ? 'Reemplazar token' : 'Access Token de producción'}</label>
+        <div style={{ display:'flex', gap:'10px' }}>
+          <input
+            type="password"
+            value={mpTokenInput}
+            onChange={e => setMpTokenInput(e.target.value)}
+            style={{ ...inputStyle, flex:1 }}
+            placeholder="APP_USR-..."
+            autoComplete="off"
+          />
+          <button
+            onClick={saveMpToken}
+            disabled={!mpTokenInput.trim() || mpSaveState === 'saving'}
+            style={{ padding:'10px 20px', borderRadius:'8px', border:'none', backgroundColor: !mpTokenInput.trim() ? '#cbd5e1' : P800, color:'#fff', fontSize:'13px', fontWeight:600, cursor: !mpTokenInput.trim() ? 'default' : 'pointer', whiteSpace:'nowrap' }}
+          >
+            {mpSaveState === 'saving' ? 'Guardando…' : 'Guardar token'}
+          </button>
+        </div>
+        {mpSaveState === 'saved' && <p style={{ color:OK, fontSize:'12px', marginTop:'8px' }}>Token guardado.</p>}
+        {mpSaveState === 'error'  && <p style={{ color:ERR, fontSize:'12px', marginTop:'8px' }}>Error al guardar. Probá de nuevo.</p>}
       </div>
 
       {/* ── SAVE ── */}

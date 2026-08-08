@@ -423,7 +423,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const handleServiceSelect = async (svc: Service) => {
     const { data } = await supabase
       .from('professional_services')
-      .select('professionals(id, full_name, specialty, bio, avatar_url, active)')
+      .select('professionals(id, organization_id, full_name, specialty, bio, avatar_url, active)')
       .eq('service_id', svc.id)
     const profs = (data ?? []).map((r: any) => r.professionals as Professional).filter(p => p?.active)
     if (profs.length === 1) {

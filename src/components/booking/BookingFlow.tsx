@@ -266,7 +266,7 @@ export function BookingFlow() {
             onSelect={async s => {
               const { data } = await supabase
                 .from('professional_services')
-                .select('professionals(id, full_name, specialty, bio, avatar_url, active)')
+                .select('professionals(id, organization_id, full_name, specialty, bio, avatar_url, active)')
                 .eq('service_id', s.id)
               const profs = (data ?? []).map((r: any) => r.professionals).filter((p: any) => p?.active)
               if (profs.length === 1) {

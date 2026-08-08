@@ -16,6 +16,8 @@ export interface Service {
   waitlist_limit: number
   /** Si true (default), este servicio necesita al profesional dedicado todo el turno y no puede combinarse con otro servicio que también lo requiera al mismo tiempo. Si false, tiene tiempo de espera/procesado durante el cual el profesional puede atender otro servicio (ej: Color). */
   requiere_atencion_completa: boolean
+  /** Override opcional del último horario de inicio ofrecido, por día de semana (0=domingo..6=sábado), ej: {"6":"15:00"}. Si un día no está presente, se usa el horario normal del profesional. */
+  last_start_overrides?: Record<string, string> | null
   created_at: string
 }
 
@@ -33,6 +35,8 @@ export interface Organization {
   active: boolean
   feature_mp: boolean
   feature_hc: boolean
+  /** Monto fijo de seña (ARS) a cobrar por Mercado Pago al reservar, para cualquier servicio. null = sin seña. */
+  deposit_amount?: number | null
   tenant_type: TenantType
   primary_color?: string | null
   whatsapp_number?: string | null

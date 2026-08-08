@@ -60,7 +60,7 @@ export function useAvailability(
             return q
           })(),
           serviceId
-            ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa').eq('id', serviceId).single()
+            ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa, last_start_overrides').eq('id', serviceId).single()
             : Promise.resolve({ data: null, error: null }),
           supabase.from('professionals').select('concurrent_capacity').eq('id', professionalId).single(),
         ])
@@ -80,6 +80,15 @@ export function useAvailability(
         const waitlistLimit = (serviceRes?.data as { waitlist_limit?: number } | null)?.waitlist_limit ?? 0
         const isGroupService = !!serviceId && capacity > 1
         const candidateRequiereAtencion = (serviceRes?.data as { requiere_atencion_completa?: boolean } | null)?.requiere_atencion_completa ?? true
+
+        // Override opcional del último horario de inicio para ESTE servicio en ESTE día de semana
+        // (ej: Reflejos necesita terminar antes que el resto porque el bloqueo de 30min no refleja
+        // el tiempo real que toma). Si no hay override para el día, se usa el horario normal.
+        const lastStartOverrides = (serviceRes?.data as { last_start_overrides?: Record<string, string> | null } | null)?.last_start_overrides
+        const lastStartOverride  = lastStartOverrides?.[String(dayOfWeek)]
+        const lastStartOverrideMin = lastStartOverride
+          ? (() => { const [h, m] = lastStartOverride.split(':').map(Number); return h * 60 + m })()
+          : null
 
         // Cupo del profesional: cuántos clientes puede atender en simultáneo (default 1 = sin superposición,
         // comportamiento clásico e intacto para todos los profesionales que no lo tengan configurado).
@@ -174,12 +183,15 @@ export function useAvailability(
           const [startH, startM] = sch.start_time.split(':').map(Number)
           const [endH, endM]     = sch.end_time.split(':').map(Number)
           const startMin = startH * 60 + startM
-          const endMin   = endH   * 60 + endM
           const interval = Math.max(sch.interval_minutes ?? 30, 5)
-
           // end_time es el último horario que se ofrece para reservar (no la hora de cierre real
           // del local, que suele ser más tarde). Por eso el corte es simple: hasta end_time
-          // exclusive, sin restar la duración del servicio.
+          // exclusive, sin restar la duración del servicio. Si el servicio tiene un override de
+          // último horario para este día (ej: Reflejos), se usa ese en cambio.
+          const endMin = lastStartOverrideMin != null
+            ? Math.min(endH * 60 + endM, lastStartOverrideMin + interval)
+            : endH * 60 + endM
+
           for (let m = startMin; m < endMin; m += interval) {
             const hh   = Math.floor(m / 60).toString().padStart(2, '0')
             const mm   = (m % 60).toString().padStart(2, '0')

@@ -8,6 +8,7 @@ import { RecepcionPage } from './pages/RecepcionPage'
 import { WaitingRoomScreen } from './pages/WaitingRoomScreen'
 import { TotemPage } from './pages/TotemPage'
 import { NuevoTenantPage } from './pages/superadmin/NuevoTenantPage'
+import { PagoResultPage } from './pages/PagoResultPage'
 
 export default function App() {
   return (
@@ -15,6 +16,9 @@ export default function App() {
       <Routes>
         <Route path="/"                        element={<LandingPage />} />
         <Route path="/cancelar"                element={<CancelPage />} />
+        <Route path="/turno/pago-exitoso"      element={<PagoResultPage outcome="exitoso" />} />
+        <Route path="/turno/pago-fallido"      element={<PagoResultPage outcome="fallido" />} />
+        <Route path="/turno/pago-pendiente"    element={<PagoResultPage outcome="pendiente" />} />
         <Route path="/admin"                   element={<AdminPage />} />
         <Route path="/medico"                  element={<MedicoDashboard />} />
         <Route path="/profesional"             element={<MedicoDashboard />} />

@@ -63,9 +63,13 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
 
   const labels         = getTenantLabels(tenantType)
   const orgId          = state.professional?.organization_id ?? null
-  const { featureMp, featureModo, modoQr } = useOrgFeatures(orgId)
+  const { featureMp, featureModo, modoQr, depositAmount } = useOrgFeatures(orgId)
   const servicePrice      = state.service?.price ?? 0
-  const ofrecePagoOnline  = (featureMp || featureModo) && servicePrice > 0
+  // Seña fija: si la organización la tiene configurada, se pide SIEMPRE (para cualquier servicio,
+  // tenga o no precio cargado) y se cobra ese monto fijo por MercadoPago — nunca el precio del
+  // servicio, que además no se muestra en ningún lado del flujo de reserva.
+  const isDeposit         = depositAmount != null && depositAmount > 0
+  const ofrecePagoOnline  = isDeposit || ((featureMp || featureModo) && servicePrice > 0)
   const tieneObraSocial   = labels.showObraSocial && state.obra_social.trim().length > 0
   const accent            = darkMode ? GOLD : accentColor
   const dateLabel         = state.fecha ? format(parseISO(state.fecha), "EEEE d 'de' MMMM", { locale: es }) : ''
@@ -118,7 +122,7 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
         return
       }
 
-      if (paymentMethod === 'mercadopago' && result?.id) {
+      if ((isDeposit || paymentMethod === 'mercadopago') && result?.id) {
         await markPendingPago(result.id, 'mercadopago')
         setRedirecting(true)
         const { data: mpData, error: mpError } = await supabase.functions.invoke('mp-create-preference', { body: { appointment_id: result.id } })
@@ -337,8 +341,28 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
           </div>
         )}
 
-        {/* Payment selector */}
-        {ofrecePagoOnline && !tieneObraSocial && (
+        {/* Seña obligatoria (monto fijo, nunca se muestra el precio del servicio) */}
+        {isDeposit && !tieneObraSocial && (
+          <div style={{
+            border: darkMode ? '1px solid rgba(201,169,110,0.25)' : `1px solid ${alpha(accentColor, 0.3)}`,
+            borderRadius: '14px', padding: '14px 16px',
+            backgroundColor: darkMode ? 'rgba(201,169,110,0.06)' : alpha(accentColor, 0.06),
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <CreditCard size={18} style={{ color: accent, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', fontWeight: 600, color: darkMode ? '#fff' : '#111827' }}>
+                Seña para reservar: ${depositAmount!.toLocaleString('es-AR')}
+              </div>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: darkMode ? 'rgba(255,255,255,0.45)' : '#6b7280', marginTop: '2px' }}>
+                Se paga con MercadoPago para confirmar el turno.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment selector (solo cuando NO hay seña fija, comportamiento original) */}
+        {!isDeposit && ofrecePagoOnline && !tieneObraSocial && (
           <div style={{
             border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e5e7eb',
             borderRadius: '14px', overflow: 'hidden',
@@ -403,7 +427,12 @@ export function BookingConfirm({ state, onChange, onBack, onComplete, tenantType
             transition: 'opacity 0.2s',
           }}
         >
-          {loading ? 'Reservando...' : paymentMethod === 'mercadopago' ? 'Reservar y pagar con MercadoPago' : paymentMethod === 'modo' ? 'Reservar y pagar con MODO' : labels.confirmLabel}
+          {loading
+            ? 'Reservando...'
+            : isDeposit ? `Reservar y pagar seña ($${depositAmount!.toLocaleString('es-AR')})`
+            : paymentMethod === 'mercadopago' ? 'Reservar y pagar con MercadoPago'
+            : paymentMethod === 'modo' ? 'Reservar y pagar con MODO'
+            : labels.confirmLabel}
         </button>
       </form>
     </div>

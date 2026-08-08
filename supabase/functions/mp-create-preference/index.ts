@@ -26,15 +26,21 @@ serve(async (req) => {
 
     const { data: appt, error } = await supabase
       .from('appointments')
-      .select('*, services(name, price, duration_minutes), professionals(full_name)')
+      .select('*, services(name, price, duration_minutes), professionals(full_name), organizations(deposit_amount)')
       .eq('id', appointment_id)
       .single()
 
     if (error || !appt) throw new Error('Turno no encontrado')
 
-    const service    = appt.services as { name: string; price: number | null }
+    const service     = appt.services as { name: string; price: number | null }
     const profesional = appt.professionals as { full_name: string }
-    const price      = service.price ?? 0
+    const org          = appt.organizations as { deposit_amount: number | null } | null
+    // Si la organización tiene una seña fija configurada, se cobra ESE monto (no el precio del
+    // servicio, que puede no mostrarse al paciente en absoluto). Si no, se mantiene el comportamiento
+    // original: se cobra el precio completo del servicio.
+    const depositAmount = org?.deposit_amount ?? null
+    const isDeposit      = depositAmount != null && depositAmount > 0
+    const price          = isDeposit ? depositAmount : (service.price ?? 0)
 
     if (price <= 0) throw new Error('El servicio no tiene precio configurado')
 
@@ -46,7 +52,7 @@ serve(async (req) => {
     const preference = {
       items: [{
         id:          appointment_id,
-        title:       `${service.name} - Dr. ${profesional.full_name}`,
+        title:       isDeposit ? `Seña - ${service.name} - ${profesional.full_name}` : `${service.name} - Dr. ${profesional.full_name}`,
         description: `Turno: ${dateStr} a las ${timeStr}hs`,
         quantity:    1,
         unit_price:  price,
@@ -58,9 +64,11 @@ serve(async (req) => {
         phone: appt.patient_phone ? { number: appt.patient_phone } : undefined,
       },
       back_urls: {
-        success: `${APP_URL}/turno/pago-exitoso?appointment_id=${appointment_id}`,
-        failure: `${APP_URL}/turno/pago-fallido?appointment_id=${appointment_id}`,
-        pending: `${APP_URL}/turno/pago-pendiente?appointment_id=${appointment_id}`,
+        // La app usa basename "/agenda" en el router (ver src/App.tsx), hay que incluirlo acá o
+        // el redirect de MercadoPago cae en una ruta inexistente.
+        success: `${APP_URL}/agenda/turno/pago-exitoso?appointment_id=${appointment_id}`,
+        failure: `${APP_URL}/agenda/turno/pago-fallido?appointment_id=${appointment_id}`,
+        pending: `${APP_URL}/agenda/turno/pago-pendiente?appointment_id=${appointment_id}`,
       },
       auto_return:          'approved',
       external_reference:   appointment_id,

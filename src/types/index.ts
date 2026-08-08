@@ -14,6 +14,8 @@ export interface Service {
   capacity: number
   /** Cantidad máxima de personas en lista de espera cuando el cupo está lleno (0 = sin lista de espera) */
   waitlist_limit: number
+  /** Si true (default), este servicio necesita al profesional dedicado todo el turno y no puede combinarse con otro servicio que también lo requiera al mismo tiempo. Si false, tiene tiempo de espera/procesado durante el cual el profesional puede atender otro servicio (ej: Color). */
+  requiere_atencion_completa: boolean
   created_at: string
 }
 
@@ -54,6 +56,8 @@ export interface Professional {
   bio?: string
   avatar_url?: string
   active: boolean
+  /** Cantidad de clientes que puede atender en simultáneo (default 1 = sin superposición). */
+  concurrent_capacity: number
   created_at: string
 }
 

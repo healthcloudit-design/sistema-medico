@@ -36,7 +36,7 @@ export function useAvailability(
         const dayStart = `${selectedDate}T00:00:00-03:00`
         const dayEnd   = `${selectedDate}T23:59:59-03:00`
 
-        const [scheduleRes, blockRes, apptRes, serviceRes] = await Promise.all([
+        const [scheduleRes, blockRes, apptRes, serviceRes, professionalRes] = await Promise.all([
           supabase
             .from('schedules')
             .select('*')
@@ -51,7 +51,7 @@ export function useAvailability(
           (() => {
             let q = supabase
               .from('appointments')
-              .select('id, starts_at, ends_at, service_id, status')
+              .select('id, starts_at, ends_at, service_id, status, services(requiere_atencion_completa)')
               .eq('professional_id', professionalId)
               .gte('starts_at', dayStart)
               .lte('starts_at', dayEnd)
@@ -60,8 +60,9 @@ export function useAvailability(
             return q
           })(),
           serviceId
-            ? supabase.from('services').select('capacity, waitlist_limit').eq('id', serviceId).single()
+            ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa').eq('id', serviceId).single()
             : Promise.resolve({ data: null, error: null }),
+          supabase.from('professionals').select('concurrent_capacity').eq('id', professionalId).single(),
         ])
 
         if (scheduleRes.error) throw scheduleRes.error
@@ -78,8 +79,14 @@ export function useAvailability(
         const capacity      = (serviceRes?.data as { capacity?: number } | null)?.capacity ?? 1
         const waitlistLimit = (serviceRes?.data as { waitlist_limit?: number } | null)?.waitlist_limit ?? 0
         const isGroupService = !!serviceId && capacity > 1
+        const candidateRequiereAtencion = (serviceRes?.data as { requiere_atencion_completa?: boolean } | null)?.requiere_atencion_completa ?? true
 
-        const allAppts = (apptRes.data ?? []) as { id: string; starts_at: string; ends_at: string | null; service_id: string; status: string }[]
+        // Cupo del profesional: cuántos clientes puede atender en simultáneo (default 1 = sin superposición,
+        // comportamiento clásico e intacto para todos los profesionales que no lo tengan configurado).
+        const professionalCapacity = (professionalRes?.data as { concurrent_capacity?: number } | null)?.concurrent_capacity ?? 1
+        const isMultiCapacityProfessional = professionalCapacity > 1
+
+        const allAppts = (apptRes.data ?? []) as { id: string; starts_at: string; ends_at: string | null; service_id: string; status: string; services: { requiere_atencion_completa?: boolean } | null }[]
 
         // Para servicios con cupo: los turnos del MISMO servicio no bloquean el horario entre sí
         // (cuentan contra el cupo en vez de "ocupar" el slot); los de otros servicios sí bloquean como siempre.
@@ -119,17 +126,35 @@ export function useAvailability(
         const activeAt = (ranges: { startMin: number; endMin: number }[], t: number) =>
           ranges.filter(r => r.startMin <= t && r.endMin > t).length
 
-        // Un turno nuevo [slotMin, slotMin+duration) excede el cupo si en ALGÚN instante dentro de ese
-        // rango la concurrencia real (turnos existentes activos en ese instante + el nuevo) supera capacity.
+        // Un turno nuevo [slotMin, slotMin+duration) excede el cupo dado si en ALGÚN instante dentro de ese
+        // rango la concurrencia real (turnos existentes activos en ese instante + el nuevo) supera ese cupo.
         // Esto permite turnos escalonados (ej: 14:00 y 14:30 con bloques de 60') que nunca coinciden
         // los 3 a la vez, aunque cada uno individualmente "toque" a los otros dos en distintos momentos.
-        const wouldExceedCapacity = (ranges: { startMin: number; endMin: number }[], slotMin: number) => {
+        const wouldExceedCapacity = (ranges: { startMin: number; endMin: number }[], slotMin: number, cap: number) => {
           const newEnd = slotMin + serviceDurationMinutes
           const overlapping = ranges.filter(r => r.startMin < newEnd && r.endMin > slotMin)
-          if (overlapping.length + 1 <= capacity) return false
+          if (overlapping.length + 1 <= cap) return false
           const points = [slotMin, ...overlapping.map(r => Math.max(r.startMin, slotMin))]
-          return points.some(t => activeAt(overlapping, t) + 1 > capacity)
+          return points.some(t => activeAt(overlapping, t) + 1 > cap)
         }
+
+        // ── Cupo general del profesional (multitasking entre servicios distintos) ──────────────
+        // Solo se activa para profesionales con concurrent_capacity > 1 (ej: Alejandra = 2).
+        // Para el resto, el comportamiento es exactamente el de antes (bloqueo total por cualquier
+        // otro turno superpuesto, vía isSlotConflict más abajo).
+        // Cuenta TODOS los turnos activos del profesional (cualquier servicio) contra su cupo general,
+        // y además exige que, de esos turnos simultáneos, a lo sumo 1 requiera "atención completa"
+        // (ej: nunca 2 Cortes al mismo tiempo, pero sí 1 Corte + 1 Color).
+        const allActiveRanges = isMultiCapacityProfessional
+          ? allAppts
+              .filter(a => a.status !== 'lista_espera')
+              .map(a => ({
+                startMin: toMin(a.starts_at),
+                endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + 30,
+                requiereAtencionCompleta: a.services?.requiere_atencion_completa ?? true,
+              }))
+          : []
+        const attentionRanges = allActiveRanges.filter(r => r.requiereAtencionCompleta)
 
         const blockedRanges = blocks
           .filter(b => b.blocked_start && b.blocked_end)
@@ -152,6 +177,9 @@ export function useAvailability(
           const endMin   = endH   * 60 + endM
           const interval = Math.max(sch.interval_minutes ?? 30, 5)
 
+          // end_time es el último horario que se ofrece para reservar (no la hora de cierre real
+          // del local, que suele ser más tarde). Por eso el corte es simple: hasta end_time
+          // exclusive, sin restar la duración del servicio.
           for (let m = startMin; m < endMin; m += interval) {
             const hh   = Math.floor(m / 60).toString().padStart(2, '0')
             const mm   = (m % 60).toString().padStart(2, '0')
@@ -160,15 +188,20 @@ export function useAvailability(
             const slotDt    = new Date(`${selectedDate}T${hora}:00-03:00`)
             const isPast    = isBefore(slotDt, now)
             const slotMin   = Math.floor(m)
-            const isTaken   = isSlotConflict(slotMin)
+            // Profesionales normales (cupo=1): comportamiento clásico intacto (isSlotConflict).
+            // Profesionales con cupo>1 (ej: Alejandra): cupo general del profesional + regla de atención completa.
+            const isTaken   = isMultiCapacityProfessional
+              ? wouldExceedCapacity(allActiveRanges, slotMin, professionalCapacity)
+                || (candidateRequiereAtencion && wouldExceedCapacity(attentionRanges, slotMin, 1))
+              : isSlotConflict(slotMin)
             const isBlocked = isBlockedByRange(hora)
 
             if (!slotMap.has(hora)) {
               if (isGroupService) {
                 const activosAhora  = activeAt(sameServiceActiveRanges, slotMin)
-                const excedeCupo    = wouldExceedCapacity(sameServiceActiveRanges, slotMin)
+                const excedeCupo    = wouldExceedCapacity(sameServiceActiveRanges, slotMin, capacity)
                 const enEspera      = activeAt(sameServiceWaitlistRanges, slotMin)
-                const hayCupo       = !excedeCupo
+                const hayCupo       = !excedeCupo && !isTaken
                 const hayListaEspera = !hayCupo && enEspera < waitlistLimit
                 slotMap.set(hora, {
                   hora,

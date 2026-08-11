@@ -24,8 +24,10 @@ export function MiAgendaBloqueos({ professionalId }: Props) {
   const [newTimeFrom, setNewTimeFrom] = useState('')
   const [newTimeTo, setNewTimeTo]     = useState('')
   const [mode, setMode]             = useState<'dia' | 'bloque'>('dia')
+  const [addError, setAddError]     = useState('')
 
   const today = startOfDay(new Date()).toISOString().slice(0, 10)
+  const rangoInvalido = mode === 'bloque' && !!newTimeFrom && !!newTimeTo && newTimeTo <= newTimeFrom
 
   useEffect(() => {
     supabase
@@ -45,6 +47,11 @@ export function MiAgendaBloqueos({ professionalId }: Props) {
 
   const handleAdd = async () => {
     if (!newDate) return
+    setAddError('')
+    if (mode === 'bloque' && newTimeFrom && newTimeTo && newTimeTo <= newTimeFrom) {
+      setAddError('El horario "Hasta" tiene que ser posterior al "Desde".')
+      return
+    }
     setSaving(true)
     const payload: Record<string, unknown> = {
       professional_id: professionalId,
@@ -66,6 +73,7 @@ export function MiAgendaBloqueos({ professionalId }: Props) {
         blockSortDate(a).localeCompare(blockSortDate(b))))
       setNewDate(''); setNewReason(''); setNewTimeFrom(''); setNewTimeTo('')
     } else if (error) {
+      setAddError('No se pudo guardar el bloqueo. Intentá de nuevo.')
       console.error(error)
     }
     setSaving(false)
@@ -151,10 +159,17 @@ export function MiAgendaBloqueos({ professionalId }: Props) {
                   type="time"
                   value={newTimeTo}
                   onChange={e => setNewTimeTo(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 ${rangoInvalido ? 'border-red-300 focus:ring-red-400' : 'border-gray-200 focus:ring-orange-400'}`}
                 />
               </div>
             </div>
+          )}
+
+          {rangoInvalido && (
+            <p className="text-xs text-red-600">El horario "Hasta" tiene que ser posterior al "Desde".</p>
+          )}
+          {addError && !rangoInvalido && (
+            <p className="text-xs text-red-600">{addError}</p>
           )}
 
           <div>
@@ -170,7 +185,7 @@ export function MiAgendaBloqueos({ professionalId }: Props) {
 
           <button
             onClick={handleAdd}
-            disabled={!newDate || saving}
+            disabled={!newDate || saving || rangoInvalido}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />

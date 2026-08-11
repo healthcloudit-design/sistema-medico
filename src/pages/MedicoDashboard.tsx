@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Users, LogOut, FileText,
   CalendarX, ChevronRight, Search, MessageCircle,
   CheckCircle, AlertCircle, TrendingUp, Menu, X, ArrowRight,
-  Lock, Clock, Activity, CalendarClock, UserX, XCircle,
+  Lock, Clock, Activity, CalendarClock, UserX, XCircle, CalendarPlus,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProfile } from '../hooks/useProfile'
@@ -19,6 +19,7 @@ import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { RescheduleModal } from '../components/shared/RescheduleModal'
+import { NuevoTurno } from '../components/shared/NuevoTurno'
 import { MiAgendaBloqueos } from '../components/medico/MiAgendaBloqueos'
 import { MiHorarios } from '../components/medico/MiHorarios'
 import type { User } from '@supabase/supabase-js'
@@ -49,7 +50,7 @@ const ST: Record<string, { label: string; color: string; bg: string; dot: string
   en_atencion: { label: 'En atención', color: '#4C1D95', bg: '#F5F3FF', dot: '#8B5CF6' },
 }
 
-type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos'
+type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos' | 'nuevoturno'
 
 function argTime(iso: string) {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
@@ -80,6 +81,7 @@ function Badge({ status }: { status: string }) {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id:'dashboard',     icon:LayoutDashboard, label:'Inicio'    },
+  { id:'nuevoturno',    icon:CalendarPlus,    label:'Nuevo turno' },
   { id:'agenda',        icon:Calendar,        label:'Mi agenda' },
   { id:'pacientes',     icon:Users,           label:'Pacientes' },
   { id:'bloqueos',      icon:CalendarX,       label:'Disponibilidad' },
@@ -221,6 +223,7 @@ function Empty({ go }: { go:(v:View)=>void }) {
         No tenés turnos programados. Revisá la agenda, creá uno nuevo o bloqueá horarios no disponibles.
       </p>
       <div style={{ display:'flex', gap:'8px', justifyContent:'center', flexWrap:'wrap' }}>
+        <button onClick={() => go('nuevoturno')} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:GOLD, color:P900, border:'none', cursor:'pointer' }}><CalendarPlus size={12}/> Nuevo turno</button>
         <button onClick={() => go('agenda')} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:P600, color:'#fff', border:'none', cursor:'pointer' }}><Calendar size={12}/> Ver agenda</button>
         <button onClick={() => go('bloqueos')} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'8px 14px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:'transparent', color:T2, border:`1px solid ${BD}`, cursor:'pointer' }}><Lock size={12}/> Bloquear horario</button>
       </div>
@@ -255,9 +258,10 @@ function RightPanel({ appointments, onSelect, go }: {
   const cxls  = appointments.filter(a => a.status === 'cancelado').length
 
   const QUICK = [
-    { icon:Calendar, label:'Agenda completa',  action:() => go('agenda') },
-    { icon:Users,    label:'Buscar paciente',  action:() => go('pacientes') },
-    { icon:Lock,     label:'Bloquear horario', action:() => go('bloqueos') },
+    { icon:CalendarPlus, label:'Nuevo turno',      action:() => go('nuevoturno') },
+    { icon:Calendar,     label:'Agenda completa',  action:() => go('agenda') },
+    { icon:Users,        label:'Buscar paciente',  action:() => go('pacientes') },
+    { icon:Lock,         label:'Bloquear horario', action:() => go('bloqueos') },
   ]
 
   return (
@@ -614,8 +618,12 @@ function DashView({ appointments, today, tomorrow, loading, go, onSelect, profil
               : 'Sin turnos programados esta semana'}
           </div>
           <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-            <button onClick={() => go('agenda')}
+            <button onClick={() => go('nuevoturno')}
               style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 18px', borderRadius:'8px', fontSize:'12px', fontWeight:600, backgroundColor:GOLD, color:P900, border:'none', cursor:'pointer' }}>
+              <CalendarPlus size={12}/> Nuevo turno
+            </button>
+            <button onClick={() => go('agenda')}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 16px', borderRadius:'8px', fontSize:'12px', fontWeight:500, backgroundColor:'rgba(255,255,255,0.1)', color:'#fff', border:'1px solid rgba(255,255,255,0.15)', cursor:'pointer' }}>
               Ver agenda completa <ArrowRight size={12}/>
             </button>
             <button onClick={() => go('pacientes')}
@@ -894,6 +902,16 @@ export function MedicoDashboard() {
             )}
             {view === 'agenda' && (
               <AgendaView appointments={appointments} today={today} tomorrow={tomorrow} upcoming={upcoming} loading={loading} onSelect={setSel} calendar={calendar} setCalendar={setCal} week={week} setWeek={setWeek}/>
+            )}
+            {view === 'nuevoturno' && orgId && profile?.professional_id && (
+              <div>
+                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>Nuevo turno</h2>
+                <NuevoTurno
+                  key={profile.professional_id}
+                  organizationId={orgId}
+                  lockedProfessional={{ id: profile.professional_id, full_name: profile.full_name ?? '', specialty: (profile as any).specialty }}
+                />
+              </div>
             )}
             {view === 'pacientes' && (
               <div>

@@ -13,7 +13,7 @@ import { PatientSearch } from '../components/shared/PatientSearch'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { RescheduleModal } from '../components/shared/RescheduleModal'
 import { RecepcionBloqueos } from '../components/recepcion/RecepcionBloqueos'
-import { NuevoTurnoRecepcion } from '../components/recepcion/NuevoTurnoRecepcion'
+import { NuevoTurno } from '../components/shared/NuevoTurno'
 import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
@@ -336,7 +336,7 @@ export function RecepcionPage() {
           <RecepcionBloqueos organizationId={(profile as any)?.organization_id ?? ''}/>
         )}
         {tab === 'nuevo' && (
-          <NuevoTurnoRecepcion
+          <NuevoTurno
             key={nuevoKey}
             organizationId={(profile as any)?.organization_id ?? ''}
             initialPatient={prefillPatient}

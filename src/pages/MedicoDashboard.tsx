@@ -50,7 +50,7 @@ const ST: Record<string, { label: string; color: string; bg: string; dot: string
   en_atencion: { label: 'En atención', color: '#4C1D95', bg: '#F5F3FF', dot: '#8B5CF6' },
 }
 
-type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos' | 'nuevoturno'
+type View = 'dashboard' | 'agenda' | 'pacientes' | 'bloqueos' | 'nuevoturno' | 'cancelados'
 
 function argTime(iso: string) {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
@@ -249,13 +249,13 @@ function Section({ title, count, empty, children }: { title:string; count:number
 }
 
 // ── Right panel ───────────────────────────────────────────────────────────────
-function RightPanel({ appointments, onSelect, go }: {
-  appointments:Appointment[]; onSelect:(a:Appointment)=>void; go:(v:View)=>void
+function RightPanel({ appointments, cancelledThisWeek, onSelect, go }: {
+  appointments:Appointment[]; cancelledThisWeek:Appointment[]; onSelect:(a:Appointment)=>void; go:(v:View)=>void
 }) {
   const now   = new Date()
   const next  = appointments.filter(a => parseISO(a.starts_at) > now && a.status !== 'cancelado').sort((a,b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime())[0]
   const soon  = appointments.filter(a => parseISO(a.starts_at) > now && a.status !== 'cancelado').sort((a,b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime()).slice(1,5)
-  const cxls  = appointments.filter(a => a.status === 'cancelado').length
+  const cxls  = cancelledThisWeek.length
 
   const QUICK = [
     { icon:CalendarPlus, label:'Nuevo turno',      action:() => go('nuevoturno') },
@@ -328,24 +328,30 @@ function RightPanel({ appointments, onSelect, go }: {
 
       {/* Cancellation alert */}
       {cxls > 0 && (
-        <div style={{ borderRadius:'10px', padding:'12px 14px', backgroundColor:'#FFFBEB', border:'1px solid #FDE68A', display:'flex', gap:'10px' }}>
+        <button onClick={() => go('cancelados')}
+          style={{ display:'flex', alignItems:'flex-start', gap:'10px', width:'100%', textAlign:'left', borderRadius:'10px', padding:'12px 14px', backgroundColor:'#FFFBEB', border:'1px solid #FDE68A', cursor:'pointer', transition:'background-color 0.12s' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor='#FEF3C7'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor='#FFFBEB'}
+        >
           <AlertCircle size={14} style={{ color:'#D97706', flexShrink:0, marginTop:'1px' }}/>
-          <div>
+          <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:'12px', fontWeight:600, color:'#92400E' }}>{cxls} cancelación{cxls!==1?'es':''} esta semana</div>
-            <div style={{ fontSize:'11px', color:'#B45309', marginTop:'2px' }}>Contactá a esos pacientes para reprogramar.</div>
+            <div style={{ fontSize:'11px', color:'#B45309', marginTop:'2px' }}>Tocá para ver el listado y reagendar.</div>
           </div>
-        </div>
+          <ChevronRight size={14} style={{ color:'#D97706', flexShrink:0, marginTop:'2px' }}/>
+        </button>
       )}
     </div>
   )
 }
 
 // ── Appointment detail modal ──────────────────────────────────────────────────
-function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onRescheduled }: {
+function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onRescheduled, onReagendar }: {
   appt:Appointment; onClose:()=>void;
   onStatus:(id:string,s:string)=>void;
   featureHc:boolean; onShowHC:()=>void; onShowST:()=>void
   onRescheduled:()=>void
+  onReagendar:()=>void
 }) {
   const s     = ST[appt.status] ?? ST.pendiente
   const svc   = appt.service as { name:string; duration_minutes?:number; display_duration_minutes?:number|null }|undefined
@@ -412,6 +418,12 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
               <button onClick={() => onStatus(appt.id,'completado')}
                 style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:'#16a34a', color:'#fff', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'7px' }}>
                 <CheckCircle size={15}/> Marcar como atendido
+              </button>
+            )}
+            {appt.status==='cancelado' && (
+              <button onClick={onReagendar}
+                style={{ width:'100%', padding:'12px', borderRadius:'10px', fontSize:'13px', fontWeight:600, backgroundColor:GOLD, color:P900, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'7px' }}>
+                <CalendarClock size={15}/> Reagendar turno
               </button>
             )}
 
@@ -752,6 +764,8 @@ export function MedicoDashboard() {
   const [calendar, setCal]    = useState(false)
   const [week, setWeek]       = useState(new Date())
   const [drawer, setDrawer]   = useState(false)
+  const [prefillPatient, setPrefillPatient] = useState<{ full_name:string; phone?:string; email?:string; obra_social?:string } | null>(null)
+  const [nuevoKey, setNuevoKey] = useState(0)
   const navigate = useNavigate()
 
   const { profile, loading:profileLoading } = useProfile(user)
@@ -830,13 +844,35 @@ export function MedicoDashboard() {
   const today    = active.filter(a => isToday(parseISO(a.starts_at)))
   const tomorrow = active.filter(a => isTomorrow(parseISO(a.starts_at)))
   const upcoming = active.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
+  const wkStart  = startOfWeek(new Date(), { weekStartsOn:1 })
+  const wkEnd    = endOfWeek(new Date(), { weekStartsOn:1 })
+  const cancelledThisWeek = appointments
+    .filter(a => a.status === 'cancelado' && parseISO(a.starts_at) >= wkStart && parseISO(a.starts_at) <= wkEnd)
+    .sort((a,b) => parseISO(b.starts_at).getTime() - parseISO(a.starts_at).getTime())
   const logout   = () => supabase.auth.signOut()
-  const go       = (v: View) => { setView(v); setDrawer(false) }
+  const go       = (v: View) => {
+    if (v === 'nuevoturno') { setPrefillPatient(null); setNuevoKey(k => k + 1) }
+    setView(v); setDrawer(false)
+  }
 
   const changeStatus = async (id:string, status:string) => {
     await supabase.from('appointments').update({ status }).eq('id', id)
     setAppts(p => p.map(a => a.id===id ? { ...a, status:status as any } : a))
     setSel(p => p?.id===id ? { ...p, status:status as any } : p)
+  }
+
+  const openReagendar = (appt: Appointment) => {
+    const p = appt.patient as { phone?:string; email?:string; obra_social?:string } | undefined
+    setPrefillPatient({
+      full_name:   appt.patient_name,
+      phone:       appt.patient_phone ?? p?.phone,
+      email:       appt.patient_email ?? p?.email,
+      obra_social: p?.obra_social,
+    })
+    setNuevoKey(k => k + 1)
+    setSel(null)
+    setView('nuevoturno')
+    setDrawer(false)
   }
 
   return (
@@ -906,10 +942,17 @@ export function MedicoDashboard() {
             {view === 'nuevoturno' && orgId && profile?.professional_id && (
               <div>
                 <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>Nuevo turno</h2>
+                {prefillPatient && (
+                  <div style={{ display:'flex', alignItems:'center', gap:'8px', backgroundColor:GOLD_DIM, border:`1px solid ${GOLD_BD}`, borderRadius:'10px', padding:'10px 14px', marginBottom:'16px' }}>
+                    <CalendarClock size={14} style={{ color:GOLD, flexShrink:0 }}/>
+                    <span style={{ fontSize:'12px', color:'#7C6423' }}>Reagendando para <strong>{prefillPatient.full_name}</strong> — revisá los datos antes de confirmar.</span>
+                  </div>
+                )}
                 <NuevoTurno
-                  key={profile.professional_id}
+                  key={`${profile.professional_id}-${nuevoKey}`}
                   organizationId={orgId}
                   lockedProfessional={{ id: profile.professional_id, full_name: profile.full_name ?? '', specialty: (profile as any).specialty }}
+                  initialPatient={prefillPatient}
                 />
               </div>
             )}
@@ -929,12 +972,28 @@ export function MedicoDashboard() {
                 <MiAgendaBloqueos professionalId={profile.professional_id}/>
               </div>
             )}
+            {view === 'cancelados' && (
+              <div>
+                <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 4px' }}>Turnos cancelados</h2>
+                <p style={{ fontSize:'12px', color:T3, margin:'0 0 20px' }}>Esta semana · tocá un turno para ver los datos del paciente y reagendarlo</p>
+                {cancelledThisWeek.length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'36px 20px', borderRadius:'12px', border:`1.5px dashed ${BD2}`, backgroundColor:CARD2 }}>
+                    <CheckCircle size={28} style={{ color:'#22C55E', margin:'0 auto 10px', display:'block' }}/>
+                    <p style={{ fontSize:'13px', color:T2, margin:0 }}>Sin cancelaciones esta semana.</p>
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                    {cancelledThisWeek.map(a => <ApptCard key={a.id} appt={a} onClick={() => setSel(a)}/>)}
+                  </div>
+                )}
+              </div>
+            )}
           </main>
 
           {/* Right panel — xl+ only */}
           <aside className="hidden xl:block border-l py-5 px-4 overflow-y-auto"
             style={{ borderColor:BD, backgroundColor:'#F8FAFB', minHeight:'100%' }}>
-            <RightPanel appointments={appointments} onSelect={setSel} go={go}/>
+            <RightPanel appointments={appointments} cancelledThisWeek={cancelledThisWeek} onSelect={setSel} go={go}/>
           </aside>
         </div>
       </div>
@@ -956,7 +1015,7 @@ export function MedicoDashboard() {
 
       {/* Modals */}
       {selected && !showHC && (
-        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)} onShowST={() => setShowST(true)} onRescheduled={() => setSel(null)}/>
+        <ApptModal appt={selected} onClose={() => setSel(null)} onStatus={changeStatus} featureHc={featureHc} onShowHC={() => setShowHC(true)} onShowST={() => setShowST(true)} onRescheduled={() => setSel(null)} onReagendar={() => openReagendar(selected)}/>
       )}
       {selected && showHC && profile?.professional_id && (
         <ClinicalRecordModal

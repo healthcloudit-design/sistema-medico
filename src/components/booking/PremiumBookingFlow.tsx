@@ -457,6 +457,21 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             </div>
           ))}
         </div>
+        {org.slug === 'bicentenario' && (
+          <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '16px', marginBottom: '24px', textAlign: 'center' }}>
+            <p style={{ fontFamily: SANS, fontSize: '12px', fontWeight: 700, color: '#166534', letterSpacing: '0.02em', lineHeight: 1.5, margin: '0 0 12px' }}>
+              CONSULTE SU COSEGURO EN RECEPCIÓN O A TRAVÉS DE WHATSAPP
+            </p>
+            <a
+              href={`https://wa.me/${(whatsappNumber ?? '+5491136042208').replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px 18px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}
+            >
+              <MessageCircle size={16} /> Consultar por WhatsApp
+            </a>
+          </div>
+        )}
         <button onClick={() => { setState(INIT); setCompleted(false); setSelectedCat(null); navigate(`/${org.slug}`) }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', backgroundColor: gold, color: DARK, border: 'none', borderRadius: '10px', padding: '13px', fontFamily: SANS, fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}>
           <Home size={15} /> Volver al inicio

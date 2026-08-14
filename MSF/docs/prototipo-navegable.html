@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turnos Salud San Fernando</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --verde:#8CC63F;          /* identidad de marca */
+    --verde-accion:#3F7D1E;   /* botones - alto contraste (AA con texto blanco) */
+    --verde-accion-hover:#356A19;
+    --magenta:#E63784;        /* acento de marca, uso moderado */
+    --magenta-bg:#FCE4EF;
+    --magenta-txt:#A31860;
+    --tinta:#161616;
+    --gris:#555B62;
+    --fondo:#FFFFFF;
+    --fondo-suave:#F4F6F4;
+    --borde:#D8DDD6;
+    --ok:#2E7D32;
+    --error:#C62828;
+    --sombra:0 1px 2px rgba(22,22,22,.06),0 4px 16px rgba(22,22,22,.06);
+    --radio:14px;
+  }
+  *{box-sizing:border-box}
+  html{font-size:18px}
+  body{
+    margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    color:var(--tinta);background:var(--fondo-suave);line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .demo-banner{
+    background:var(--tinta);color:#fff;text-align:center;font-size:.82rem;
+    padding:7px 14px;letter-spacing:.01em;
+  }
+  .demo-banner strong{color:var(--verde)}
+  /* Franja de marca */
+  header.marca{
+    background:#fff;border-bottom:4px solid var(--verde);
+  }
+  .marca-inner{
+    max-width:1040px;margin:0 auto;padding:14px 20px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .escudo{
+    width:44px;height:44px;border-radius:10px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--verde) 0%,var(--verde) 55%,var(--magenta) 55%,var(--magenta) 100%);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;
+  }
+  .marca-txt b{display:block;font-size:1.06rem;font-weight:800;line-height:1.15}
+  .marca-txt span{display:block;font-size:.8rem;color:var(--gris);font-weight:500}
+  .marca-tel{margin-left:auto;text-align:right;font-size:.82rem;color:var(--gris)}
+  .marca-tel b{display:block;color:var(--tinta);font-size:.98rem}
+  main{max-width:1040px;margin:0 auto;padding:22px 20px 60px}
+
+  /* Pasos */
+  .pasos{display:flex;gap:8px;margin:6px 0 24px;flex-wrap:wrap}
+  .paso{
+    display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--gris);
+    padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--borde);
+  }
+  .paso .n{
+    width:22px;height:22px;border-radius:50%;background:var(--borde);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.78rem;flex:0 0 auto;
+  }
+  .paso.activo{border-color:var(--verde-accion);color:var(--tinta);font-weight:600}
+  .paso.activo .n{background:var(--verde-accion)}
+  .paso.hecho .n{background:var(--ok)}
+
+  h1{font-size:1.7rem;font-weight:800;margin:.2em 0 .1em;letter-spacing:-.01em}
+  h2{font-size:1.25rem;font-weight:700;margin:.2em 0 .4em}
+  .sub{color:var(--gris);margin:0 0 22px;font-size:1.02rem}
+
+  /* Botones */
+  .btn{
+    font:inherit;font-weight:700;border:none;border-radius:12px;cursor:pointer;
+    padding:15px 26px;min-height:52px;display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    transition:background .15s,transform .05s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--verde-accion);color:#fff}
+  .btn-primary:hover{background:var(--verde-accion-hover)}
+  .btn-ghost{background:#fff;color:var(--verde-accion);border:2px solid var(--verde-accion)}
+  .btn-ghost:hover{background:#f0f6ea}
+  .btn-lg{width:100%;font-size:1.08rem;padding:18px}
+  .btn:focus-visible,a:focus-visible,input:focus-visible,.card:focus-visible{
+    outline:3px solid var(--magenta);outline-offset:2px
+  }
+  .volver{
+    background:none;border:none;color:var(--verde-accion);font:inherit;font-weight:600;
+    cursor:pointer;padding:8px 0;display:inline-flex;align-items:center;gap:6px;margin-bottom:6px;
+  }
+  .volver:hover{text-decoration:underline}
+
+  /* Hero */
+  .hero{
+    background:#fff;border-radius:var(--radio);box-shadow:var(--sombra);overflow:hidden;
+    border:1px solid var(--borde);
+  }
+  .hero-top{
+    background:linear-gradient(120deg,#4d7c0f 0%,var(--verde-accion) 45%,var(--verde) 100%);
+    color:#fff;padding:38px 32px;
+  }
+  .hero-top h1{color:#fff;font-size:2rem;margin:0 0 8px}
+  .hero-top p{margin:0;font-size:1.1rem;max-width:52ch;opacity:.96}
+  .hero-body{padding:26px 32px 32px}
+  .hero-puntos{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin:0 0 26px;padding:0;list-style:none}
+  .hero-puntos li{display:flex;gap:11px;align-items:flex-start;font-size:.98rem}
+  .tick{color:var(--verde-accion);font-weight:800;font-size:1.1rem;flex:0 0 auto;margin-top:-1px}
+  .gratis-pill{display:inline-block;background:var(--magenta-bg);color:var(--magenta-txt);font-weight:700;font-size:.82rem;padding:5px 13px;border-radius:999px;margin-bottom:16px}
+
+  /* Grid de centros */
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .card{
+    text-align:left;background:#fff;border:1px solid var(--borde);border-radius:var(--radio);
+    padding:18px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .05s;
+    display:flex;flex-direction:column;gap:6px;width:100%;font:inherit;color:inherit;
+  }
+  .card:hover{border-color:var(--verde-accion);box-shadow:var(--sombra)}
+  .card:active{transform:translateY(1px)}
+  .card .cnombre{font-weight:700;font-size:1.05rem;line-height:1.25}
+  .card .cdato{color:var(--gris);font-size:.9rem;display:flex;gap:7px;align-items:flex-start}
+  .card .cdato .ic{flex:0 0 auto}
+  .card-info{cursor:default;opacity:.75;border-style:dashed}
+  .card-info:hover{border-color:var(--borde);box-shadow:none}
+  .tag-guardia{display:inline-block;background:#fdecec;color:var(--error);font-weight:700;font-size:.72rem;padding:3px 9px;border-radius:6px;margin-top:4px;width:fit-content}
+
+  .buscador{
+    width:100%;padding:14px 16px;font:inherit;border:2px solid var(--borde);border-radius:12px;
+    margin-bottom:16px;background:#fff;
+  }
+  .buscador:focus{border-color:var(--verde-accion);outline:none}
+
+  /* Lista de servicios */
+  .serv-grupo{margin:0 0 22px}
+  .serv-grupo h3{font-size:.86rem;text-transform:uppercase;letter-spacing:.05em;color:var(--gris);margin:0 0 10px;font-weight:700}
+  .serv{
+    display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--borde);
+    border-radius:12px;padding:15px 18px;cursor:pointer;width:100%;font:inherit;color:inherit;text-align:left;
+    margin-bottom:10px;transition:border-color .15s,box-shadow .15s;
+  }
+  .serv:hover{border-color:var(--verde-accion);box-shadow:var(--sombra)}
+  .serv .snombre{font-weight:600;flex:1}
+  .serv .flecha{color:var(--verde-accion);font-weight:800;font-size:1.2rem}
+  .badge-orden{background:var(--magenta-bg);color:var(--magenta-txt);font-weight:700;font-size:.74rem;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .nota-walkin{
+    background:var(--fondo-suave);border:1px dashed var(--borde);border-radius:12px;padding:14px 18px;
+    color:var(--gris);font-size:.92rem;margin-top:4px;
+  }
+  .nota-walkin b{color:var(--tinta)}
+
+  /* Panel genérico */
+  .panel{background:#fff;border:1px solid var(--borde);border-radius:var(--radio);padding:26px 28px;box-shadow:var(--sombra)}
+
+  /* Gate orden */
+  .gate-opts{display:grid;gap:14px;grid-template-columns:1fr 1fr;margin-top:22px}
+  @media(max-width:520px){.gate-opts{grid-template-columns:1fr}}
+  .gate-opt{
+    border:2px solid var(--borde);border-radius:14px;padding:22px;text-align:center;cursor:pointer;
+    background:#fff;font:inherit;color:inherit;transition:border-color .15s,background .15s;
+  }
+  .gate-opt:hover{border-color:var(--verde-accion);background:#f6faf1}
+  .gate-opt .em{font-size:1.6rem;display:block;margin-bottom:6px}
+  .gate-opt b{display:block;font-size:1.05rem;margin-bottom:2px}
+  .gate-opt span{color:var(--gris);font-size:.88rem}
+
+  /* Mensaje sin orden */
+  .aviso{
+    border-left:5px solid var(--verde-accion);background:#f6faf1;border-radius:12px;padding:22px 24px;margin:6px 0 22px;
+  }
+  .aviso h2{margin-top:0}
+  .aviso p{margin:.5em 0;color:#333}
+
+  /* Fecha y hora */
+  .fh-wrap{display:grid;gap:24px;grid-template-columns:1fr 1fr}
+  @media(max-width:720px){.fh-wrap{grid-template-columns:1fr}}
+  .dias{display:flex;gap:8px;flex-wrap:wrap}
+  .dia{
+    border:2px solid var(--borde);background:#fff;border-radius:12px;padding:10px 6px;min-width:64px;
+    text-align:center;cursor:pointer;font:inherit;color:inherit;
+  }
+  .dia:hover{border-color:var(--verde-accion)}
+  .dia.sel{border-color:var(--verde-accion);background:var(--verde-accion);color:#fff}
+  .dia .dsem{font-size:.72rem;text-transform:uppercase;color:inherit;opacity:.8}
+  .dia .dnum{font-size:1.25rem;font-weight:800;line-height:1.1}
+  .dia .dmes{font-size:.72rem;opacity:.8}
+  .horas{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:9px}
+  .hora{
+    border:2px solid var(--borde);background:#fff;border-radius:10px;padding:11px 4px;text-align:center;
+    cursor:pointer;font:inherit;font-weight:600;color:var(--tinta);
+  }
+  .hora:hover{border-color:var(--verde-accion)}
+  .hora.sel{border-color:var(--verde-accion);background:var(--verde-accion);color:#fff}
+  .hora:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+
+  /* Form */
+  .form-grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+  @media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+  .campo{display:flex;flex-direction:column;gap:6px}
+  .campo.full{grid-column:1/-1}
+  .campo label{font-weight:600;font-size:.92rem}
+  .campo input,.campo select{
+    padding:14px 15px;font:inherit;border:2px solid var(--borde);border-radius:11px;background:#fff;
+  }
+  .campo input:focus,.campo select:focus{border-color:var(--verde-accion);outline:none}
+  .req{color:var(--magenta-txt)}
+
+  /* Resumen lateral */
+  .resumen{background:var(--fondo-suave);border:1px solid var(--borde);border-radius:12px;padding:18px 20px;font-size:.95rem}
+  .resumen h3{margin:0 0 12px;font-size:.86rem;text-transform:uppercase;letter-spacing:.05em;color:var(--gris)}
+  .resumen .fila{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde)}
+  .resumen .fila:last-child{border-bottom:none}
+  .resumen .k{color:var(--gris);flex:0 0 42%}
+  .resumen .v{font-weight:600;flex:1}
+
+  /* Confirmación */
+  .conf-icon{
+    width:76px;height:76px;border-radius:50%;background:var(--ok);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:2.4rem;margin:0 auto 18px;
+  }
+  .conf-code{
+    display:inline-block;background:var(--fondo-suave);border:2px dashed var(--verde-accion);
+    border-radius:12px;padding:10px 22px;font-size:1.5rem;font-weight:800;letter-spacing:.08em;margin:6px 0 8px;
+  }
+  .recordatorio{background:var(--magenta-bg);border-radius:12px;padding:16px 20px;color:var(--magenta-txt);margin:20px 0;text-align:left}
+  .recordatorio .rlabel{display:block;font-weight:700;margin-bottom:4px}
+  .recordatorio strong{font-weight:700}
+  .center-text{text-align:center}
+  .acciones{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  @media(max-width:560px){.acciones .btn{width:100%}}
+
+  footer{max-width:1040px;margin:0 auto;padding:24px 20px 40px;color:var(--gris);font-size:.82rem;border-top:1px solid var(--borde)}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="demo-banner">Prototipo de demostración — <strong>datos de ejemplo</strong>, no se reserva ningún turno real.</div>
+
+<header class="marca">
+  <div class="marca-inner">
+    <div class="escudo" aria-hidden="true">SF</div>
+    <div class="marca-txt">
+      <b>Turnos Salud San Fernando</b>
+      <span>Municipio de San Fernando · Secretaría de Salud Pública</span>
+    </div>
+    <div class="marca-tel">
+      Línea de turnos
+      <b>0800 888 5566</b>
+      Lun a Vie, 7 a 19 h
+    </div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  Turnos Salud San Fernando · Atención gratuita en los Centros de Salud Municipales. Ante una urgencia, llamá al <b>107</b> (Emergencias San Fernando, 24 h).
+</footer>
+
+<script>
+/* ---------- Datos de los centros (relevados del sitio oficial) ---------- */
+const CENTROS = [
+  {id:'rehab', nombre:'Centro de Rehabilitación y Kinesiología', dir:'Besares 2172', hs:'Lun a Vie 8 a 19 h', open:8, close:19,
+   servicios:['Kinesiología Traumatológica','Kinesiología Geriátrica','Kinesiología Cardiovascular','Kinesiología Deportiva','Hidroterapia Traumatológica','RPG (Reeducación Postural Global)','Sesiones Grupales de Obesidad','Sesiones Grupales de Diabéticos','Taller para Gestante']},
+  {id:'cemat', nombre:'CeMAT – Dr. Pedro Di Matteo (Atención Temprana)', dir:'Sarmiento 3244', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Pediatría','Psicología','Kinesiología','Odontología','Psicomotricidad','Fonoaudiología','Psicopedagogía','Terapia Ocupacional','Enfermería','Vacunatorio']},
+  {id:'emergencias', nombre:'Emergencias San Fernando (EMEF)', dir:'Carlos Casares y Entre Ríos', hs:'24 horas', guardia:true, servicios:[]},
+  {id:'sfcentro', nombre:'Vacunatorio Municipal "San Fernando Centro"', dir:'Av. Avellaneda 1460', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Otoemisiones','Enfermería','Farmacia','Vacunatorio','Zoonosis']},
+  {id:'cs31', nombre:'Centro de Salud 31 "Dr. Carcagno"', dir:'Entre Ríos y Carlos Casares', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Pediatría','Control de recién nacido','Obstetricia','Traumatología','Enfermería','Farmacia','Vacunatorio']},
+  {id:'villajardin', nombre:'Centro de Salud Villa Jardín', dir:'Guatemala 3069', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Obstetricia','Pediatría','Enfermería','Farmacia','Vacunatorio']},
+  {id:'udp27', nombre:'Unidad de Diagnóstico Precoz N°27', dir:'25 de Mayo 2290', hs:'Lun a Vie 8 a 18 h', open:8, close:18,
+   servicios:['Clínica Médica','Pediatría','Control de recién nacido','Obstetricia','Nutrición','Radiología','Mamografía','Enfermería','Farmacia','Vacunatorio']},
+  {id:'galvez', nombre:'Centro Odontológico Dr. Gálvez', dir:'Portugal 2276', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Odontología General','Odontopediatría','Endodoncia','Ortodoncia','Enfermería','Farmacia','Vacunatorio']},
+  {id:'cs66', nombre:'Centro de Salud N°66 "Dr. Pietranera"', dir:'Balcarce 2950', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Pediatría','Nutrición','Enfermería','Farmacia','Vacunatorio']},
+  {id:'absalon', nombre:'Centro de Salud Absalón Rojas (Islas)', dir:'Arroyo Felicaria, 2da Sección de Islas', hs:'Lun a Vie 9 a 15 h', open:9, close:15,
+   servicios:['Clínica Médica','Pediatría','Medicina Familiar','Odontología General','Psicología','Trabajo Social','Enfermería','Farmacia','Vacunatorio']},
+  {id:'piaggi', nombre:'Centro de Salud Piaggi', dir:'Málaga y Garibaldi', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Pediatría','Obstetricia','Control de recién nacido','Enfermería','Farmacia','Vacunatorio']},
+  {id:'mariaisabel', nombre:'Centro de Salud María Isabel', dir:'Arenales 3200', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Pediatría','Control de recién nacido','Obstetricia','Nutrición','Odontología General','Enfermería','Farmacia','Vacunatorio']},
+  {id:'finochietto', nombre:'Centro de Salud Finochietto', dir:'Ruta 202 km 5,5', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Pediatría','Control de recién nacido','Obstetricia','Nutrición','Odontología General','Enfermería','Farmacia','Vacunatorio']},
+  {id:'crisol', nombre:'Centro de Salud Crisol', dir:'Martín Rodríguez y Tucumán', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Ginecología','Obstetricia','Odontología General','Pediatría','Nutrición','Enfermería','Farmacia','Vacunatorio']},
+  {id:'bertres', nombre:'Centro de Salud Bertrés', dir:'Azcuénaga 1745', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Ginecología','Nefrología','Nutrición','Obstetricia','Odontología General','Pediatría','Enfermería','Farmacia','Vacunatorio']},
+  {id:'reinecke', nombre:'Centro de Salud Reinecke', dir:'Alvear 600', hs:'Lun a Vie 8 a 17 h', open:8, close:17,
+   servicios:['Clínica Médica','Pediatría','Obstetricia','Odontología General','Enfermería','Farmacia','Vacunatorio']},
+];
+
+/* ---------- Clasificación de servicios ----------
+   walkin  = por demanda espontánea (sin turno)
+   orden   = especialidad derivada -> requiere orden del médico de cabecera
+   resto   = atención primaria / acceso directo (sin orden) */
+const WALKIN = ['Farmacia','Vacunatorio','Enfermería','Zoonosis'];
+const ORDEN = ['Traumatología','Nefrología','Nutrición','Kinesiología','Hidroterapia','RPG','Rehabilitación',
+  'Endodoncia','Ortodoncia','Radiología','Mamografía','Otoemisiones','Psicología','Fonoaudiología',
+  'Terapia Ocupacional','Psicopedagogía','Psicomotricidad','Sesiones Grupales','Taller para Gestante'];
+const PRIMARIA = ['Medicina Familiar','Clínica Médica','Pediatría'];
+
+function clasificar(nombre){
+  if (WALKIN.some(w => nombre === w)) return 'walkin';
+  if (ORDEN.some(o => nombre.includes(o))) return 'orden';
+  return 'primaria';
+}
+function cabeceraDe(centro){
+  for(const p of PRIMARIA){ const s = centro.servicios.find(x=>x.includes(p)); if(s) return s; }
+  return null;
+}
+
+/* ---------- Estado ---------- */
+let S = { step:'home', centro:null, servicio:null, tipo:null, orden:null, dia:null, hora:null };
+const app = document.getElementById('app');
+const MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS=['dom','lun','mar','mié','jue','vie','sáb'];
+
+function go(step){ S.step=step; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function centro(){ return CENTROS.find(c=>c.id===S.centro); }
+
+/* ---------- Barra de pasos ---------- */
+function pasos(activo){
+  const items=[['1','Centro'],['2','Especialidad'],['3','Fecha y hora'],['4','Tus datos'],['5','Confirmación']];
+  return `<div class="pasos" aria-label="Progreso">`+items.map((it,i)=>{
+    const n=i+1; let cls='paso';
+    if(n<activo)cls+=' hecho'; if(n===activo)cls+=' activo';
+    return `<div class="${cls}"><span class="n">${n<activo?'✓':it[0]}</span>${it[1]}</div>`;
+  }).join('')+`</div>`;
+}
+
+/* ---------- Pantallas ---------- */
+function vHome(){
+  return `<section class="hero">
+    <div class="hero-top">
+      <h1>Sacá tu turno en tu Centro de Salud</h1>
+      <p>Reservá una atención en cualquiera de los Centros de Salud Municipales de San Fernando, de forma simple y desde tu celular.</p>
+    </div>
+    <div class="hero-body">
+      <span class="gratis-pill">100% gratuito · sin costo ni seña</span>
+      <ul class="hero-puntos">
+        <li><span class="tick">✓</span><span>Elegí el centro más cercano a tu domicilio.</span></li>
+        <li><span class="tick">✓</span><span>Reservá el día y horario que mejor te quede.</span></li>
+        <li><span class="tick">✓</span><span>Recibí la confirmación de tu turno al instante.</span></li>
+      </ul>
+      <button class="btn btn-primary btn-lg" onclick="go('centro')">Pedir un turno →</button>
+    </div>
+  </section>`;
+}
+
+function vCentro(){
+  const cards = CENTROS.map(c=>{
+    if(c.guardia){
+      return `<div class="card card-info">
+        <div class="cnombre">${c.nombre}</div>
+        <div class="cdato"><span class="ic">📍</span>${c.dir}</div>
+        <div class="cdato"><span class="ic">🕒</span>${c.hs}</div>
+        <span class="tag-guardia">Guardia 24 h — no requiere turno</span>
+      </div>`;
+    }
+    return `<button class="card" onclick="elegirCentro('${c.id}')">
+      <div class="cnombre">${c.nombre}</div>
+      <div class="cdato"><span class="ic">📍</span>${c.dir}</div>
+      <div class="cdato"><span class="ic">🕒</span>${c.hs}</div>
+    </button>`;
+  }).join('');
+  return `${pasos(1)}
+    <button class="volver" onclick="go('home')">← Volver</button>
+    <h1>Elegí tu Centro de Salud</h1>
+    <p class="sub">Seleccioná el centro más cercano a tu domicilio o el que prefieras.</p>
+    <input class="buscador" type="text" placeholder="Buscar por nombre o dirección…" oninput="filtrar(this.value)" aria-label="Buscar centro">
+    <div class="grid" id="grid-centros">${cards}</div>`;
+}
+function filtrar(q){
+  q=q.toLowerCase().trim();
+  const grid=document.getElementById('grid-centros');
+  const cards=CENTROS.map(c=>{
+    const match=(c.nombre+' '+c.dir).toLowerCase().includes(q);
+    if(!match) return '';
+    if(c.guardia) return `<div class="card card-info"><div class="cnombre">${c.nombre}</div><div class="cdato"><span class="ic">📍</span>${c.dir}</div><div class="cdato"><span class="ic">🕒</span>${c.hs}</div><span class="tag-guardia">Guardia 24 h — no requiere turno</span></div>`;
+    return `<button class="card" onclick="elegirCentro('${c.id}')"><div class="cnombre">${c.nombre}</div><div class="cdato"><span class="ic">📍</span>${c.dir}</div><div class="cdato"><span class="ic">🕒</span>${c.hs}</div></button>`;
+  }).join('');
+  grid.innerHTML = cards || `<p class="sub">No encontramos centros con ese nombre.</p>`;
+}
+function elegirCentro(id){ S.centro=id; S.servicio=null; S.orden=null; S.dia=null; S.hora=null; go('servicio'); }
+
+function vServicio(){
+  const c=centro();
+  const turnables = c.servicios.filter(s=>clasificar(s)!=='walkin');
+  const walkins = c.servicios.filter(s=>clasificar(s)==='walkin');
+  const directos = turnables.filter(s=>clasificar(s)==='primaria');
+  const conOrden = turnables.filter(s=>clasificar(s)==='orden');
+
+  const item = s => `<button class="serv" onclick="elegirServicio('${encodeURIComponent(s)}')">
+      <span class="snombre">${s}</span>
+      ${clasificar(s)==='orden'?'<span class="badge-orden">Requiere orden médica</span>':''}
+      <span class="flecha" aria-hidden="true">›</span>
+    </button>`;
+
+  let html = `${pasos(2)}
+    <button class="volver" onclick="go('centro')">← Cambiar de centro</button>
+    <h1>${c.nombre}</h1>
+    <p class="sub">📍 ${c.dir} · 🕒 ${c.hs}. Elegí la atención que necesitás.</p>`;
+
+  if(directos.length){
+    html += `<div class="serv-grupo"><h3>Atención primaria — acceso directo</h3>${directos.map(item).join('')}</div>`;
+  }
+  if(conOrden.length){
+    html += `<div class="serv-grupo"><h3>Especialidades — requieren orden del médico de cabecera</h3>${conOrden.map(item).join('')}</div>`;
+  }
+  if(walkins.length){
+    html += `<div class="serv-grupo"><h3>Sin turno</h3><div class="nota-walkin"><b>${walkins.join(' · ')}</b><br>Se atienden por orden de llegada, no necesitás reservar turno. Acercate al centro dentro del horario de atención.</div></div>`;
+  }
+  return html;
+}
+function elegirServicio(enc){
+  const s=decodeURIComponent(enc);
+  S.servicio=s; S.tipo=clasificar(s);
+  if(S.tipo==='orden'){ S.orden=null; go('orden'); }
+  else { S.orden=null; go('fechahora'); }
+}
+
+function vOrden(){
+  const c=centro();
+  return `${pasos(2)}
+    <button class="volver" onclick="go('servicio')">← Volver a especialidades</button>
+    <div class="panel">
+      <h1>Antes de continuar</h1>
+      <p class="sub" style="margin-bottom:8px">Elegiste <b>${S.servicio}</b> en ${c.nombre}.</p>
+      <h2 style="font-size:1.15rem">¿Tenés la orden de tu médico de cabecera para esta atención?</h2>
+      <div class="gate-opts">
+        <button class="gate-opt" onclick="respOrden(true)">
+          <span class="em" aria-hidden="true">✅</span>
+          <b>Sí, tengo la orden</b>
+          <span>Continuar con la reserva</span>
+        </button>
+        <button class="gate-opt" onclick="respOrden(false)">
+          <span class="em" aria-hidden="true">📄</span>
+          <b>No tengo la orden</b>
+          <span>Ver cómo obtenerla</span>
+        </button>
+      </div>
+    </div>`;
+}
+function respOrden(v){ S.orden=v; if(v) go('fechahora'); else go('sinorden'); }
+
+function vSinOrden(){
+  const c=centro();
+  const cab=cabeceraDe(c);
+  const cta = cab
+    ? `<button class="btn btn-primary" onclick="irACabecera('${encodeURIComponent(cab)}')">Sacar turno con mi médico de cabecera</button>`
+    : `<p class="sub">Este centro no cuenta con médico de cabecera propio: consultá en la línea 0800 888 5566 a qué centro acercarte.</p>`;
+  return `${pasos(2)}
+    <button class="volver" onclick="go('orden')">← Volver</button>
+    <div class="aviso">
+      <h2>Para este turno necesitás una orden de tu médico de cabecera</h2>
+      <p>La atención que elegiste (<b>${S.servicio}</b>) requiere que primero te vea tu <b>médico de cabecera</b>. Él o ella evalúa tu situación y, si corresponde, te da la <b>orden</b> para acceder a esta especialidad.</p>
+      <p><b>¿Qué hacés ahora?</b> Sacá un turno con tu médico de cabecera en este mismo centro. Es gratuito, como todos los turnos. Cuando tengas la orden, volvés y reservás la especialidad sin problema.</p>
+    </div>
+    <div class="acciones">
+      ${cta}
+      <button class="btn btn-ghost" onclick="go('servicio')">Elegir otra atención</button>
+    </div>`;
+}
+function irACabecera(enc){ S.servicio=decodeURIComponent(enc); S.tipo='primaria'; S.orden=null; go('fechahora'); }
+
+/* --- disponibilidad simulada, estable por día --- */
+function proximosDias(n){
+  const out=[]; const d=new Date(); let added=0;
+  while(out.length<n){
+    d.setDate(d.getDate()+1);
+    const dow=d.getDay();
+    if(dow>=1 && dow<=5) out.push(new Date(d));
+  }
+  return out;
+}
+function seed(str){ let h=0; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; } return h; }
+function slots(c,dia){
+  const arr=[]; const key=S.centro+dia.toDateString();
+  for(let h=c.open; h<c.close; h++){
+    for(const m of [0,30]){
+      if(h===13) continue; // pausa mediodía (ejemplo)
+      const label=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      const taken=(seed(key+label)%10)<4; // ~40% ocupados
+      arr.push({label,taken});
+    }
+  }
+  return arr;
+}
+function vFechaHora(){
+  const c=centro();
+  const dias=proximosDias(8);
+  if(!S.dia) S.dia=dias[0].toISOString();
+  const diaSel=new Date(S.dia);
+  const diasHtml=dias.map(d=>{
+    const sel=d.toDateString()===diaSel.toDateString();
+    return `<button class="dia ${sel?'sel':''}" onclick="setDia('${d.toISOString()}')">
+      <span class="dsem">${DIAS[d.getDay()]}</span>
+      <span class="dnum">${d.getDate()}</span>
+      <span class="dmes">${MESES[d.getMonth()]}</span>
+    </button>`;
+  }).join('');
+  const horasHtml=slots(c,diaSel).map(s=>{
+    const sel=S.hora===s.label;
+    return `<button class="hora ${sel?'sel':''}" ${s.taken?'disabled':''} onclick="setHora('${s.label}')">${s.label}</button>`;
+  }).join('');
+  const back = S.tipo==='orden' ? "go('orden')" : "go('servicio')";
+  return `${pasos(3)}
+    <button class="volver" onclick="${back}">← Volver</button>
+    <h1>Elegí día y horario</h1>
+    <p class="sub"><b>${S.servicio}</b> · ${c.nombre}</p>
+    <div class="fh-wrap">
+      <div>
+        <h2 style="font-size:1.05rem">Día</h2>
+        <div class="dias">${diasHtml}</div>
+      </div>
+      <div>
+        <h2 style="font-size:1.05rem">Horario disponible</h2>
+        <div class="horas">${horasHtml}</div>
+        <p style="color:var(--gris);font-size:.84rem;margin-top:12px">Los horarios tachados ya están ocupados.</p>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="btn btn-primary" id="btn-fh" ${S.hora?'':'disabled style=opacity:.5;cursor:not-allowed'} onclick="${S.hora?"go('datos')":''}">Continuar →</button>
+    </div>`;
+}
+function setDia(iso){ S.dia=iso; S.hora=null; render(); }
+function setHora(h){ S.hora=h; render(); }
+
+function vDatos(){
+  const c=centro();
+  const d=new Date(S.dia);
+  return `${pasos(4)}
+    <button class="volver" onclick="go('fechahora')">← Volver</button>
+    <h1>Completá tus datos</h1>
+    <p class="sub">Necesitamos estos datos para registrar y confirmarte el turno.</p>
+    <div class="fh-wrap">
+      <div class="panel">
+        <div class="form-grid">
+          <div class="campo full"><label>Nombre y apellido <span class="req">*</span></label><input type="text" placeholder="Ej: María González"></div>
+          <div class="campo"><label>DNI <span class="req">*</span></label><input type="text" inputmode="numeric" placeholder="Sin puntos"></div>
+          <div class="campo"><label>Fecha de nacimiento</label><input type="date"></div>
+          <div class="campo"><label>Teléfono <span class="req">*</span></label><input type="tel" inputmode="tel" placeholder="Ej: 11 5555 5555"></div>
+          <div class="campo"><label>Email</label><input type="email" placeholder="Para recibir la confirmación"></div>
+        </div>
+        <div class="acciones">
+          <button class="btn btn-primary btn-lg" onclick="go('confirmacion')">Confirmar turno</button>
+        </div>
+      </div>
+      <div>
+        <div class="resumen">
+          <h3>Resumen del turno</h3>
+          <div class="fila"><span class="k">Centro</span><span class="v">${c.nombre}</span></div>
+          <div class="fila"><span class="k">Dirección</span><span class="v">${c.dir}</span></div>
+          <div class="fila"><span class="k">Atención</span><span class="v">${S.servicio}</span></div>
+          <div class="fila"><span class="k">Día</span><span class="v">${DIAS[d.getDay()]} ${d.getDate()} de ${['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][d.getMonth()]}</span></div>
+          <div class="fila"><span class="k">Hora</span><span class="v">${S.hora} h</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function vConfirmacion(){
+  const c=centro();
+  const d=new Date(S.dia);
+  const code='SF-'+(seed(S.centro+S.servicio+S.dia+S.hora)%90000+10000);
+  const record = S.tipo==='orden'
+    ? `<div class="recordatorio"><span class="rlabel">📄 No te olvides de traer:</span>Tu <strong>DNI</strong> y la <strong>orden de tu médico de cabecera</strong>. Sin la orden no se podrá realizar la atención.</div>`
+    : `<div class="recordatorio"><span class="rlabel">📄 No te olvides de traer:</span>Tu <strong>DNI</strong>. Te esperamos unos minutos antes del horario del turno.</div>`;
+  return `${pasos(5)}
+    <div class="panel center-text">
+      <div class="conf-icon" aria-hidden="true">✓</div>
+      <h1>¡Tu turno está confirmado!</h1>
+      <p class="sub" style="margin-bottom:6px">Guardá tu código de turno:</p>
+      <div class="conf-code">${code}</div>
+      <div class="resumen" style="text-align:left;max-width:440px;margin:22px auto 0">
+        <h3>Detalle</h3>
+        <div class="fila"><span class="k">Centro</span><span class="v">${c.nombre}</span></div>
+        <div class="fila"><span class="k">Dirección</span><span class="v">${c.dir}</span></div>
+        <div class="fila"><span class="k">Atención</span><span class="v">${S.servicio}</span></div>
+        <div class="fila"><span class="k">Día y hora</span><span class="v">${DIAS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1} · ${S.hora} h</span></div>
+      </div>
+      <div style="max-width:440px;margin:0 auto">${record}</div>
+      <p class="sub" style="font-size:.9rem">Si no vas a poder asistir, cancelá tu turno para que otro vecino pueda usarlo.</p>
+      <div class="acciones" style="justify-content:center">
+        <button class="btn btn-primary" onclick="reset()">Sacar otro turno</button>
+      </div>
+    </div>`;
+}
+function reset(){ S={step:'home',centro:null,servicio:null,tipo:null,orden:null,dia:null,hora:null}; go('home'); }
+
+/* ---------- Router ---------- */
+function render(){
+  const map={home:vHome,centro:vCentro,servicio:vServicio,orden:vOrden,sinorden:vSinOrden,fechahora:vFechaHora,datos:vDatos,confirmacion:vConfirmacion};
+  app.innerHTML=(map[S.step]||vHome)();
+}
+render();
+</script>
+</body>
+</html>

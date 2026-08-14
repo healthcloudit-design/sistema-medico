@@ -1,8 +1,24 @@
 {
   "rewrites": [
-    { "source": "/agenda/assets/:path*", "destination": "/assets/:path*" },
-    { "source": "/agenda/favicon.png", "destination": "/favicon.png" },
-    { "source": "/agenda/praxis_logo.png", "destination": "/praxis_logo.png" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/agenda/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/agenda/favicon.png",
+      "destination": "/favicon.png"
+    },
+    {
+      "source": "/agenda/praxis_logo.png",
+      "destination": "/praxis_logo.png"
+    },
+    {
+      "source": "/agenda/msf_logo.png",
+      "destination": "/msf_logo.png"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

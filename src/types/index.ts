@@ -18,6 +18,8 @@ export interface Service {
   requiere_atencion_completa: boolean
   /** Override opcional del último horario de inicio ofrecido, por día de semana (0=domingo..6=sábado), ej: {"6":"15:00"}. Si un día no está presente, se usa el horario normal del profesional. */
   last_start_overrides?: Record<string, string> | null
+  /** Si true, el flujo público multi-centro (salud pública) pide la orden del médico de cabecera antes de reservar este servicio. */
+  requiere_orden?: boolean
   created_at: string
 }
 

@@ -10,6 +10,7 @@ import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
 import { PremiumBookingFlow } from './PremiumBookingFlow'
+import { MunicipalBookingFlow } from './MunicipalBookingFlow'
 
 const STEPS_MEDICAL = [
   { label: 'Servicio',     icon: Stethoscope },
@@ -122,6 +123,10 @@ export function BookingFlow() {
   const instagramHandle  = org.instagram_handle ?? null
   const orgAddress       = org.address ?? null
   const STEPS            = getSteps(tenantType)
+
+  // Salud pública multi-centro (municipios, obras sociales): flujo con selección de
+  // centro + gate de orden médica por servicio.
+  if (tenantType === 'general') return <MunicipalBookingFlow org={org} />
 
   // Beauty, estética, petshop, veterinary y cancha usan la experiencia premium
   if (tenantType === 'beauty' || tenantType === 'estetica' || tenantType === 'medical'

@@ -34,8 +34,13 @@ export function DateTimeSelector({
   const [localTime, setLocalTime] = useState(selectedTime)
   const timeRef    = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
-  const scrollTo = (el: HTMLElement | null, block: ScrollLogicalPosition = 'start') =>
-    setTimeout(() => el?.scrollIntoView({ behavior: 'smooth', block }), 60)
+  // Lee el ref DENTRO del timeout: al hacer click el panel destino todavía no está
+  // montado, así que capturar ref.current en el momento del click daría null.
+  const scrollToRef = (ref: { readonly current: HTMLElement | null }, block: ScrollLogicalPosition = 'start') => {
+    const go = () => ref.current?.scrollIntoView({ behavior: 'smooth', block })
+    setTimeout(go, 90)
+    setTimeout(go, 260)
+  }
 
   const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes, undefined, serviceId)
 
@@ -199,7 +204,7 @@ export function DateTimeSelector({
             const isToday     = isSameDay(day, new Date())
             return (
               <button key={dateStr}
-                onClick={() => { if (isAvailable && !isPast) { setLocalDate(dateStr); setLocalTime(undefined); scrollTo(timeRef.current, 'start') } }}
+                onClick={() => { if (isAvailable && !isPast) { setLocalDate(dateStr); setLocalTime(undefined); scrollToRef(timeRef, 'start') } }}
                 disabled={!isAvailable || isPast}
                 className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
                 style={isSelected
@@ -241,7 +246,7 @@ export function DateTimeSelector({
                 const seleccionable = slot.disponible || slot.enListaDeEspera
                 const esEspera = slot.enListaDeEspera && !slot.disponible
                 return (
-                <button key={slot.hora} onClick={() => { if (seleccionable) { setLocalTime(slot.hora); scrollTo(confirmRef.current, 'center') } }} disabled={!seleccionable}
+                <button key={slot.hora} onClick={() => { if (seleccionable) { setLocalTime(slot.hora); scrollToRef(confirmRef, 'center') } }} disabled={!seleccionable}
                   className="py-2 rounded-xl text-sm font-medium transition-all flex flex-col items-center gap-0.5"
                   style={!seleccionable
                     ? { backgroundColor:'#f9fafb', color:'#d1d5db', textDecoration:'line-through', cursor:'not-allowed' }

@@ -387,6 +387,10 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const isAlco            = org.slug === 'alco-rehabilitacion'
   const isPremiumHero     = isClinicaDelEste || isAlco
 
+  // Flujo por especialidad (especialidad → profesional → fecha/hora → confirmar).
+  // Scopeado a Bicentenario; el resto de los tenants sigue con el flujo por servicio.
+  const specialtyFirst    = org.slug === 'bicentenario'
+
   const [state, setState]           = useState<BookingState>(INIT)
   const [completed, setCompleted]   = useState(false)
   const [services, setServices]     = useState<Service[]>([])
@@ -395,6 +399,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const [hovCat, setHovCat]         = useState<string | null>(null)
   const [hovSvc, setHovSvc]         = useState<string | null>(null)
   const [hovCta, setHovCta]         = useState(false)
+  const [pros, setPros]             = useState<Professional[]>([])
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null)
+  const [hovPro, setHovPro]         = useState<string | null>(null)
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const instagramHandle = org.instagram_handle?.replace(/^@/, '') ?? null
@@ -438,6 +445,56 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
     () => selectedCat ? services.filter(s => s.category === selectedCat) : services,
     [services, selectedCat],
   )
+
+  // ── Flujo por especialidad (Bicentenario) ────────────────────────────────────
+  const stepLabels = specialtyFirst
+    ? ['Especialidad', 'Profesional', 'Fecha y hora', 'Confirmar']
+    : STEPS
+
+  useEffect(() => {
+    if (!specialtyFirst) return
+    supabase.from('professionals')
+      .select('id, organization_id, full_name, specialty, bio, avatar_url, active')
+      .eq('organization_id', org.id).eq('active', true).order('full_name')
+      .then(({ data }) => setPros((data ?? []) as Professional[]))
+  }, [org.id, specialtyFirst])
+
+  // Una especialidad "combinada" (ej: "Cardiología / Clínica Médica") ubica al
+  // profesional en cada especialidad, siempre con el mismo calendario.
+  const splitSpecialties = (s?: string | null) =>
+    (s ?? '').split(' / ').map(x => x.trim()).filter(Boolean)
+
+  const specialties = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const p of pros) {
+      const parts = splitSpecialties(p.specialty)
+      for (const part of (parts.length ? parts : ['Otras'])) m.set(part, (m.get(part) ?? 0) + 1)
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es'))
+  }, [pros])
+
+  const prosInSpecialty = useMemo(
+    () => selectedSpecialty
+      ? pros.filter(p => splitSpecialties(p.specialty).includes(selectedSpecialty))
+      : [],
+    [pros, selectedSpecialty],
+  )
+
+  const handleSpecialtySelect = (spec: string) => {
+    setSelectedSpecialty(spec)
+    setState(prev => ({ ...prev, professional: undefined, service: undefined, fecha: undefined, hora: undefined, step: 2 }))
+    scrollToBooking()
+  }
+
+  const handleProSelectSpecialty = async (pro: Professional) => {
+    const { data } = await supabase
+      .from('professional_services')
+      .select('services(*)')
+      .eq('professional_id', pro.id)
+    const svc = (data ?? []).map((r: any) => r.services).find((s: any) => s?.active) as Service | undefined
+    setState(prev => ({ ...prev, professional: pro, service: svc, fecha: undefined, hora: undefined, ...(svc ? { step: 3 } : {}) }))
+    scrollToBooking()
+  }
 
   // ── Completed ──────────────────────────────────────────────────────────────
   if (completed) return (
@@ -654,17 +711,17 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
       <div ref={bookingRef} style={{ backgroundColor: TH_BAR, borderBottom: `1px solid ${TH_BARBD}`, position: 'sticky', top: 0, zIndex: 30 }}>
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            {STEPS.map((label, i) => {
+            {stepLabels.map((label, i) => {
               const n = i + 1; const isActive = state.step === n; const isDone = state.step > n
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < STEPS.length - 1 ? 1 : 'none' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flex: i < stepLabels.length - 1 ? 1 : 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                     <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SANS, fontSize: '11px', fontWeight: 600, backgroundColor: isDone ? gold : 'transparent', border: isDone ? 'none' : isActive ? `1.5px solid ${gold}` : `1px solid ${TH_BD}`, color: isDone ? DARK : isActive ? gold : TH_T3 }}>
                       {isDone ? '✓' : n}
                     </div>
                     <span style={{ fontFamily: SANS, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: isActive ? gold : TH_T3, whiteSpace: 'nowrap' }}>{label}</span>
                   </div>
-                  {i < STEPS.length - 1 && <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? gold : TH_BD }} />}
+                  {i < stepLabels.length - 1 && <div style={{ flex: 1, height: '1px', margin: '0 6px 18px', backgroundColor: isDone ? gold : TH_BD }} />}
                 </div>
               )
             })}
@@ -675,8 +732,36 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
       {/* ─── CONTENT ─── */}
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 20px 80px' }}>
 
+        {/* STEP 1 — Especialidad (Bicentenario) */}
+        {state.step === 1 && specialtyFirst && (
+          <div>
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 1</div>
+              <h2 style={{ fontFamily: SERIF, fontSize: '28px', fontStyle: 'italic', fontWeight: 400, color: TH_T1, margin: 0 }}>¿Qué especialidad buscás?</h2>
+            </div>
+            {pros.length === 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {[1,2,3,4,5,6].map(i => <div key={i} style={{ height: '64px', backgroundColor: TH_CARD, borderRadius: '14px', border: `1px solid ${TH_BD}` }} />)}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {specialties.map(([spec, count]) => {
+                  const isHov = hovCat === spec
+                  return (
+                    <button key={spec} onClick={() => handleSpecialtySelect(spec)} onMouseEnter={() => setHovCat(spec)} onMouseLeave={() => setHovCat(null)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', borderRadius: '14px', border: isHov ? `1px solid ${gold}` : `1px solid ${TH_BD}`, backgroundColor: isHov ? TH_CARD2 : TH_CARD, cursor: 'pointer', padding: '16px 18px', textAlign: 'left', transition: 'all 0.18s', boxShadow: isHov ? '0 4px 20px rgba(27,108,168,0.10)' : '0 1px 4px rgba(15,23,42,0.05)' }}>
+                      <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: '14px', color: TH_T1 }}>{spec}</span>
+                      <span style={{ fontFamily: SANS, fontSize: '11px', color: isHov ? gold : TH_T3 }}>{count} {count === 1 ? 'profesional' : 'profesionales'} →</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* STEP 1 — Services */}
-        {state.step === 1 && (
+        {state.step === 1 && !specialtyFirst && (
           <div>
             <div style={{ marginBottom: '28px' }}>
               <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 1</div>
@@ -756,8 +841,41 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
           </div>
         )}
 
+        {/* STEP 2 — Profesional por especialidad (Bicentenario) */}
+        {state.step === 2 && specialtyFirst && (
+          <div>
+            <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 2</div>
+            <div style={{ marginBottom: '18px' }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: '28px', fontStyle: 'italic', fontWeight: 400, color: TH_T1, margin: '0 0 4px' }}>Elegí profesional</h2>
+              <span style={{ fontFamily: SANS, fontSize: '13px', color: TH_T3 }}>{selectedSpecialty}</span>
+            </div>
+            <button onClick={() => update({ step: 1 })}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: SANS, fontSize: '12px', color: gold, background: 'none', border: `1px solid ${bord(gold)}`, borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', marginBottom: '20px' }}>
+              <ChevronLeft size={14} /> Especialidades
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {prosInSpecialty.map(pro => {
+                const isHov = hovPro === pro.id
+                return (
+                  <button key={pro.id} onClick={() => handleProSelectSpecialty(pro)} onMouseEnter={() => setHovPro(pro.id)} onMouseLeave={() => setHovPro(null)}
+                    style={{ display: 'flex', alignItems: 'center', borderRadius: '14px', border: isHov ? `1px solid ${gold}` : `1px solid ${TH_BD}`, backgroundColor: isHov ? TH_CARD2 : TH_CARD, cursor: 'pointer', padding: '16px 18px', textAlign: 'left', transition: 'all 0.18s', gap: '14px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: fade(gold), border: `1px solid ${bord(gold)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: SERIF, fontStyle: 'italic', color: gold, fontSize: '16px' }}>
+                      {pro.full_name.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: SANS, fontWeight: 500, fontSize: '14px', color: TH_T1 }}>{pro.full_name}</div>
+                      {pro.specialty && <div style={{ fontFamily: SANS, fontSize: '12px', color: TH_T3, marginTop: '2px' }}>{pro.specialty}</div>}
+                    </div>
+                    <ChevronRight size={16} style={{ color: isHov ? gold : TH_T3, flexShrink: 0 }} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* STEP 2 */}
-        {state.step === 2 && state.service && (
+        {state.step === 2 && !specialtyFirst && state.service && (
           <div>
             <div style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.28em', textTransform: 'uppercase', color: gold, marginBottom: '8px' }}>Paso 2</div>
             <ProfessionalSelector service={state.service} selected={state.professional} onSelect={p => update({ professional: p, fecha: undefined, hora: undefined })} onConfirm={() => update({ step: 3 })} onBack={() => update({ step: 1 })} accentColor={gold} tenantType={org.tenant_type ?? 'beauty'} darkMode={!isLight} />

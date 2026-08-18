@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { format, addDays, startOfWeek, isBefore, startOfDay, parseISO, isSameDay, subWeeks, addWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -32,6 +32,10 @@ export function DateTimeSelector({
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [localDate, setLocalDate] = useState(selectedDate)
   const [localTime, setLocalTime] = useState(selectedTime)
+  const timeRef    = useRef<HTMLDivElement>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const scrollTo = (el: HTMLElement | null, block: ScrollLogicalPosition = 'start') =>
+    setTimeout(() => el?.scrollIntoView({ behavior: 'smooth', block }), 60)
 
   const { slots, loading, availableDates } = useAvailability(professional.id, localDate, serviceDurationMinutes, undefined, serviceId)
 
@@ -195,7 +199,7 @@ export function DateTimeSelector({
             const isToday     = isSameDay(day, new Date())
             return (
               <button key={dateStr}
-                onClick={() => { if (isAvailable && !isPast) { setLocalDate(dateStr); setLocalTime(undefined) } }}
+                onClick={() => { if (isAvailable && !isPast) { setLocalDate(dateStr); setLocalTime(undefined); scrollTo(timeRef.current, 'start') } }}
                 disabled={!isAvailable || isPast}
                 className="flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
                 style={isSelected
@@ -220,7 +224,7 @@ export function DateTimeSelector({
 
       {/* Time slots */}
       {localDate && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div ref={timeRef} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
           <h3 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
             <Clock className="w-4 h-4" style={{ color:accent }}/>
             Horarios — {format(parseISO(localDate),"d 'de' MMMM",{locale:es})}
@@ -237,7 +241,7 @@ export function DateTimeSelector({
                 const seleccionable = slot.disponible || slot.enListaDeEspera
                 const esEspera = slot.enListaDeEspera && !slot.disponible
                 return (
-                <button key={slot.hora} onClick={() => seleccionable && setLocalTime(slot.hora)} disabled={!seleccionable}
+                <button key={slot.hora} onClick={() => { if (seleccionable) { setLocalTime(slot.hora); scrollTo(confirmRef.current, 'center') } }} disabled={!seleccionable}
                   className="py-2 rounded-xl text-sm font-medium transition-all flex flex-col items-center gap-0.5"
                   style={!seleccionable
                     ? { backgroundColor:'#f9fafb', color:'#d1d5db', textDecoration:'line-through', cursor:'not-allowed' }
@@ -258,7 +262,7 @@ export function DateTimeSelector({
       )}
 
       {localDate && localTime && (
-        <button onClick={() => onSelect(localDate,localTime)}
+        <button ref={confirmRef} onClick={() => onSelect(localDate,localTime)}
           className="w-full text-white py-3.5 rounded-2xl font-semibold transition-colors shadow-sm"
           style={{ backgroundColor:accent }}>
           Continuar — {format(parseISO(localDate),"d/MM",{locale:es})} a las {localTime}hs

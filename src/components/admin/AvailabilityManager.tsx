@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import type { Professional, AvailabilityBlock } from '../../types'
 import { Button } from '../ui/Button'
 import { WeeklyScheduleEditor } from './WeeklyScheduleEditor'
+import { AperturasManager } from '../shared/AperturasManager'
 
 function toArgTime(iso: string): string {
   const ms = new Date(iso).getTime() - 3 * 60 * 60 * 1000
@@ -172,6 +173,12 @@ export function AvailabilityManager() {
           </Button>
         </div>
       </div>
+
+      {selectedId && (
+        <div className="mt-5">
+          <AperturasManager professionalId={selectedId} />
+        </div>
+      )}
     </div>
   )
 }

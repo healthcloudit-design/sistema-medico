@@ -88,6 +88,17 @@ export interface AvailabilityBlock {
   created_at: string
 }
 
+/** Apertura puntual: habilita una franja horaria en una fecha específica para un profesional. */
+export interface AvailabilityOpening {
+  id: string
+  professional_id: string
+  opening_date: string
+  start_time: string
+  end_time: string
+  reason?: string | null
+  created_at: string
+}
+
 export interface Patient {
   id: string
   organization_id: string

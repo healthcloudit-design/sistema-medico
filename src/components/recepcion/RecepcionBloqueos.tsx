@@ -4,6 +4,7 @@ import { format, parseISO, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import type { AvailabilityBlock } from '../../types'
+import { AperturasManager } from '../shared/AperturasManager'
 
 interface Professional { id: string; full_name: string; specialty?: string }
 
@@ -224,6 +225,12 @@ export function RecepcionBloqueos({ organizationId }: Props) {
           <p className="text-sm text-gray-400">No hay bloqueos próximos para este profesional</p>
         </div>
       ) : null}
+
+      {selectedProId && (
+        <div className="pt-1">
+          <AperturasManager professionalId={selectedProId} />
+        </div>
+      )}
     </div>
   )
 }

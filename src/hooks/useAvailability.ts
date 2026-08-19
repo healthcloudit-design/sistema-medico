@@ -36,7 +36,7 @@ export function useAvailability(
         const dayStart = `${selectedDate}T00:00:00-03:00`
         const dayEnd   = `${selectedDate}T23:59:59-03:00`
 
-        const [scheduleRes, blockRes, apptRes, serviceRes, professionalRes] = await Promise.all([
+        const [scheduleRes, blockRes, apptRes, serviceRes, professionalRes, openingsRes, allSchedRes] = await Promise.all([
           supabase
             .from('schedules')
             .select('*')
@@ -63,6 +63,10 @@ export function useAvailability(
             ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa, last_start_overrides').eq('id', serviceId).single()
             : Promise.resolve({ data: null, error: null }),
           supabase.from('professionals').select('concurrent_capacity').eq('id', professionalId).single(),
+          // Aperturas puntuales (habilitar dias/horarios) para ESTA fecha
+          supabase.from('availability_openings').select('start_time, end_time').eq('professional_id', professionalId).eq('opening_date', selectedDate),
+          // Todos los intervalos del profesional, para derivar el intervalo de las aperturas
+          supabase.from('schedules').select('interval_minutes').eq('professional_id', professionalId).eq('active', true),
         ])
 
         if (scheduleRes.error) throw scheduleRes.error
@@ -228,6 +232,49 @@ export function useAvailability(
           }
         }
 
+        // ── Aperturas puntuales ────────────────────────────────────────────────
+        // Habilitan slots en ESTA fecha (aunque el profesional no tenga horario semanal ese día,
+        // o además del que tenga). El intervalo se toma del horario habitual del profesional.
+        const openings = (openingsRes?.data ?? []) as { start_time: string; end_time: string }[]
+        if (openings.length > 0) {
+          const intervals = ((allSchedRes?.data ?? []) as { interval_minutes: number }[])
+            .map(s => s.interval_minutes).filter(n => typeof n === 'number' && n > 0)
+          const openingInterval = Math.max(intervals.length ? Math.min(...intervals) : (serviceDurationMinutes || 30), 5)
+          const parseHM = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0) }
+          for (const op of openings) {
+            const opStart = parseHM(op.start_time)
+            const opEnd   = parseHM(op.end_time)
+            for (let m = opStart; m < opEnd; m += openingInterval) {
+              const hh = Math.floor(m / 60).toString().padStart(2, '0')
+              const mm = (m % 60).toString().padStart(2, '0')
+              const hora = `${hh}:${mm}`
+              if (slotMap.has(hora)) continue
+              const slotDt  = new Date(`${selectedDate}T${hora}:00-03:00`)
+              const isPast  = isBefore(slotDt, now)
+              const isTaken = isMultiCapacityProfessional
+                ? wouldExceedCapacity(allActiveRanges, m, professionalCapacity)
+                  || (candidateRequiereAtencion && wouldExceedCapacity(attentionRanges, m, 1))
+                : isSlotConflict(m)
+              const isBlocked = isBlockedByRange(hora)
+              if (isGroupService) {
+                const activosAhora   = activeAt(sameServiceActiveRanges, m)
+                const excedeCupo     = wouldExceedCapacity(sameServiceActiveRanges, m, capacity)
+                const enEspera       = activeAt(sameServiceWaitlistRanges, m)
+                const hayCupo        = !excedeCupo && !isTaken
+                const hayListaEspera = !hayCupo && enEspera < waitlistLimit
+                slotMap.set(hora, {
+                  hora,
+                  disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
+                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activosAhora, 0) : undefined,
+                  enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
+                })
+              } else {
+                slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
+              }
+            }
+          }
+        }
+
         setSlots(Array.from(slotMap.values()).sort((a, b) => a.hora.localeCompare(b.hora)))
       } finally {
         setLoading(false)
@@ -244,7 +291,7 @@ export function useAvailability(
     }
 
     const loadDates = async () => {
-      const [schedRes, blockRes] = await Promise.all([
+      const [schedRes, blockRes, openRes] = await Promise.all([
         supabase
           .from('schedules')
           .select('day_of_week')
@@ -255,6 +302,10 @@ export function useAvailability(
           .select('blocked_date')
           .eq('professional_id', professionalId)
           .not('blocked_date', 'is', null),
+        supabase
+          .from('availability_openings')
+          .select('opening_date')
+          .eq('professional_id', professionalId),
       ])
 
       if (schedRes.error || blockRes.error) return
@@ -265,6 +316,9 @@ export function useAvailability(
       const blockedDates = new Set(
         (blockRes.data ?? []).map((b: { blocked_date: string }) => b.blocked_date),
       )
+      const openingDates = new Set(
+        (openRes?.data ?? []).map((o: { opening_date: string }) => o.opening_date),
+      )
 
       const dates = new Set<string>()
       const today = startOfDay(new Date())
@@ -274,7 +328,7 @@ export function useAvailability(
       const cursor = new Date(today)
       while (cursor <= limit) {
         const dateStr = format(cursor, 'yyyy-MM-dd')
-        if (availDays.has(cursor.getDay()) && !blockedDates.has(dateStr)) {
+        if ((availDays.has(cursor.getDay()) || openingDates.has(dateStr)) && !blockedDates.has(dateStr)) {
           dates.add(dateStr)
         }
         cursor.setDate(cursor.getDate() + 1)

@@ -14,6 +14,7 @@ import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { RescheduleModal } from '../components/shared/RescheduleModal'
 import { RecepcionBloqueos } from '../components/recepcion/RecepcionBloqueos'
 import { NuevoTurno } from '../components/shared/NuevoTurno'
+import { CargarTurnoPasado } from '../components/recepcion/CargarTurnoPasado'
 import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
 import type { User } from '@supabase/supabase-js'
 import type { Appointment, AppointmentStatus } from '../types'
@@ -79,7 +80,7 @@ export function RecepcionPage() {
   const [appointments, setAppts]  = useState<Appointment[]>([])
   const [allAppts, setAllAppts]   = useState<Appointment[]>([])
   const [loading, setLoading]     = useState(true)
-  const [tab, setTab]             = useState<'turnos'|'pacientes'|'bloqueos'|'nuevo'>('turnos')
+  const [tab, setTab]             = useState<'turnos'|'pacientes'|'bloqueos'|'nuevo'|'pasado'>('turnos')
   const [search, setSearch]       = useState('')
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().slice(0,10))
   const [selected, setSelected]   = useState<Appointment | null>(null)
@@ -199,6 +200,7 @@ export function RecepcionPage() {
     { id:'pacientes', icon:Users,     label:'Pacientes' },
     { id:'bloqueos',  icon:CalendarX, label:'Bloqueos'  },
     { id:'nuevo',     icon:UserPlus,  label:'Nuevo'     },
+    { id:'pasado',    icon:CalendarClock, label:'Pasado' },
   ] as const
 
   return (
@@ -341,6 +343,9 @@ export function RecepcionPage() {
             organizationId={(profile as any)?.organization_id ?? ''}
             initialPatient={prefillPatient}
           />
+        )}
+        {tab === 'pasado' && (
+          <CargarTurnoPasado organizationId={(profile as any)?.organization_id ?? ''} />
         )}
       </main>
 

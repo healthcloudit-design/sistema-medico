@@ -572,8 +572,8 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             <img src={logoUrl} alt={org.name} style={{ width: '100px', height: '100px', objectFit: 'contain', backgroundColor: '#fff', borderRadius: '22px', padding: '3px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', marginBottom: '28px' }} />
           )}
 
-          {/* Eyebrow / categoría */}
-          <div style={{
+          {/* Eyebrow / categoría (oculto en Bicentenario) */}
+          {!specialtyFirst && <div style={{
             fontFamily: SANS,
             fontSize: isPremiumHero ? '11px' : '10px',
             fontWeight: isPremiumHero ? 500 : 400,
@@ -587,7 +587,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
               borderRadius: '100px',
               padding: '7px 22px',
             } : {}),
-          }}>{ctx.eyebrow}</div>
+          }}>{ctx.eyebrow}</div>}
 
           {/* Título principal */}
           <h1 style={{
@@ -611,8 +611,9 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             fontWeight: isPremiumHero ? 400 : 300,
             color: isPremiumHero ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.58)',
             marginBottom: isPremiumHero ? '52px' : '44px',
-            maxWidth: isPremiumHero ? '380px' : '320px',
+            maxWidth: isPremiumHero ? '380px' : '340px',
             lineHeight: 1.65,
+            whiteSpace: 'pre-line',
             ...(isPremiumHero ? {
               textShadow: '0 1px 10px rgba(0,0,0,0.45)',
             } : {}),

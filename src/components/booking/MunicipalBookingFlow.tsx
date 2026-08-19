@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import { alpha } from '../../lib/color'
+import { getMunicipalTheme, type MunicipalTheme } from '../../lib/municipalTheme'
 import { useAvailability } from '../../hooks/useAvailability'
 import type { Organization, Professional, Service } from '../../types'
 
@@ -26,11 +27,9 @@ const DIA3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
 const MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 
-// ── Identidad institucional San Fernando: verde + acento magenta ──────────────
-const ACCENT = '#3F7D1E'     // verde acción (alto contraste, WCAG AA)
-const ACCENT_INK = '#2f6417' // verde oscuro
-const VERDE = '#8CC63F'      // verde institucional (identidad)
-const MAG = '#A31860', MAG_BG = '#FCE4EF', MAG_TXT = '#A31860' // acento magenta
+// ── Neutrales compartidos (iguales para todos los tenants) ────────────────────
+// La paleta institucional (acento, secundario, etc.) y los textos por municipio
+// se resuelven por tenant en getMunicipalTheme(org) => ver src/lib/municipalTheme.ts.
 const INK = '#161616', MUTED = '#5b6470', SOFT = '#F4F6F8', BORDER = '#e5e7eb'
 
 const STEP_NUM: Record<Step, number> = { home: 0, centro: 1, servicio: 2, orden: 2, sinorden: 2, fechahora: 3, datos: 4, ok: 5 }
@@ -38,23 +37,23 @@ const STEPS = ['Centro', 'Atención', 'Fecha y hora', 'Tus datos', 'Confirmació
 
 // ── Subcomponentes a NIVEL DE MÓDULO (identidad estable => los inputs no se
 //    re-montan en cada tecla y no pierden el foco) ────────────────────────────
-function Shell({ org, logoUrl, phone, step, children }: {
-  org: Organization; logoUrl: string; phone: string; step: Step; children: React.ReactNode
+function Shell({ org, theme, logoUrl, phone, step, children }: {
+  org: Organization; theme: MunicipalTheme; logoUrl: string; phone: string; step: Step; children: React.ReactNode
 }) {
   const cur = STEP_NUM[step]
   return (
     <div className="min-h-screen" style={{ backgroundColor: SOFT, fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <header className="bg-white" style={{ borderBottom: `4px solid ${ACCENT}` }}>
+      <header className="bg-white" style={{ borderBottom: `4px solid ${theme.accent}` }}>
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <img src={logoUrl} alt={org.name} className="h-11 w-auto" />
           <div className="leading-tight">
             <div className="font-extrabold text-[17px]" style={{ color: INK }}>{org.name}</div>
-            <div className="text-xs" style={{ color: MUTED }}>Municipio de San Fernando · Secretaría de Salud Pública</div>
+            <div className="text-xs" style={{ color: MUTED }}>{theme.subtitle}</div>
           </div>
           <div className="ml-auto text-right hidden sm:block">
             <div className="text-[11px]" style={{ color: MUTED }}>Línea de turnos</div>
             <div className="text-sm font-bold" style={{ color: INK }}>{phone}</div>
-            <div className="text-[11px]" style={{ color: MUTED }}>Lun a Vie, 7 a 19 h</div>
+            <div className="text-[11px]" style={{ color: MUTED }}>{theme.hoursLabel}</div>
           </div>
         </div>
       </header>
@@ -65,9 +64,9 @@ function Shell({ org, logoUrl, phone, step, children }: {
               const n = i + 1, done = n < cur, active = n === cur
               return (
                 <div key={label} className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px]"
-                  style={{ backgroundColor: active ? alpha(ACCENT, 0.1) : '#fff', border: `1px solid ${active ? ACCENT : BORDER}`, color: active ? INK : '#8a929c', fontWeight: active ? 600 : 400 }}>
+                  style={{ backgroundColor: active ? alpha(theme.accent, 0.1) : '#fff', border: `1px solid ${active ? theme.accent : BORDER}`, color: active ? INK : '#8a929c', fontWeight: active ? 600 : 400 }}>
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
-                    style={{ backgroundColor: done ? '#2E7D32' : active ? ACCENT : '#c7ccd2' }}>{done ? '✓' : n}</span>
+                    style={{ backgroundColor: done ? theme.success : active ? theme.accent : '#c7ccd2' }}>{done ? '✓' : n}</span>
                   <span className="hidden sm:inline">{label}</span>
                 </div>
               )
@@ -77,24 +76,26 @@ function Shell({ org, logoUrl, phone, step, children }: {
       )}
       <div className="max-w-3xl mx-auto px-4 py-6">{children}</div>
       <div className="max-w-3xl mx-auto px-4 pb-8 text-xs" style={{ color: '#8a929c' }}>
-        Atención gratuita en los Centros de Salud Municipales. Ante una urgencia, llamá al <b>107</b> (Emergencias San Fernando, 24 h).
+        Atención gratuita en los Centros de Salud Municipales. Ante una urgencia, llamá al <b>{theme.emergency.phone}</b> ({theme.emergency.label}, {theme.emergency.hours}).
       </div>
     </div>
   )
 }
 
-function Back({ to, label = 'Volver', goto }: { to: Step; label?: string; goto: (s: Step) => void }) {
+function Back({ to, label = 'Volver', goto, accent }: { to: Step; label?: string; goto: (s: Step) => void; accent: string }) {
   return (
     <button onClick={() => goto(to)} className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl mb-3"
-      style={{ color: ACCENT, backgroundColor: alpha(ACCENT, 0.08) }}><ChevronLeft className="w-4 h-4" />{label}</button>
+      style={{ color: accent, backgroundColor: alpha(accent, 0.08) }}><ChevronLeft className="w-4 h-4" />{label}</button>
   )
 }
 const H1 = ({ children }: { children: React.ReactNode }) => <h1 className="text-2xl font-extrabold mb-1" style={{ color: INK }}>{children}</h1>
 const Sub = ({ children }: { children: React.ReactNode }) => <p className="text-[15px] mb-4" style={{ color: MUTED }}>{children}</p>
 
 export function MunicipalBookingFlow({ org }: { org: Organization }) {
-  const logoUrl = org.logo_url ?? `${import.meta.env.BASE_URL}msf_logo.png`
-  const phone = org.phone ?? '0800 888 5566'
+  const theme = getMunicipalTheme(org)
+  const { accent: ACCENT, accentInk: ACCENT_INK, brand: VERDE, secondary: MAG, secondaryBg: MAG_BG, secondaryTxt: MAG_TXT } = theme
+  const logoUrl = org.logo_url ?? `${import.meta.env.BASE_URL}${theme.logoFallback}`
+  const phone = org.phone ?? theme.phoneFallback
 
   const [step, setStep] = useState<Step>('home')
   const [centros, setCentros] = useState<Centro[]>([])
@@ -198,17 +199,17 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     setForm({ nombre: '', dni: '', fnac: '', telefono: '', email: '' }); setTurnoId(''); setError('')
   }
 
-  const turnoCode = turnoId ? 'SF-' + (parseInt(turnoId.replace(/-/g, '').slice(0, 8), 16) % 90000 + 10000) : ''
+  const turnoCode = turnoId ? theme.turnoPrefix + '-' + (parseInt(turnoId.replace(/-/g, '').slice(0, 8), 16) % 90000 + 10000) : ''
 
-  const shellProps = { org, logoUrl, phone, step }
+  const shellProps = { org, theme, logoUrl, phone, step }
 
   // ── HOME ─────────────────────────────────────────────────────────
   if (step === 'home') return (
     <Shell {...shellProps}>
       <div className="bg-white rounded-2xl overflow-hidden border" style={{ borderColor: BORDER, boxShadow: '0 4px 20px rgba(47,100,23,.10)' }}>
-        <div className="px-8 py-10 text-white" style={{ background: `linear-gradient(120deg, #4d7c0f 0%, ${ACCENT} 55%, ${VERDE} 100%)` }}>
+        <div className="px-8 py-10 text-white" style={{ background: `linear-gradient(120deg, ${theme.gradientFrom} 0%, ${ACCENT} 55%, ${VERDE} 100%)` }}>
           <h1 className="text-3xl font-extrabold mb-2 leading-tight">Sacá tu turno en tu Centro de Salud</h1>
-          <p className="text-[16px] opacity-95 max-w-xl">Reservá una atención en cualquiera de los Centros de Salud Municipales de San Fernando, de forma simple y desde tu celular.</p>
+          <p className="text-[16px] opacity-95 max-w-xl">Reservá una atención en cualquiera de los Centros de Salud Municipales{theme.heroMunicipio}, de forma simple y desde tu celular.</p>
         </div>
         <div className="px-8 py-7">
           <span className="inline-block text-[13px] font-bold px-3.5 py-1.5 rounded-full mb-5" style={{ backgroundColor: MAG_BG, color: MAG_TXT }}>100% gratuito · sin costo ni seña</span>
@@ -231,7 +232,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     const filtered = centros.filter(c => (c.name + ' ' + (c.address ?? '')).toLowerCase().includes(q))
     return (
       <Shell {...shellProps}>
-        <Back to="home" goto={goto} />
+        <Back to="home" goto={goto} accent={ACCENT} />
         <H1>Elegí tu Centro de Salud</H1>
         <Sub>Seleccioná el centro más cercano a tu domicilio o el que prefieras.</Sub>
         <div className="relative mb-4">
@@ -250,11 +251,11 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
                 {c.phone && <div className="flex items-center gap-1.5 text-sm mt-0.5" style={{ color: MUTED }}><Phone className="w-4 h-4 flex-shrink-0" />{c.phone}</div>}
               </button>
             ))}
-            {q === '' && (
+            {q === '' && theme.emergencyCard && (
               <div className="bg-white rounded-2xl p-4 border border-dashed opacity-80" style={{ borderColor: BORDER }}>
-                <div className="font-bold text-[16px] leading-tight mb-1.5" style={{ color: INK }}>Emergencias San Fernando</div>
-                <div className="flex items-start gap-1.5 text-sm" style={{ color: MUTED }}><MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />Carlos Casares y Entre Ríos</div>
-                <span className="inline-block mt-2 text-[12px] font-bold px-2 py-1 rounded" style={{ backgroundColor: '#fdecec', color: '#c62828' }}>Guardia 24 h — no requiere turno</span>
+                <div className="font-bold text-[16px] leading-tight mb-1.5" style={{ color: INK }}>{theme.emergencyCard.name}</div>
+                <div className="flex items-start gap-1.5 text-sm" style={{ color: MUTED }}><MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />{theme.emergencyCard.address}</div>
+                <span className="inline-block mt-2 text-[12px] font-bold px-2 py-1 rounded" style={{ backgroundColor: '#fdecec', color: '#c62828' }}>{theme.emergencyCard.badge}</span>
               </div>
             )}
             {filtered.length === 0 && q !== '' && <p style={{ color: MUTED }}>No encontramos centros con ese nombre.</p>}
@@ -278,7 +279,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     )
     return (
       <Shell {...shellProps}>
-        <Back to="centro" label="Cambiar de centro" goto={goto} />
+        <Back to="centro" label="Cambiar de centro" goto={goto} accent={ACCENT} />
         <H1>{centro.name}</H1>
         <p className="text-sm mb-5 flex items-center gap-1" style={{ color: MUTED }}>{centro.address && <><MapPin className="w-4 h-4" />{centro.address}</>}</p>
         {loadingSvcs ? (
@@ -303,14 +304,14 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
   // ── ORDEN gate ───────────────────────────────────────────────────
   if (step === 'orden' && svc && centro) return (
     <Shell {...shellProps}>
-      <Back to="servicio" label="Volver a especialidades" goto={goto} />
+      <Back to="servicio" label="Volver a especialidades" goto={goto} accent={ACCENT} />
       <div className="bg-white border rounded-2xl p-6" style={{ borderColor: BORDER }}>
         <H1>Antes de continuar</H1>
         <p className="text-[15px] mb-4" style={{ color: MUTED }}>Elegiste <b style={{ color: INK }}>{svc.name}</b> en {centro.name}.</p>
         <h2 className="text-lg font-bold mb-4" style={{ color: INK }}>¿Tenés la orden de tu médico de cabecera para esta atención?</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <button onClick={() => svc && startBooking({ service: svc, professionals: prof ? [prof] : [] })} className="rounded-2xl p-5 text-center border-2 transition-all hover:shadow-md" style={{ borderColor: BORDER, backgroundColor: '#fff' }}>
-            <ShieldCheck className="w-7 h-7 mx-auto mb-1.5" style={{ color: '#2E7D32' }} /><div className="font-bold" style={{ color: INK }}>Sí, tengo la orden</div><div className="text-sm" style={{ color: MUTED }}>Continuar con la reserva</div>
+            <ShieldCheck className="w-7 h-7 mx-auto mb-1.5" style={{ color: theme.success }} /><div className="font-bold" style={{ color: INK }}>Sí, tengo la orden</div><div className="text-sm" style={{ color: MUTED }}>Continuar con la reserva</div>
           </button>
           <button onClick={() => goto('sinorden')} className="rounded-2xl p-5 text-center border-2 transition-all hover:shadow-md" style={{ borderColor: BORDER, backgroundColor: '#fff' }}>
             <FileText className="w-7 h-7 mx-auto mb-1.5" style={{ color: MAG }} /><div className="font-bold" style={{ color: INK }}>No tengo la orden</div><div className="text-sm" style={{ color: MUTED }}>Ver cómo obtenerla</div>
@@ -325,7 +326,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     const cab = cabecera()
     return (
       <Shell {...shellProps}>
-        <Back to="orden" goto={goto} />
+        <Back to="orden" goto={goto} accent={ACCENT} />
         <div className="rounded-2xl p-6 mb-5" style={{ backgroundColor: alpha(ACCENT, 0.06), borderLeft: `5px solid ${ACCENT}` }}>
           <h1 className="text-xl font-extrabold mb-2" style={{ color: INK }}>Para este turno necesitás una orden de tu médico de cabecera</h1>
           <p className="text-[15px] mb-2" style={{ color: '#333' }}>La atención que elegiste (<b>{svc.name}</b>) requiere que primero te vea tu <b>médico de cabecera</b>. Él o ella evalúa tu situación y, si corresponde, te da la <b>orden</b> para acceder a esta especialidad.</p>
@@ -345,7 +346,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     const backTo: Step = requiereOrden ? 'orden' : 'servicio'
     return (
       <Shell {...shellProps}>
-        <Back to={backTo} goto={goto} />
+        <Back to={backTo} goto={goto} accent={ACCENT} />
         <H1>Elegí día y horario</H1>
         <Sub><b style={{ color: INK }}>{svc.name}</b> · {centro.name}</Sub>
         <div className="grid gap-6 md:grid-cols-2">
@@ -404,7 +405,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     const lbl = 'block text-sm font-semibold mb-1.5'
     return (
       <Shell {...shellProps}>
-        <Back to="fechahora" goto={goto} />
+        <Back to="fechahora" goto={goto} accent={ACCENT} />
         <H1>Completá tus datos</H1>
         <Sub>Necesitamos estos datos para registrar y confirmarte el turno.</Sub>
         <div className="grid gap-6 md:grid-cols-2">
@@ -441,7 +442,7 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     return (
       <Shell {...shellProps}>
         <div className="bg-white border rounded-2xl p-8 text-center" style={{ borderColor: BORDER }}>
-          <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#2E7D32' }}><CheckCircle className="w-9 h-9 text-white" /></div>
+          <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: theme.success }}><CheckCircle className="w-9 h-9 text-white" /></div>
           <H1>¡Tu turno está confirmado!</H1>
           <p className="text-[15px] mb-1" style={{ color: MUTED }}>Guardá tu código de turno:</p>
           {turnoCode && <div className="inline-block font-extrabold text-2xl tracking-wider rounded-xl px-6 py-2.5 my-2" style={{ backgroundColor: SOFT, border: `2px dashed ${ACCENT}`, color: ACCENT_INK }}>{turnoCode}</div>}

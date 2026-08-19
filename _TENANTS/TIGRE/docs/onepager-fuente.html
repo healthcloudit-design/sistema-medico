@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Turnos Salud Tigre — Propuesta</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --red:#D02013; --red-ink:#a5160c; --red-soft:#FDECEA;
+    --cel:#0E7CB0; --cel-soft:#E3F2FB; --ink:#161616; --muted:#5b6470; --line:#e7e9ec;
+  }
+  html,body{ font-family:'Inter',-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--ink); }
+  .page{ width:210mm; min-height:297mm; padding:14mm 15mm 12mm; margin:0 auto; background:#fff; }
+  header{ display:flex; align-items:center; gap:14px; border-bottom:4px solid var(--red); padding-bottom:12px; }
+  .logo{ width:46px; height:46px; border-radius:11px; background:var(--red); color:#fff; font-weight:800; font-size:26px; display:flex; align-items:center; justify-content:center; }
+  .brand b{ font-size:19px; } .brand div{ font-size:12px; color:var(--muted); }
+  .tag{ margin-left:auto; text-align:right; font-size:11px; color:var(--muted); }
+  .tag b{ color:var(--ink); font-size:13px; }
+  h1{ font-size:26px; line-height:1.15; margin:18px 0 6px; }
+  h1 span{ color:var(--red); }
+  .lead{ font-size:13.5px; color:#333; max-width:165mm; line-height:1.5; }
+  .pill{ display:inline-block; background:var(--cel-soft); color:var(--cel); font-weight:700; font-size:11.5px; padding:5px 12px; border-radius:999px; margin:12px 0 4px; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+  .card{ border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
+  .card h3{ font-size:13px; color:var(--red-ink); margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+  .card p, .card li{ font-size:12px; color:#333; line-height:1.5; }
+  .card ul{ margin-left:15px; }
+  .num{ width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center; }
+  .stats{ display:flex; gap:10px; margin-top:14px; }
+  .stat{ flex:1; background:var(--red-soft); border-radius:12px; padding:12px; text-align:center; }
+  .stat b{ display:block; font-size:24px; color:var(--red-ink); line-height:1; }
+  .stat span{ font-size:10.5px; color:#7a3b36; }
+  .flow{ background:#F7F8FA; border:1px solid var(--line); border-radius:12px; padding:13px 15px; margin-top:14px; }
+  .flow h3{ font-size:13px; margin-bottom:8px; }
+  .steps{ display:flex; gap:8px; flex-wrap:wrap; }
+  .step{ flex:1; min-width:90px; font-size:11px; color:#333; background:#fff; border:1px solid var(--line); border-radius:9px; padding:8px 10px; }
+  .step b{ display:block; color:var(--red-ink); font-size:11px; margin-bottom:2px; }
+  .cta{ margin-top:16px; background:var(--red); color:#fff; border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:16px; }
+  .cta .big{ font-size:15px; font-weight:800; }
+  .cta .u{ margin-left:auto; text-align:right; font-size:12px; }
+  .cta .u b{ font-size:14px; }
+  footer{ margin-top:12px; font-size:10px; color:#9098a2; border-top:1px solid var(--line); padding-top:8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo">T</div>
+    <div class="brand"><b>Salud Tigre — Turnos online</b><div>Propuesta para la Secretaría de Salud · Municipio de Tigre</div></div>
+    <div class="tag">Solución donada · impacto social<br><b>Praxis Agenda</b></div>
+  </header>
+
+  <h1>Un turno en el Centro de Salud, <span>desde el celular</span> y sin filas de madrugada.</h1>
+  <p class="lead">Una plataforma web para que cada vecino de Tigre saque su turno en el efector municipal más cercano, en minutos, sin costo y sin tener que hacer cola de madrugada. Reutiliza la misma solución ya implementada para el Municipio de San Fernando, adaptada a la identidad y la red de salud de Tigre.</p>
+
+  <div class="pill">100% gratuito para el vecino · sin pasarela de pago · sin app para descargar</div>
+
+  <div class="stats">
+    <div class="stat"><b>+30</b><span>efectores municipales integrables</span></div>
+    <div class="stat"><b>11</b><span>localidades cubiertas</span></div>
+    <div class="stat"><b>24/7</b><span>reservas online, sin ventanilla</span></div>
+    <div class="stat"><b>$0</b><span>costo para el municipio en el piloto</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>El problema que resuelve</h3>
+      <p>La demanda de turnos genera <b>filas presenciales de madrugada</b> en los centros de salud. La plataforma traslada la reserva al celular del vecino, <b>libera ventanilla</b> y ordena la demanda por especialidad y por centro.</p>
+    </div>
+    <div class="card">
+      <h3>Puerta de entrada ordenada</h3>
+      <p>El sistema distingue <b>atención primaria</b> (acceso directo) de <b>especialidades</b> que requieren <b>orden del médico de cabecera</b>: si el vecino no la tiene, lo guía primero a su médico de cabecera. Menos turnos perdidos, mejor derivación.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h3>Cómo lo usa el vecino</h3>
+    <div class="steps">
+      <div class="step"><b>1 · Centro</b>Elige el centro más cercano a su domicilio.</div>
+      <div class="step"><b>2 · Atención</b>Elige la especialidad (con guía de orden médica si corresponde).</div>
+      <div class="step"><b>3 · Día y hora</b>Ve la disponibilidad real y elige el turno.</div>
+      <div class="step"><b>4 · Datos</b>Carga nombre, DNI y teléfono.</div>
+      <div class="step"><b>5 · Listo</b>Recibe el código de turno al instante.</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Para la gestión de Salud</h3>
+      <ul>
+        <li>Panel por centro: turnos, agendas y profesionales.</li>
+        <li>Demanda espontánea (enfermería, vacunatorio) y guardias quedan fuera del turnero, como corresponde.</li>
+        <li>Datos reales de demanda por especialidad y sede.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Puesta en marcha</h3>
+      <ul>
+        <li>Piloto ya cargado con la red de efectores de Tigre.</li>
+        <li>Identidad visual oficial del Municipio.</li>
+        <li>Clasificación de especialidades a validar con la Secretaría.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div>
+      <div class="big">Demo navegable lista para probar</div>
+      <div style="font-size:12px;opacity:.95">Entrá y sacá un turno de prueba en cualquier centro.</div>
+    </div>
+    <div class="u">Línea de turnos<br><b>0810 444 3400</b><br>tu-dominio/agenda/salud-tigre</div>
+  </div>
+
+  <footer>
+    Propuesta sin cargo con fines de impacto social y como caso de referencia. Los datos de efectores fueron tomados del sitio oficial tigre.gob.ar/salud. La clasificación de servicios y de orden médica es una propuesta a validar con la Secretaría de Salud del Municipio de Tigre.
+  </footer>
+</div>
+</body>
+</html>

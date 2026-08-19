@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" role="img" aria-label="Salud Tigre">
+  <rect x="0" y="6" width="44" height="44" rx="10" fill="#D02013"/>
+  <text x="22" y="37" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="#ffffff">T</text>
+  <text x="54" y="27" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="800" fill="#161616" letter-spacing="0.5">TIGRE</text>
+  <text x="54" y="45" font-family="Inter, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#D02013" letter-spacing="0.5">Salud Municipal</text>
+</svg>

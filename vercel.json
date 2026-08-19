@@ -17,6 +17,10 @@
       "destination": "/msf_logo.png"
     },
     {
+      "source": "/agenda/tigre_logo.svg",
+      "destination": "/tigre_logo.svg"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

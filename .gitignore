@@ -7,3 +7,6 @@ dist/
 *.mjs
 migrate*.js
 fix-migration*.js
+
+# Cajón de descarte local (no versionar)
+_to_delete/

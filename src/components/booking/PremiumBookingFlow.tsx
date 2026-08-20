@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, MapPin, Calendar, Home, MessageCircle, Instagram } from 'lucide-react'
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, MapPin, Calendar, Home, MessageCircle, Instagram, Facebook } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
@@ -8,6 +8,7 @@ import type { BookingState, Organization, Professional, Service } from '../../ty
 import { ProfessionalSelector } from './ProfessionalSelector'
 import { DateTimeSelector } from './DateTimeSelector'
 import { BookingConfirm } from './BookingConfirm'
+import { ObrasSocialesCarousel } from './ObrasSocialesCarousel'
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
 const DARK      = '#0B0B0B'
@@ -405,6 +406,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
   const bookingRef = useRef<HTMLDivElement>(null)
 
   const instagramHandle = org.instagram_handle?.replace(/^@/, '') ?? null
+  const facebookUrl     = org.facebook_url ?? null
   const whatsappNumber  = org.whatsapp_number ?? null
   const orgAddress      = org.address ?? null
   const logoUrl         = org.logo_url ?? null
@@ -653,6 +655,12 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
                 <Instagram size={14} /> @{instagramHandle}
               </a>
             )}
+            {facebookUrl && (
+              <a href={facebookUrl} target="_blank" rel="noopener noreferrer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '8px', padding: '14px 28px', fontFamily: SANS, fontWeight: 400, fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Facebook size={14} /> Facebook
+              </a>
+            )}
           </div>
 
           {/* Dirección + WhatsApp */}
@@ -703,9 +711,15 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
             )}
           </div>
         </div>
-        <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)' }}>
-          <div style={{ width: '1px', height: '36px', background: `linear-gradient(to bottom, transparent, ${gold})` }} />
-        </div>
+        {specialtyFirst ? (
+          <div style={{ position: 'absolute', bottom: '22px', left: 0, right: 0, padding: '0 16px' }}>
+            <ObrasSocialesCarousel accent={gold} />
+          </div>
+        ) : (
+          <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)' }}>
+            <div style={{ width: '1px', height: '36px', background: `linear-gradient(to bottom, transparent, ${gold})` }} />
+          </div>
+        )}
       </div>
 
       {/* ─── STEPS BAR ─── */}

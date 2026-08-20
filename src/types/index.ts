@@ -43,6 +43,7 @@ export interface Organization {
   primary_color?: string | null
   whatsapp_number?: string | null
   instagram_handle?: string | null
+  facebook_url?: string | null
   specialty?: string | null
   cover_image_url?: string | null
   booking_headline?: string | null

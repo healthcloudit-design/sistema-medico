@@ -713,7 +713,7 @@ export function PremiumBookingFlow({ org }: { org: Organization }) {
         </div>
         {specialtyFirst ? (
           <div style={{ position: 'absolute', bottom: '22px', left: 0, right: 0, padding: '0 16px' }}>
-            <ObrasSocialesCarousel accent={gold} />
+            <ObrasSocialesCarousel />
           </div>
         ) : (
           <div style={{ position: 'absolute', bottom: '28px', left: '50%', transform: 'translateX(-50%)' }}>

@@ -2,9 +2,9 @@ const SANS = 'Inter, sans-serif'
 
 type Cobertura = { img: string; alt: string } | { text: string }
 
-// Coberturas de Bicentenario. Logos reales sobre tarjetas blancas uniformes (coherentes entre sí);
-// las que no son obra social con logo (Particular / Diagnóstico Norte) van como tarjeta de texto
-// en el mismo estilo. Imágenes servidas desde /public/obras-sociales.
+// Coberturas de Bicentenario. Logos reales sobre tarjetas blancas de ancho fijo (el logo se
+// contiene adentro, así ninguno se corta ni se desborda). Las que no son obra social con logo
+// (Particular / Diagnóstico Norte) van como tarjeta de texto. Imágenes en /public/obras-sociales.
 const COBERTURAS: Cobertura[] = [
   { img: '/obras-sociales/ioma.png',     alt: 'IOMA' },
   { img: '/obras-sociales/premedic.png', alt: 'Premedic' },
@@ -18,9 +18,15 @@ const COBERTURAS: Cobertura[] = [
   { text: 'DIAGNÓSTICO NORTE' },
 ]
 
+const cardBase = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  height: '50px', margin: '0 7px', borderRadius: '12px',
+  backgroundColor: '#fff', boxShadow: '0 3px 12px rgba(0,0,0,0.16)',
+} as const
+
 /**
- * Carrusel (marquee) de coberturas para el hero. Tarjetas blancas uniformes con el logo real
- * (o el nombre, para las que no tienen logo). Se desliza solo y pausa al pasar el mouse.
+ * Carrusel (marquee) de coberturas para el hero. Tarjetas blancas uniformes; el logo se contiene
+ * dentro de un ancho fijo para que ninguno se corte. Se desliza solo y pausa al pasar el mouse.
  */
 export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertura[] }) {
   const doubled = [...items, ...items]
@@ -28,7 +34,7 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
     <div style={{ width: '100%' }}>
       <style>{`
         @keyframes ooss-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .ooss-track { display: flex; width: max-content; align-items: center; animation: ooss-scroll 38s linear infinite; }
+        .ooss-track { display: flex; width: max-content; align-items: center; animation: ooss-scroll 40s linear infinite; }
         .ooss-viewport:hover .ooss-track { animation-play-state: paused; }
       `}</style>
 
@@ -42,29 +48,24 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
         className="ooss-viewport"
         style={{
           overflow: 'hidden',
-          WebkitMaskImage: 'linear-gradient(to right, transparent, #000 7%, #000 93%, transparent)',
-          maskImage: 'linear-gradient(to right, transparent, #000 7%, #000 93%, transparent)',
+          padding: '6px 0 14px',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)',
+          maskImage: 'linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)',
         }}
       >
         <div className="ooss-track">
           {doubled.map((c, i) => (
-            <div
-              key={i}
-              aria-hidden={i >= items.length}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                height: '52px', margin: '0 7px', padding: '0 18px', borderRadius: '12px',
-                backgroundColor: '#fff', boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-              }}
-            >
-              {'img' in c ? (
-                <img src={c.img} alt={c.alt} style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }} />
-              ) : (
+            'img' in c ? (
+              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, width: '150px' }}>
+                <img src={c.img} alt={c.alt} style={{ maxHeight: '30px', maxWidth: '118px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              </div>
+            ) : (
+              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, padding: '0 22px' }}>
                 <span style={{ fontFamily: SANS, fontSize: '12.5px', fontWeight: 700, letterSpacing: '0.04em', color: '#0F2A3F', whiteSpace: 'nowrap' }}>
                   {c.text}
                 </span>
-              )}
-            </div>
+              </div>
+            )
           ))}
         </div>
       </div>

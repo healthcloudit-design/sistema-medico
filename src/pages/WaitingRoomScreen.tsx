@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { ObrasSocialesCarousel } from '../components/booking/ObrasSocialesCarousel'
 
 interface Appointment {
   id: string
@@ -13,6 +14,7 @@ interface Appointment {
 interface Org {
   id: string
   name: string
+  logo_url?: string | null
 }
 
 function DoctorIcon({ size }: { size: number }) {
@@ -73,13 +75,68 @@ export function WaitingRoomScreen() {
   const [queue, setQueue]         = useState<Appointment[]>([])
   const [flash, setFlash]         = useState(false)
   const [notFound, setNotFound]   = useState(false)
+  const [soundReady, setSoundReady] = useState(false)
+
+  // Solo Bicentenario, por ahora, muestra carrusel de obras sociales + sonido de campana.
+  const isBicentenario = slug === 'bicentenario'
+
+  // Refs para evitar "stale closure" dentro del callback de realtime:
+  // - audioCtxRef: el AudioContext, creado recién cuando el usuario toca para activar el sonido.
+  // - lastCurrentIdRef: id del último paciente "en atención" anunciado, para disparar el
+  //   destello y la campana solo cuando REALMENTE cambia (no en cada refresco de realtime).
+  const audioCtxRef      = useRef<AudioContext | null>(null)
+  const lastCurrentIdRef = useRef<string | null>(null)
+
+  // Campana sintetizada con Web Audio (sin archivo de audio). Dos tonos tipo "ding-dong".
+  const playChime = () => {
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    try {
+      const now = ctx.currentTime
+      const notes = [
+        { f: 987.77, t: 0 },     // Si5
+        { f: 659.25, t: 0.22 },  // Mi5
+      ]
+      notes.forEach(({ f, t }) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = f
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        const start = now + t
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(0.45, start + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 1.1)
+        osc.start(start)
+        osc.stop(start + 1.15)
+      })
+    } catch {
+      /* si el navegador bloquea el audio, no rompemos la pantalla */
+    }
+  }
+
+  // Desbloqueo del audio: los navegadores no dejan sonar nada hasta que hubo una interacción
+  // del usuario. Este toque único crea el AudioContext y suena una campana de prueba.
+  const enableSound = () => {
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const ctx = new Ctx()
+      audioCtxRef.current = ctx
+      if (ctx.state === 'suspended') ctx.resume()
+      setSoundReady(true)
+      playChime()
+    } catch {
+      setSoundReady(true)
+    }
+  }
 
   // Cargar org
   useEffect(() => {
     if (!slug) return
     supabase
       .from('organizations')
-      .select('id, name')
+      .select('id, name, logo_url')
       .eq('slug', slug)
       .eq('active', true)
       .single()
@@ -112,11 +169,14 @@ export function WaitingRoomScreen() {
     const inAttention = appts.find(a => a.status === 'en_atencion') ?? null
     const waiting     = appts.filter(a => a.status !== 'en_atencion')
 
-    // Flash cuando cambia el que está en atención
-    if (inAttention?.id !== current?.id && inAttention) {
+    // Destello + campana SOLO cuando cambia el paciente en atención (no en cada refresco).
+    const newId = inAttention?.id ?? null
+    if (inAttention && newId !== lastCurrentIdRef.current) {
       setFlash(true)
       setTimeout(() => setFlash(false), 3000)
+      playChime()
     }
+    lastCurrentIdRef.current = newId
 
     setCurrent(inAttention)
     setQueue(waiting)
@@ -158,10 +218,34 @@ export function WaitingRoomScreen() {
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col select-none">
 
+      {/* Overlay de un toque para activar el sonido (solo Bicentenario, una vez por sesión) */}
+      {isBicentenario && !soundReady && (
+        <div
+          onClick={enableSound}
+          className="fixed inset-0 z-50 flex items-center justify-center cursor-pointer"
+          style={{ backgroundColor: 'rgba(3,7,18,0.92)' }}
+        >
+          <div className="text-center px-6">
+            <div className="text-7xl mb-6">🔔</div>
+            <p className="text-white text-3xl font-semibold mb-2">Tocá para activar el sonido</p>
+            <p className="text-gray-400 text-lg">El llamador sonará cada vez que se llame a un paciente</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-10 py-5 border-b border-white/10">
-        <h1 className="text-2xl font-bold text-white tracking-wide">{org.name}</h1>
-        <div className="text-3xl font-mono font-light text-sky-400">
+        <div className="flex items-center gap-4 min-w-0">
+          {org.logo_url && (
+            <img
+              src={org.logo_url}
+              alt=""
+              className="h-14 w-14 rounded-xl object-cover bg-white/5 border border-white/10 flex-shrink-0"
+            />
+          )}
+          <h1 className="text-3xl font-bold text-white tracking-wide truncate">{org.name}</h1>
+        </div>
+        <div className="text-3xl font-mono font-light text-sky-400 flex-shrink-0">
           <Clock />
         </div>
       </div>
@@ -181,13 +265,13 @@ export function WaitingRoomScreen() {
                 {current.patient_name}
               </p>
               {current.professional && (
-                <div className="mt-6 flex flex-col items-center">
-                  <div className="flex items-center gap-3">
-                    <ProfessionalAvatar url={current.professional.avatar_url} size={40} />
-                    <p className="text-sky-300/70 text-xl">{current.professional.full_name}</p>
+                <div className="mt-8 flex flex-col items-center">
+                  <div className="flex items-center gap-4">
+                    <ProfessionalAvatar url={current.professional.avatar_url} size={56} />
+                    <p className="text-sky-300/80 text-3xl font-medium">{current.professional.full_name}</p>
                   </div>
                   {current.professional.consultorio && (
-                    <span className="mt-1 text-sky-400 font-bold uppercase tracking-widest text-2xl">
+                    <span className="mt-3 text-sky-400 font-bold uppercase tracking-widest text-5xl">
                       Consultorio {current.professional.consultorio}
                     </span>
                   )}
@@ -247,6 +331,13 @@ export function WaitingRoomScreen() {
         </div>
 
       </div>
+
+      {/* Carrusel de obras sociales (solo Bicentenario) */}
+      {isBicentenario && (
+        <div className="px-8 pt-3 pb-4 border-t border-white/10">
+          <ObrasSocialesCarousel />
+        </div>
+      )}
 
       {/* Footer */}
       <div className="px-10 py-3 border-t border-white/10 flex items-center justify-between">

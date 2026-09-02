@@ -15,7 +15,7 @@ const COBERTURAS: Cobertura[] = [
   { img: '/obras-sociales/osde.png',     alt: 'OSDE' },
   { img: '/obras-sociales/pami.png',     alt: 'PAMI' },
   { text: 'PARTICULAR' },
-  { text: 'DIAGNÓSTICO NORTE' },
+  { img: '/obras-sociales/diagnostico-norte.png', alt: 'Diagnóstico Norte' },
 ]
 
 const cardBase = {

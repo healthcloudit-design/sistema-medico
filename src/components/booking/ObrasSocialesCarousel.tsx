@@ -61,7 +61,7 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
               </div>
             ) : (
               <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, padding: '0 22px' }}>
-                <span style={{ fontFamily: SANS, fontSize: '12.5px', fontWeight: 700, letterSpacing: '0.04em', color: '#0F2A3F', whiteSpace: 'nowrap' }}>
+                <span style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 700, letterSpacing: '0.04em', color: '#0F2A3F', whiteSpace: 'nowrap' }}>
                   {c.text}
                 </span>
               </div>

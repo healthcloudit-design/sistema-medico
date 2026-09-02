@@ -216,7 +216,7 @@ export function WaitingRoomScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col select-none">
+    <div className="h-screen overflow-hidden bg-gray-900 text-white flex flex-col select-none">
 
       {/* Overlay de un toque para activar el sonido (solo Bicentenario, una vez por sesión) */}
       {isBicentenario && !soundReady && (
@@ -240,7 +240,7 @@ export function WaitingRoomScreen() {
             <img
               src={org.logo_url}
               alt=""
-              className="h-14 w-14 rounded-xl object-cover bg-white/5 border border-white/10 flex-shrink-0"
+              className="h-20 w-20 rounded-xl object-cover bg-white/5 border border-white/10 flex-shrink-0"
             />
           )}
           <h1 className="text-3xl font-bold text-white tracking-wide truncate">{org.name}</h1>
@@ -250,7 +250,7 @@ export function WaitingRoomScreen() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-0">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-0">
 
         {/* Panel izquierdo: en atención */}
         <div className={`lg:w-1/2 flex flex-col items-center justify-center p-10 transition-all duration-700
@@ -292,14 +292,14 @@ export function WaitingRoomScreen() {
         <div className="hidden lg:block w-px bg-white/10" />
 
         {/* Panel derecho: cola de espera */}
-        <div className="lg:w-1/2 flex flex-col p-8 overflow-hidden">
+        <div className="lg:w-1/2 flex flex-col p-8 overflow-hidden min-h-0">
           <p className="text-gray-400 text-sm font-medium uppercase tracking-widest mb-5">
             A continuación
           </p>
           {queue.length === 0 ? (
             <p className="text-gray-600 text-xl font-light mt-4">Sin turnos pendientes</p>
           ) : (
-            <div className="space-y-3 overflow-y-auto">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
               {queue.slice(0, 8).map((appt, i) => (
                 <div
                   key={appt.id}

@@ -265,16 +265,16 @@ export function ClinicalRecordModal({
       // Adjuntos
       setAttachments((attachRes.data ?? []) as Attachment[])
 
-      // Historial previo
+      // Historial previo — compartido dentro del centro: muestra las evoluciones del
+      // paciente cargadas por CUALQUIER profesional (la RLS habilita la lectura org-wide).
       if (patientId) {
         const { data: hist } = await supabase
           .from('clinical_records')
-          .select('id, motivo, diagnostico, indicaciones, notas, is_closed, closed_at, created_at')
+          .select('id, motivo, diagnostico, indicaciones, notas, is_closed, closed_at, created_at, professional_id, professionals(full_name)')
           .eq('patient_id', patientId)
-          .eq('professional_id', professionalId)
           .neq('appointment_id', appointmentId)
           .order('created_at', { ascending: false })
-          .limit(10)
+          .limit(20)
         setHistory((hist ?? []) as ConsultationNote[])
       }
 
@@ -833,6 +833,9 @@ export function ClinicalRecordModal({
                           {h.is_closed && <Lock className="w-3 h-3 text-gray-300" />}
                         </div>
                         <p className="text-sm text-gray-700 font-medium mt-0.5 truncate max-w-xs">{h.motivo}</p>
+                        {(h as any).professionals?.full_name && (
+                          <p className="text-xs text-gray-400 mt-0.5">Prof.: {(h as any).professionals.full_name}</p>
+                        )}
                       </div>
                       {expandedHist === h.id
                         ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />

@@ -17,6 +17,7 @@ import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
 import { ClinicalRecordModal } from '../components/medico/ClinicalRecordModal'
 import { PatientSearch } from '../components/shared/PatientSearch'
+import { PatientHistoryModal } from '../components/medico/PatientHistoryModal'
 import { WeekCalendar } from '../components/shared/WeekCalendar'
 import { RescheduleModal } from '../components/shared/RescheduleModal'
 import { NuevoTurno } from '../components/shared/NuevoTurno'
@@ -760,6 +761,7 @@ export function MedicoDashboard() {
   const [selected, setSel]    = useState<Appointment|null>(null)
   const [showHC, setShowHC]   = useState(false)
   const [showST, setShowST]   = useState(false)
+  const [historyPatient, setHistoryPatient] = useState<{ id: string; full_name: string } | null>(null)
   const [view, setView]       = useState<View>('dashboard')
   const [calendar, setCal]    = useState(false)
   const [week, setWeek]       = useState(new Date())
@@ -961,7 +963,12 @@ export function MedicoDashboard() {
                 <h2 style={{ fontSize:'16px', fontWeight:700, color:TEXT, margin:'0 0 20px' }}>
                   {tenant === 'cancha' ? 'Reservas' : ['medical','estetica'].includes(tenant) ? 'Pacientes' : 'Clientes'}
                 </h2>
-                <PatientSearch orgId={orgId} professionalId={profile?.professional_id ?? null}/>
+                <PatientSearch
+                  orgId={orgId}
+                  professionalId={profile?.professional_id ?? null}
+                  searchAllPatients
+                  onOpenHistory={featureHc ? (p) => setHistoryPatient({ id: p.id, full_name: p.full_name }) : undefined}
+                />
               </div>
             )}
             {view === 'bloqueos' && profile?.professional_id && (
@@ -1035,6 +1042,15 @@ export function MedicoDashboard() {
           patientName={selected.patient_name}
           readOnly={false}
           onClose={() => setShowST(false)}
+        />
+      )}
+      {historyPatient && orgId && profile?.professional_id && (
+        <PatientHistoryModal
+          patientId={historyPatient.id}
+          patientName={historyPatient.full_name}
+          organizationId={orgId}
+          professionalId={profile.professional_id}
+          onClose={() => setHistoryPatient(null)}
         />
       )}
     </div>

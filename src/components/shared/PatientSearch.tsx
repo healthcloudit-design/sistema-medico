@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash, Pencil, CalendarPlus, X, Save, UserPlus } from 'lucide-react'
+import { Search, UserCircle, Phone, Mail, CreditCard, Heart, Hash, Pencil, CalendarPlus, X, Save, UserPlus, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 interface Patient {
@@ -27,9 +27,13 @@ interface Props {
   canEdit?: boolean
   /** Si se pasa, muestra un botón "Nuevo turno" por paciente */
   onNewAppointment?: (patient: Patient) => void
+  /** Si se pasa, muestra un botón "Historia clínica" por paciente */
+  onOpenHistory?: (patient: Patient) => void
+  /** Si true, busca en todos los pacientes del centro (ignora el filtro de solo-mis-pacientes del médico) */
+  searchAllPatients?: boolean
 }
 
-export function PatientSearch({ orgId, professionalId, canEdit = false, onNewAppointment }: Props) {
+export function PatientSearch({ orgId, professionalId, canEdit = false, onNewAppointment, onOpenHistory, searchAllPatients = false }: Props) {
   const [query, setQuery]       = useState('')
   const [results, setResults]   = useState<Patient[]>([])
   const [loading, setLoading]   = useState(false)
@@ -53,7 +57,7 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
     setSearched(true)
 
     let allowedPatientIds: string[] | null = null
-    if (professionalId) {
+    if (professionalId && !searchAllPatients) {
       const { data: apptData } = await supabase
         .from('appointments')
         .select('patient_id')
@@ -279,8 +283,14 @@ export function PatientSearch({ orgId, professionalId, canEdit = false, onNewApp
                     </span>
                   </div>
                 )}
-                {(canEdit || onNewAppointment) && (
-                  <div className="mt-3 flex gap-2">
+                {(canEdit || onNewAppointment || onOpenHistory) && (
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    {onOpenHistory && (
+                      <button onClick={() => onOpenHistory(p)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                        <FileText className="w-3.5 h-3.5" /> Historia clínica
+                      </button>
+                    )}
                     {onNewAppointment && (
                       <button onClick={() => onNewAppointment(p)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors">

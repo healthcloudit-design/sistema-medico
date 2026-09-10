@@ -17,6 +17,43 @@ interface Org {
   logo_url?: string | null
 }
 
+// Tips de salud rotativos ("briTips"), validados por un médico del centro.
+// 5 de pediatría primero, luego 15 generales. Se muestran en el panel "En atención"
+// cuando no hay ningún paciente siendo llamado.
+const HEALTH_TIPS: string[] = [
+  'Llevá a tus hijos a los controles del niño sano: el pediatra sigue de cerca su crecimiento y desarrollo.',
+  'Vacunas al día según el calendario oficial. Es la mejor protección a cada edad.',
+  'Lactancia materna exclusiva hasta los 6 meses siempre que se pueda. Ante cualquier duda, consultá.',
+  'Primera visita al odontólogo cerca del primer añito, y después controles periódicos.',
+  'Menos pantallas y más juego: cuidá el sueño, la vista y el desarrollo de los más chicos.',
+  'Un chequeo médico al año, aunque te sientas bien. Prevenir siempre es más fácil que curar.',
+  'Tomá alrededor de 2 litros de agua por día. Tu cuerpo te lo agradece.',
+  'Movete al menos 30 minutos por día. Una caminata también cuenta.',
+  'Controlá tu presión arterial una vez al año. La hipertensión casi no da síntomas.',
+  'Mujeres: consulta ginecológica anual y no se salteen el Papanicolaou.',
+  'A partir de los 40, la mamografía puede salvar vidas. Consultá con tu médico.',
+  'Hombres: control urológico y de próstata desde los 50, o antes si hay antecedentes.',
+  'Visitá al dentista cada 6 meses. Tu salud bucal cuida todo tu cuerpo.',
+  'Controlá tu vista cada 1 o 2 años, sobre todo si vivís frente a una pantalla.',
+  'Cuidá tu piel del sol y revisá tus lunares. Ante cualquier cambio, consultá.',
+  'Dormí entre 7 y 8 horas. El buen descanso también es salud.',
+  'Sumá frutas y verduras a cada comida, y bajá un poco la sal y el azúcar.',
+  'Un análisis de sangre anual te muestra tu colesterol y tu glucemia a tiempo.',
+  'Mantené tu carnet de vacunas al día, a cualquier edad.',
+  'Tu salud mental importa: si algo te pesa, pedí ayuda. Hablar también cura.',
+]
+
+function HeartIcon({ size }: { size: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" className="text-sky-300">
+      <path
+        d="M12 20.5s-7-4.35-9.3-8.6C1.2 9.1 2.4 5.8 5.6 5.2c1.9-.35 3.6.6 4.4 2 .8-1.4 2.5-2.35 4.4-2 3.2.6 4.4 3.9 2.9 6.7C19 16.15 12 20.5 12 20.5Z"
+        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function DoctorIcon({ size }: { size: number }) {
   return (
     <svg
@@ -77,8 +114,11 @@ export function WaitingRoomScreen() {
   const [notFound, setNotFound]   = useState(false)
   const [soundReady, setSoundReady] = useState(false)
 
-  // Solo Bicentenario, por ahora, muestra carrusel de obras sociales + sonido de campana.
+  // Solo Bicentenario, por ahora, muestra carrusel de obras sociales + sonido de campana + tips.
   const isBicentenario = slug === 'bicentenario'
+
+  // Tip de salud que se muestra ahora (rotación aleatoria; ver el efecto más abajo).
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * HEALTH_TIPS.length))
 
   // Refs para evitar "stale closure" dentro del callback de realtime:
   // - audioCtxRef: el AudioContext, creado recién cuando el usuario toca para activar el sonido.
@@ -199,6 +239,19 @@ export function WaitingRoomScreen() {
     return () => { supabase.removeChannel(channel) }
   }, [org])
 
+  // Rotación de los tips de salud (solo Bicentenario): cada ~13s pasa a otro tip al azar.
+  useEffect(() => {
+    if (!isBicentenario || HEALTH_TIPS.length < 2) return
+    const t = setInterval(() => {
+      setTipIndex(prev => {
+        let n = Math.floor(Math.random() * HEALTH_TIPS.length)
+        if (n === prev) n = (n + 1) % HEALTH_TIPS.length
+        return n
+      })
+    }, 13000)
+    return () => clearInterval(t)
+  }, [isBicentenario])
+
   if (notFound) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
@@ -217,6 +270,11 @@ export function WaitingRoomScreen() {
 
   return (
     <div className="h-screen overflow-hidden bg-gray-900 text-white flex flex-col select-none">
+
+      <style>{`
+        @keyframes healthtipfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .health-tip { animation: healthtipfade 0.9s ease; }
+      `}</style>
 
       {/* Overlay de un toque para activar el sonido (solo Bicentenario, una vez por sesión) */}
       {isBicentenario && !soundReady && (
@@ -278,6 +336,14 @@ export function WaitingRoomScreen() {
                 </div>
               )}
             </>
+          ) : isBicentenario ? (
+            <div key={tipIndex} className="health-tip flex flex-col items-center text-center max-w-3xl px-6">
+              <div className="flex items-center gap-3 mb-8">
+                <HeartIcon size={26} />
+                <span className="text-sky-300/70 text-lg font-medium uppercase tracking-widest">Consejo de salud</span>
+              </div>
+              <p className="text-white/90 text-4xl font-light leading-snug">{HEALTH_TIPS[tipIndex]}</p>
+            </div>
           ) : (
             <>
               <p className="text-sky-300/40 text-2xl font-medium uppercase tracking-widest mb-3">

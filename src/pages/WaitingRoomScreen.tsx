@@ -43,13 +43,16 @@ const HEALTH_TIPS: string[] = [
   'Tu salud mental importa: si algo te pesa, pedí ayuda. Hablar también cura.',
 ]
 
-function HeartIcon({ size }: { size: number }) {
+// Ícono "tomando nota": bloc + lápiz (como que anotan el consejo).
+function NoteIcon({ size }: { size: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" className="text-sky-300">
-      <path
-        d="M12 20.5s-7-4.35-9.3-8.6C1.2 9.1 2.4 5.8 5.6 5.2c1.9-.35 3.6.6 4.4 2 .8-1.4 2.5-2.35 4.4-2 3.2.6 4.4 3.9 2.9 6.7C19 16.15 12 20.5 12 20.5Z"
-        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"
-      />
+    <svg
+      viewBox="0 0 24 24" width={size} height={size} fill="none" className="text-sky-300"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+    >
+      <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.4 2.6a1.6 1.6 0 0 1 2.3 2.3l-8.5 8.5-3 .8.8-3z" />
+      <path d="M7 12.5h5M7 16h3.5" />
     </svg>
   )
 }
@@ -338,9 +341,12 @@ export function WaitingRoomScreen() {
             </>
           ) : isBicentenario ? (
             <div key={tipIndex} className="health-tip flex flex-col items-center text-center max-w-3xl px-6">
-              <div className="flex items-center gap-3 mb-8">
-                <HeartIcon size={26} />
-                <span className="text-sky-300/70 text-lg font-medium uppercase tracking-widest">Consejo de salud</span>
+              <div className="flex flex-col items-center mb-8">
+                <div className="w-20 h-20 rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-4">
+                  <NoteIcon size={38} />
+                </div>
+                <span className="text-sky-300 text-3xl font-bold tracking-wide">BriceTips</span>
+                <span className="text-sky-300/40 text-xs uppercase tracking-widest mt-1">Consejos de salud</span>
               </div>
               <p className="text-white/90 text-4xl font-light leading-snug">{HEALTH_TIPS[tipIndex]}</p>
             </div>

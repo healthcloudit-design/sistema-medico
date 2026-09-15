@@ -12,6 +12,7 @@ import {
   Lock, Clock, Activity, CalendarClock, UserX, XCircle, CalendarPlus,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { realBlockingMinutes } from '../lib/serviceDuration'
 import { useProfile } from '../hooks/useProfile'
 import { useOrgFeatures } from '../hooks/useOrgFeatures'
 import { SessionTreatmentsModal } from '../components/medico/SessionTreatmentsModal'
@@ -479,7 +480,7 @@ function ApptModal({ appt, onClose, onStatus, featureHc, onShowHC, onShowST, onR
         <RescheduleModal
           appointmentId={appt.id}
           professionalId={appt.professional_id}
-          serviceDurationMinutes={svc?.duration_minutes ?? 30}
+          serviceDurationMinutes={realBlockingMinutes(svc)}
           serviceId={appt.service_id}
           currentStartsAt={appt.starts_at}
           onClose={() => setShowReschedule(false)}
@@ -807,7 +808,7 @@ export function MedicoDashboard() {
       .select('*, services(name, color, duration_minutes, display_duration_minutes), patients(id, full_name, phone, email, obra_social)')
       .eq('professional_id', profile.professional_id)
       .gte('starts_at', startOfDay(wkStart).toISOString())
-      .lte('starts_at', endOfDay(addDays(wkStart, 27)).toISOString())
+      .lte('starts_at', endOfDay(addDays(wkStart, 180)).toISOString())
       .order('starts_at')
     const fresh = (data ?? []).map((r:any) => ({ ...r, service:r.services, patient:r.patients })) as Appointment[]
     setAppts(fresh)
@@ -845,7 +846,7 @@ export function MedicoDashboard() {
   const active   = appointments.filter(a => a.status !== 'cancelado')
   const today    = active.filter(a => isToday(parseISO(a.starts_at)))
   const tomorrow = active.filter(a => isTomorrow(parseISO(a.starts_at)))
-  const upcoming = active.filter(a => !isToday(parseISO(a.starts_at)) && !isTomorrow(parseISO(a.starts_at)))
+  const upcoming = active.filter(a => parseISO(a.starts_at) >= startOfDay(addDays(new Date(), 2)))
   const wkStart  = startOfWeek(new Date(), { weekStartsOn:1 })
   const wkEnd    = endOfWeek(new Date(), { weekStartsOn:1 })
   const cancelledThisWeek = appointments

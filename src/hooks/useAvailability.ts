@@ -51,7 +51,7 @@ export function useAvailability(
           (() => {
             let q = supabase
               .from('appointments')
-              .select('id, starts_at, ends_at, service_id, status, services(requiere_atencion_completa)')
+              .select('id, starts_at, ends_at, service_id, status, services(requiere_atencion_completa, resource_group)')
               .eq('professional_id', professionalId)
               .gte('starts_at', dayStart)
               .lte('starts_at', dayEnd)
@@ -60,7 +60,7 @@ export function useAvailability(
             return q
           })(),
           serviceId
-            ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa, last_start_overrides').eq('id', serviceId).single()
+            ? supabase.from('services').select('capacity, waitlist_limit, requiere_atencion_completa, last_start_overrides, resource_group, block_duration_minutes').eq('id', serviceId).single()
             : Promise.resolve({ data: null, error: null }),
           supabase.from('professionals').select('concurrent_capacity').eq('id', professionalId).single(),
           // Aperturas puntuales (habilitar dias/horarios) para ESTA fecha
@@ -85,79 +85,73 @@ export function useAvailability(
         const isGroupService = !!serviceId && capacity > 1
         const candidateRequiereAtencion = (serviceRes?.data as { requiere_atencion_completa?: boolean } | null)?.requiere_atencion_completa ?? true
 
+        // ── Modelo de RECURSOS (grupos) — solo aplica a servicios con resource_group
+        //    configurado (ej: Acqua). Para el resto, candGroup = null y todo el
+        //    comportamiento clásico de abajo queda EXACTAMENTE igual (tenant-safe).
+        const candGroup = (serviceRes?.data as { resource_group?: string | null } | null)?.resource_group ?? null
+        const isGrouped = !!candGroup
+        // block_duration_minutes del servicio manda si está definido; si no, el valor recibido.
+        const effDuration = (serviceRes?.data as { block_duration_minutes?: number | null } | null)?.block_duration_minutes ?? serviceDurationMinutes
+
         // Override opcional del último horario de inicio para ESTE servicio en ESTE día de semana
-        // (ej: Reflejos necesita terminar antes que el resto porque el bloqueo de 30min no refleja
-        // el tiempo real que toma). Si no hay override para el día, se usa el horario normal.
         const lastStartOverrides = (serviceRes?.data as { last_start_overrides?: Record<string, string> | null } | null)?.last_start_overrides
         const lastStartOverride  = lastStartOverrides?.[String(dayOfWeek)]
         const lastStartOverrideMin = lastStartOverride
           ? (() => { const [h, m] = lastStartOverride.split(':').map(Number); return h * 60 + m })()
           : null
 
-        // Cupo del profesional: cuántos clientes puede atender en simultáneo (default 1 = sin superposición,
-        // comportamiento clásico e intacto para todos los profesionales que no lo tengan configurado).
+        // Cupo del profesional (clásico): cuántos clientes en simultáneo. default 1.
         const professionalCapacity = (professionalRes?.data as { concurrent_capacity?: number } | null)?.concurrent_capacity ?? 1
         const isMultiCapacityProfessional = professionalCapacity > 1
 
-        const allAppts = (apptRes.data ?? []) as { id: string; starts_at: string; ends_at: string | null; service_id: string; status: string; services: { requiere_atencion_completa?: boolean } | null }[]
-
-        // Para servicios con cupo: los turnos del MISMO servicio no bloquean el horario entre sí
-        // (cuentan contra el cupo en vez de "ocupar" el slot); los de otros servicios sí bloquean como siempre.
-        const otherServiceAppts = isGroupService ? allAppts.filter(a => a.service_id !== serviceId) : allAppts
-        const sameServiceAppts  = isGroupService ? allAppts.filter(a => a.service_id === serviceId) : []
+        const allAppts = (apptRes.data ?? []) as { id: string; starts_at: string; ends_at: string | null; service_id: string; status: string; services: { requiere_atencion_completa?: boolean; resource_group?: string | null } | null }[]
 
         const toMin = (iso: string) => { const t = toArgTime(iso); const [h,m] = t.split(':').map(Number); return h*60+m }
 
-        // Cada turno existente ocupa [starts_at, ends_at) — marcamos todos los slots dentro de ese rango
+        // ── Rangos ocupados del MISMO grupo de recurso (para el modelo nuevo) ──
+        // Choca solo con turnos del mismo grupo; grupos distintos no bloquean.
+        const sameGroupActiveRanges = isGrouped
+          ? allAppts
+              .filter(a => ((a.services?.resource_group ?? null) === candGroup) && a.status !== 'lista_espera')
+              .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + effDuration }))
+          : []
+
+        // Para servicios con cupo clásico (capacity>1 sin grupo): los del mismo servicio no bloquean entre sí.
+        const otherServiceAppts = isGroupService ? allAppts.filter(a => a.service_id !== serviceId) : allAppts
+        const sameServiceAppts  = isGroupService ? allAppts.filter(a => a.service_id === serviceId) : []
+
+        // Cada turno existente ocupa [starts_at, ends_at)
         const bookedRanges = otherServiceAppts.map(a => ({
           startMin: toMin(a.starts_at),
           endMin:   a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + 30,
         }))
 
-        // Un slot (hora) está tomado si cae dentro de algún rango existente
-        // O si los próximos N slots necesarios para el servicio nuevo no están todos libres
         const isSlotConflict = (slotMin: number) => {
-          // ¿El slot cae dentro de un turno existente?
           if (bookedRanges.some(r => slotMin >= r.startMin && slotMin < r.endMin)) return true
-          // ¿El nuevo turno (slotMin + duration) se superpondría con algún turno existente?
-          const newEnd = slotMin + serviceDurationMinutes
+          const newEnd = slotMin + effDuration
           if (bookedRanges.some(r => slotMin < r.endMin && newEnd > r.startMin)) return true
           return false
         }
 
-        // Cupos ocupados / en lista de espera del mismo servicio: se cuentan por SUPERPOSICIÓN de rango
-        // (no por horario exacto), para permitir turnos escalonados dentro del mismo cupo
-        // (ej: Color con capacity=2 — un turno a las 14:00 y otro a las 14:30 comparten cupo igual).
         const sameServiceActiveRanges = sameServiceAppts
           .filter(a => a.status !== 'lista_espera')
-          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + serviceDurationMinutes }))
+          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + effDuration }))
         const sameServiceWaitlistRanges = sameServiceAppts
           .filter(a => a.status === 'lista_espera')
-          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + serviceDurationMinutes }))
+          .map(a => ({ startMin: toMin(a.starts_at), endMin: a.ends_at ? toMin(a.ends_at) : toMin(a.starts_at) + effDuration }))
 
-        // Cuenta cuántos turnos existentes están activos EXACTAMENTE en el instante t (no en todo el rango)
         const activeAt = (ranges: { startMin: number; endMin: number }[], t: number) =>
           ranges.filter(r => r.startMin <= t && r.endMin > t).length
 
-        // Un turno nuevo [slotMin, slotMin+duration) excede el cupo dado si en ALGÚN instante dentro de ese
-        // rango la concurrencia real (turnos existentes activos en ese instante + el nuevo) supera ese cupo.
-        // Esto permite turnos escalonados (ej: 14:00 y 14:30 con bloques de 60') que nunca coinciden
-        // los 3 a la vez, aunque cada uno individualmente "toque" a los otros dos en distintos momentos.
         const wouldExceedCapacity = (ranges: { startMin: number; endMin: number }[], slotMin: number, cap: number) => {
-          const newEnd = slotMin + serviceDurationMinutes
+          const newEnd = slotMin + effDuration
           const overlapping = ranges.filter(r => r.startMin < newEnd && r.endMin > slotMin)
           if (overlapping.length + 1 <= cap) return false
           const points = [slotMin, ...overlapping.map(r => Math.max(r.startMin, slotMin))]
           return points.some(t => activeAt(overlapping, t) + 1 > cap)
         }
 
-        // ── Cupo general del profesional (multitasking entre servicios distintos) ──────────────
-        // Solo se activa para profesionales con concurrent_capacity > 1 (ej: Alejandra = 2).
-        // Para el resto, el comportamiento es exactamente el de antes (bloqueo total por cualquier
-        // otro turno superpuesto, vía isSlotConflict más abajo).
-        // Cuenta TODOS los turnos activos del profesional (cualquier servicio) contra su cupo general,
-        // y además exige que, de esos turnos simultáneos, a lo sumo 1 requiera "atención completa"
-        // (ej: nunca 2 Cortes al mismo tiempo, pero sí 1 Corte + 1 Color).
+        // ── Cupo general del profesional (clásico, solo si concurrent_capacity > 1) ──
         const allActiveRanges = isMultiCapacityProfessional
           ? allAppts
               .filter(a => a.status !== 'lista_espera')
@@ -179,6 +173,42 @@ export function useAvailability(
         const isBlockedByRange = (hora: string) =>
           blockedRanges.some(r => hora >= r.start && hora < r.end)
 
+        // Calcula si un slot está tomado, según el modelo que corresponda.
+        const slotIsTaken = (slotMin: number) =>
+          isGrouped
+            ? wouldExceedCapacity(sameGroupActiveRanges, slotMin, capacity)
+            : isMultiCapacityProfessional
+              ? wouldExceedCapacity(allActiveRanges, slotMin, professionalCapacity)
+                || (candidateRequiereAtencion && wouldExceedCapacity(attentionRanges, slotMin, 1))
+              : isSlotConflict(slotMin)
+
+        // Arma el TimeSlot para una hora dada (unifica grilla semanal y aperturas).
+        const buildSlot = (hora: string, slotMin: number, isPast: boolean, isBlocked: boolean): TimeSlot => {
+          const isTaken = slotIsTaken(slotMin)
+          if (isGrouped) {
+            const activos = activeAt(sameGroupActiveRanges, slotMin)
+            return {
+              hora,
+              disponible: !isPast && !isBlocked && !isTaken,
+              cuposRestantes: capacity > 1 ? (!isPast && !isBlocked && !isTaken ? Math.max(capacity - activos, 0) : undefined) : undefined,
+            }
+          }
+          if (isGroupService) {
+            const activosAhora   = activeAt(sameServiceActiveRanges, slotMin)
+            const excedeCupo     = wouldExceedCapacity(sameServiceActiveRanges, slotMin, capacity)
+            const enEspera       = activeAt(sameServiceWaitlistRanges, slotMin)
+            const hayCupo        = !excedeCupo && !isTaken
+            const hayListaEspera = !hayCupo && enEspera < waitlistLimit
+            return {
+              hora,
+              disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
+              cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activosAhora, 0) : undefined,
+              enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
+            }
+          }
+          return { hora, disponible: !isPast && !isTaken && !isBlocked }
+        }
+
         const schedules = (scheduleRes.data ?? []) as Schedule[]
         const now = new Date()
         const slotMap = new Map<string, TimeSlot>()
@@ -188,10 +218,6 @@ export function useAvailability(
           const [endH, endM]     = sch.end_time.split(':').map(Number)
           const startMin = startH * 60 + startM
           const interval = Math.max(sch.interval_minutes ?? 30, 5)
-          // end_time es el último horario que se ofrece para reservar (no la hora de cierre real
-          // del local, que suele ser más tarde). Por eso el corte es simple: hasta end_time
-          // exclusive, sin restar la duración del servicio. Si el servicio tiene un override de
-          // último horario para este día (ej: Reflejos), se usa ese en cambio.
           const endMin = lastStartOverrideMin != null
             ? Math.min(endH * 60 + endM, lastStartOverrideMin + interval)
             : endH * 60 + endM
@@ -200,46 +226,22 @@ export function useAvailability(
             const hh   = Math.floor(m / 60).toString().padStart(2, '0')
             const mm   = (m % 60).toString().padStart(2, '0')
             const hora = `${hh}:${mm}`
-
             const slotDt    = new Date(`${selectedDate}T${hora}:00-03:00`)
             const isPast    = isBefore(slotDt, now)
             const slotMin   = Math.floor(m)
-            // Profesionales normales (cupo=1): comportamiento clásico intacto (isSlotConflict).
-            // Profesionales con cupo>1 (ej: Alejandra): cupo general del profesional + regla de atención completa.
-            const isTaken   = isMultiCapacityProfessional
-              ? wouldExceedCapacity(allActiveRanges, slotMin, professionalCapacity)
-                || (candidateRequiereAtencion && wouldExceedCapacity(attentionRanges, slotMin, 1))
-              : isSlotConflict(slotMin)
             const isBlocked = isBlockedByRange(hora)
-
             if (!slotMap.has(hora)) {
-              if (isGroupService) {
-                const activosAhora  = activeAt(sameServiceActiveRanges, slotMin)
-                const excedeCupo    = wouldExceedCapacity(sameServiceActiveRanges, slotMin, capacity)
-                const enEspera      = activeAt(sameServiceWaitlistRanges, slotMin)
-                const hayCupo       = !excedeCupo && !isTaken
-                const hayListaEspera = !hayCupo && enEspera < waitlistLimit
-                slotMap.set(hora, {
-                  hora,
-                  disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
-                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activosAhora, 0) : undefined,
-                  enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
-                })
-              } else {
-                slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
-              }
+              slotMap.set(hora, buildSlot(hora, slotMin, isPast, isBlocked))
             }
           }
         }
 
         // ── Aperturas puntuales ────────────────────────────────────────────────
-        // Habilitan slots en ESTA fecha (aunque el profesional no tenga horario semanal ese día,
-        // o además del que tenga). El intervalo se toma del horario habitual del profesional.
         const openings = (openingsRes?.data ?? []) as { start_time: string; end_time: string }[]
         if (openings.length > 0) {
           const intervals = ((allSchedRes?.data ?? []) as { interval_minutes: number }[])
             .map(s => s.interval_minutes).filter(n => typeof n === 'number' && n > 0)
-          const openingInterval = Math.max(intervals.length ? Math.min(...intervals) : (serviceDurationMinutes || 30), 5)
+          const openingInterval = Math.max(intervals.length ? Math.min(...intervals) : (effDuration || 30), 5)
           const parseHM = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0) }
           for (const op of openings) {
             const opStart = parseHM(op.start_time)
@@ -251,26 +253,8 @@ export function useAvailability(
               if (slotMap.has(hora)) continue
               const slotDt  = new Date(`${selectedDate}T${hora}:00-03:00`)
               const isPast  = isBefore(slotDt, now)
-              const isTaken = isMultiCapacityProfessional
-                ? wouldExceedCapacity(allActiveRanges, m, professionalCapacity)
-                  || (candidateRequiereAtencion && wouldExceedCapacity(attentionRanges, m, 1))
-                : isSlotConflict(m)
               const isBlocked = isBlockedByRange(hora)
-              if (isGroupService) {
-                const activosAhora   = activeAt(sameServiceActiveRanges, m)
-                const excedeCupo     = wouldExceedCapacity(sameServiceActiveRanges, m, capacity)
-                const enEspera       = activeAt(sameServiceWaitlistRanges, m)
-                const hayCupo        = !excedeCupo && !isTaken
-                const hayListaEspera = !hayCupo && enEspera < waitlistLimit
-                slotMap.set(hora, {
-                  hora,
-                  disponible:      !isPast && !isBlocked && !isTaken && hayCupo,
-                  cuposRestantes:  !isPast && !isBlocked && !isTaken ? Math.max(capacity - activosAhora, 0) : undefined,
-                  enListaDeEspera: !isPast && !isBlocked && !isTaken && hayListaEspera,
-                })
-              } else {
-                slotMap.set(hora, { hora, disponible: !isPast && !isTaken && !isBlocked })
-              }
+              slotMap.set(hora, buildSlot(hora, m, isPast, isBlocked))
             }
           }
         }

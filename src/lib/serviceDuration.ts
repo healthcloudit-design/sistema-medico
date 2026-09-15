@@ -1,19 +1,21 @@
-// Duración REAL que un turno ocupa en la agenda de un profesional.
+// Minutos que un turno BLOQUEA realmente en la agenda de un profesional.
 //
-// duration_minutes es el "paso" de la grilla (cada cuánto se puede ofrecer un
-// horario, ej: cada 30 min). display_duration_minutes es la duración real que
-// se le informa al paciente/staff (ej: Reflejos = 240 min de proceso químico).
+// Modelo de 3 tiempos (ver migración 053):
+//   - duration_minutes         = "paso" de la grilla (cada cuánto se ofrece un horario)
+//   - display_duration_minutes = lo que se MUESTRA a la clienta en la web
+//   - block_duration_minutes   = lo que BLOQUEA el calendario/cupo  ← lo que importa acá
 //
-// El backend (reservar_turno / reprogramar_turno) ya usa GREATEST(duration_minutes,
-// display_duration_minutes) como ventana real de bloqueo — así nunca se puede doble-
-// reservar un profesional dentro del tiempo real que un tratamiento ocupa, aunque la
-// grilla siga ofreciendo horarios cada 30 min. El front tiene que usar el mismo
-// número al calcular qué horarios mostrar como disponibles, para no ofrecer horarios
-// que el backend después va a rechazar.
+// Si el servicio define block_duration_minutes (ej: Acqua), ese es el bloqueo real.
+// Si NO lo define (resto de los tenants), se mantiene el comportamiento clásico:
+// GREATEST(duration_minutes, display_duration_minutes).
 export function realBlockingMinutes(
-  service: { duration_minutes?: number | null; display_duration_minutes?: number | null } | null | undefined,
+  service:
+    | { duration_minutes?: number | null; display_duration_minutes?: number | null; block_duration_minutes?: number | null }
+    | null
+    | undefined,
   fallback = 30,
 ): number {
+  if (service?.block_duration_minutes != null) return service.block_duration_minutes
   const base = service?.duration_minutes ?? fallback
   const display = service?.display_duration_minutes ?? base
   return Math.max(base, display)

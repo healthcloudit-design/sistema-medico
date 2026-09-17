@@ -111,9 +111,9 @@ function Clock() {
 export function WaitingRoomScreen() {
   const { slug } = useParams<{ slug: string }>()
   const [org, setOrg]             = useState<Org | null>(null)
-  const [current, setCurrent]     = useState<Appointment | null>(null)
+  const [attending, setAttending] = useState<Appointment[]>([])
   const [queue, setQueue]         = useState<Appointment[]>([])
-  const [flash, setFlash]         = useState(false)
+  const [flashIds, setFlashIds]   = useState<Set<string>>(new Set())
   const [notFound, setNotFound]   = useState(false)
   const [soundReady, setSoundReady] = useState(false)
 
@@ -128,7 +128,8 @@ export function WaitingRoomScreen() {
   // - lastCurrentIdRef: id del último paciente "en atención" anunciado, para disparar el
   //   destello y la campana solo cuando REALMENTE cambia (no en cada refresco de realtime).
   const audioCtxRef      = useRef<AudioContext | null>(null)
-  const lastCurrentIdRef = useRef<string | null>(null)
+  // Ids de pacientes ya anunciados, para no repetir la campana en cada refresco de realtime.
+  const announcedIdsRef  = useRef<Set<string>>(new Set())
 
   // Campana sintetizada con Web Audio (sin archivo de audio). Dos tonos tipo "ding-dong".
   const playChime = () => {
@@ -209,19 +210,27 @@ export function WaitingRoomScreen() {
       professional: a.professionals,
     })) as Appointment[]
 
-    const inAttention = appts.find(a => a.status === 'en_atencion') ?? null
-    const waiting     = appts.filter(a => a.status !== 'en_atencion')
+    // Puede haber VARIOS pacientes en atención a la vez (un consultorio distinto por profesional).
+    const attendingList = appts.filter(a => a.status === 'en_atencion')
+    const waiting       = appts.filter(a => a.status !== 'en_atencion')
 
-    // Destello + campana SOLO cuando cambia el paciente en atención (no en cada refresco).
-    const newId = inAttention?.id ?? null
-    if (inAttention && newId !== lastCurrentIdRef.current) {
-      setFlash(true)
-      setTimeout(() => setFlash(false), 3000)
+    // Campana + destello SOLO para los recién llamados (ids que no anunciamos antes).
+    const nuevos = attendingList.filter(a => !announcedIdsRef.current.has(a.id)).map(a => a.id)
+    if (nuevos.length > 0) {
       playChime()
+      setFlashIds(prev => {
+        const s = new Set(prev)
+        nuevos.forEach(id => s.add(id))
+        return s
+      })
+      nuevos.forEach(id => setTimeout(() => {
+        setFlashIds(prev => { const s = new Set(prev); s.delete(id); return s })
+      }, 3500))
     }
-    lastCurrentIdRef.current = newId
+    // Reseteo al set actual: si un paciente sale y lo vuelven a llamar, se re-anuncia.
+    announcedIdsRef.current = new Set(attendingList.map(a => a.id))
 
-    setCurrent(inAttention)
+    setAttending(attendingList)
     setQueue(waiting)
   }
 
@@ -313,50 +322,64 @@ export function WaitingRoomScreen() {
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-0">
 
-        {/* Panel izquierdo: en atención */}
-        <div className={`lg:w-1/2 flex flex-col items-center justify-center p-10 transition-all duration-700
-          ${flash ? 'bg-sky-600' : current ? 'bg-sky-900/60' : 'bg-gray-800/40'}`}>
-          {current ? (
+        {/* Panel izquierdo: en atención (puede haber varios consultorios llamando a la vez) */}
+        <div className={`lg:w-1/2 flex flex-col p-8 min-h-0 transition-colors duration-700
+          ${attending.length ? 'bg-sky-900/30' : 'bg-gray-800/40'}`}>
+          {attending.length > 0 ? (
             <>
-              <p className="text-sky-300 text-lg font-medium uppercase tracking-widest mb-4">
+              <p className="text-sky-300 text-lg font-medium uppercase tracking-widest mb-5 text-center flex-shrink-0">
                 En atención
               </p>
-              <p className={`text-center font-bold leading-tight transition-all duration-500
-                ${current.patient_name.length > 20 ? 'text-5xl' : 'text-6xl'}`}>
-                {current.patient_name}
-              </p>
-              {current.professional && (
-                <div className="mt-8 flex flex-col items-center">
-                  <div className="flex items-center gap-4">
-                    <ProfessionalAvatar url={current.professional.avatar_url} size={56} />
-                    <p className="text-sky-300/80 text-3xl font-medium">{current.professional.full_name}</p>
-                  </div>
-                  {current.professional.consultorio && (
-                    <span className="mt-3 text-sky-400 font-bold uppercase tracking-widest text-5xl">
-                      Consultorio {current.professional.consultorio}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
+                {attending.map(a => {
+                  const isFlash = flashIds.has(a.id)
+                  const solo    = attending.length === 1
+                  return (
+                    <div key={a.id}
+                      className={`rounded-2xl border px-6 py-5 transition-all duration-500
+                        ${solo ? 'my-auto text-center' : ''}
+                        ${isFlash ? 'bg-sky-600 border-sky-300' : 'bg-sky-900/50 border-sky-400/20'}`}>
+                      <p className={`font-bold leading-tight ${solo ? 'text-6xl' : 'text-4xl truncate'}`}>
+                        {a.patient_name}
+                      </p>
+                      {a.professional && (
+                        <div className={`mt-3 flex items-center gap-3 flex-wrap ${solo ? 'justify-center' : ''}`}>
+                          <ProfessionalAvatar url={a.professional.avatar_url} size={solo ? 48 : 34} />
+                          <span className={`text-sky-300/80 font-medium ${solo ? 'text-2xl' : 'text-xl'}`}>
+                            {a.professional.full_name}
+                          </span>
+                          {a.professional.consultorio && (
+                            <span className={`text-sky-300 font-bold uppercase tracking-wide ${solo ? 'text-3xl' : 'text-2xl'}`}>
+                              · Consultorio {a.professional.consultorio}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </>
           ) : isBicentenario ? (
-            <div key={tipIndex} className="health-tip flex flex-col items-center text-center max-w-3xl px-6">
-              <div className="flex flex-col items-center mb-8">
-                <div className="w-20 h-20 rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-4">
-                  <NoteIcon size={38} />
+            <div className="flex-1 flex items-center justify-center">
+              <div key={tipIndex} className="health-tip flex flex-col items-center text-center max-w-3xl px-6">
+                <div className="flex flex-col items-center mb-8">
+                  <div className="w-20 h-20 rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-4">
+                    <NoteIcon size={38} />
+                  </div>
+                  <span className="text-sky-300 text-3xl font-bold tracking-wide">BriceTips</span>
+                  <span className="text-sky-300/40 text-xs uppercase tracking-widest mt-1">Consejos de salud</span>
                 </div>
-                <span className="text-sky-300 text-3xl font-bold tracking-wide">BriceTips</span>
-                <span className="text-sky-300/40 text-xs uppercase tracking-widest mt-1">Consejos de salud</span>
+                <p className="text-white/90 text-4xl font-light leading-snug">{HEALTH_TIPS[tipIndex]}</p>
               </div>
-              <p className="text-white/90 text-4xl font-light leading-snug">{HEALTH_TIPS[tipIndex]}</p>
             </div>
           ) : (
-            <>
+            <div className="flex-1 flex flex-col items-center justify-center">
               <p className="text-sky-300/40 text-2xl font-medium uppercase tracking-widest mb-3">
                 En atención
               </p>
               <p className="text-gray-500 text-3xl font-light">—</p>
-            </>
+            </div>
           )}
         </div>
 

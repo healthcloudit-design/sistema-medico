@@ -304,7 +304,7 @@ export function WaitingRoomScreen() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between px-10 py-5 border-b border-white/10">
+      <div className="flex items-center justify-between px-10 py-5 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-4 min-w-0">
           {org.logo_url && (
             <img
@@ -320,10 +320,10 @@ export function WaitingRoomScreen() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-0">
+      <div className="flex-1 min-h-0 flex flex-col landscape:flex-row gap-0">
 
         {/* Panel izquierdo: en atención (puede haber varios consultorios llamando a la vez) */}
-        <div className={`lg:w-1/2 flex flex-col p-8 min-h-0 transition-colors duration-700
+        <div className={`w-full landscape:w-1/2 flex flex-col p-8 min-h-0 transition-colors duration-700
           ${attending.length ? 'bg-sky-900/30' : 'bg-gray-800/40'}`}>
           {attending.length > 0 ? (
             <>
@@ -384,10 +384,10 @@ export function WaitingRoomScreen() {
         </div>
 
         {/* Divisor vertical */}
-        <div className="hidden lg:block w-px bg-white/10" />
+        <div className="hidden landscape:block w-px bg-white/10" />
 
         {/* Panel derecho: cola de espera */}
-        <div className="lg:w-1/2 flex flex-col p-8 overflow-hidden min-h-0">
+        <div className="w-full landscape:w-1/2 flex flex-col p-8 overflow-hidden min-h-0">
           <p className="text-gray-400 text-sm font-medium uppercase tracking-widest mb-5">
             A continuación
           </p>
@@ -429,13 +429,13 @@ export function WaitingRoomScreen() {
 
       {/* Carrusel de obras sociales (solo Bicentenario) */}
       {isBicentenario && (
-        <div className="px-8 pt-3 pb-4 border-t border-white/10">
+        <div className="px-8 pt-3 pb-4 border-t border-white/10 flex-shrink-0">
           <ObrasSocialesCarousel />
         </div>
       )}
 
       {/* Footer */}
-      <div className="px-10 py-3 border-t border-white/10 flex items-center justify-between">
+      <div className="px-10 py-3 border-t border-white/10 flex items-center justify-between flex-shrink-0">
         <p className="text-gray-600 text-sm">PRAXIS Agenda</p>
         <p className="text-gray-600 text-sm">
           {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}

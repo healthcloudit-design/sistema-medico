@@ -361,16 +361,17 @@ export function WaitingRoomScreen() {
               </div>
             </>
           ) : isBicentenario ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
               <div key={tipIndex} className="health-tip flex flex-col items-center text-center max-w-3xl px-6">
-                <div className="flex flex-col items-center mb-8">
-                  <div className="w-20 h-20 rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-4">
-                    <NoteIcon size={38} />
+                <div className="flex flex-col items-center mb-6">
+                  <div className="rounded-2xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center mb-3"
+                    style={{ width: 'clamp(48px, 9vh, 80px)', height: 'clamp(48px, 9vh, 80px)' }}>
+                    <NoteIcon size={34} />
                   </div>
-                  <span className="text-sky-300 text-3xl font-bold tracking-wide">BriceTips</span>
-                  <span className="text-sky-300/40 text-xs uppercase tracking-widest mt-1">Consejos de salud</span>
+                  <span className="text-sky-300 font-bold tracking-wide" style={{ fontSize: 'clamp(1.25rem, 3.4vh, 1.9rem)' }}>BriceTips</span>
+                  <span className="text-sky-300/40 uppercase tracking-widest mt-1" style={{ fontSize: 'clamp(0.6rem, 1.4vh, 0.75rem)' }}>Consejos de salud</span>
                 </div>
-                <p className="text-white/90 text-4xl font-light leading-snug">{HEALTH_TIPS[tipIndex]}</p>
+                <p className="text-white/90 font-light leading-snug" style={{ fontSize: 'clamp(1.35rem, 4vh, 2.4rem)' }}>{HEALTH_TIPS[tipIndex]}</p>
               </div>
             </div>
           ) : (

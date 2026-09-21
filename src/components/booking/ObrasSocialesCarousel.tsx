@@ -28,8 +28,17 @@ const cardBase = {
  * Carrusel (marquee) de coberturas para el hero. Tarjetas blancas uniformes; el logo se contiene
  * dentro de un ancho fijo para que ninguno se corte. Se desliza solo y pausa al pasar el mouse.
  */
-export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertura[] }) {
+export function ObrasSocialesCarousel({ items = COBERTURAS, compact = false }: { items?: Cobertura[]; compact?: boolean }) {
   const doubled = [...items, ...items]
+  const cardH     = compact ? '38px' : '50px'
+  const cardMg    = compact ? '0 5px' : '0 7px'
+  const imgW      = compact ? '118px' : '150px'
+  const imgMaxH   = compact ? '22px' : '30px'
+  const imgMaxW   = compact ? '94px' : '118px'
+  const textFont  = compact ? '12px' : '15px'
+  const labelFont = compact ? '9px' : '10px'
+  const labelMb   = compact ? '4px' : '10px'
+  const vpPad     = compact ? '3px 0 6px' : '6px 0 14px'
   return (
     <div style={{ width: '100%' }}>
       <style>{`
@@ -38,8 +47,8 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
         .ooss-viewport:hover .ooss-track { animation-play-state: paused; }
       `}</style>
 
-      <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-        <span style={{ fontFamily: SANS, fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
+      <div style={{ textAlign: 'center', marginBottom: labelMb }}>
+        <span style={{ fontFamily: SANS, fontSize: labelFont, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
           Trabajamos con
         </span>
       </div>
@@ -48,7 +57,7 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
         className="ooss-viewport"
         style={{
           overflow: 'hidden',
-          padding: '6px 0 14px',
+          padding: vpPad,
           WebkitMaskImage: 'linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)',
           maskImage: 'linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)',
         }}
@@ -56,12 +65,12 @@ export function ObrasSocialesCarousel({ items = COBERTURAS }: { items?: Cobertur
         <div className="ooss-track">
           {doubled.map((c, i) => (
             'img' in c ? (
-              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, width: '150px' }}>
-                <img src={c.img} alt={c.alt} style={{ maxHeight: '30px', maxWidth: '118px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, height: cardH, margin: cardMg, width: imgW }}>
+                <img src={c.img} alt={c.alt} style={{ maxHeight: imgMaxH, maxWidth: imgMaxW, width: 'auto', objectFit: 'contain', display: 'block' }} />
               </div>
             ) : (
-              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, padding: '0 22px' }}>
-                <span style={{ fontFamily: SANS, fontSize: '15px', fontWeight: 700, letterSpacing: '0.04em', color: '#0F2A3F', whiteSpace: 'nowrap' }}>
+              <div key={i} aria-hidden={i >= items.length} style={{ ...cardBase, height: cardH, margin: cardMg, padding: '0 18px' }}>
+                <span style={{ fontFamily: SANS, fontSize: textFont, fontWeight: 700, letterSpacing: '0.04em', color: '#0F2A3F', whiteSpace: 'nowrap' }}>
                   {c.text}
                 </span>
               </div>

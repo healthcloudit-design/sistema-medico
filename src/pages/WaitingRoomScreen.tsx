@@ -320,29 +320,26 @@ export function WaitingRoomScreen() {
           {queue.length === 0 ? (
             <p className="text-gray-600 text-xl font-light mt-4">Sin turnos pendientes</p>
           ) : (
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
-              {queue.slice(0, 8).map((appt, i) => (
+            <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+              {queue.slice(0, 12).map((appt, i) => (
                 <div
                   key={appt.id}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all
                     ${i === 0 ? 'bg-white/10 border border-white/20' : 'bg-white/5'}`}
                 >
-                  <span className={`text-2xl font-bold w-8 text-center
+                  <span className={`text-xl font-bold w-7 text-center flex-shrink-0
                     ${i === 0 ? 'text-sky-400' : 'text-gray-600'}`}>
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold truncate ${i === 0 ? 'text-white text-xl' : 'text-gray-300 text-lg'}`}>
+                    <p className={`font-semibold truncate leading-tight ${i === 0 ? 'text-white text-xl' : 'text-gray-200 text-lg'}`}>
                       {appt.patient_name}
                     </p>
                     {appt.professional && (
-                      <div className="flex items-center gap-2 mt-1 min-w-0">
-                        <ProfessionalAvatar url={appt.professional.avatar_url} size={20} />
-                        <p className="text-gray-500 text-sm truncate">
-                          {appt.professional.full_name}
-                          {appt.professional.consultorio && ` · Consultorio ${appt.professional.consultorio}`}
-                        </p>
-                      </div>
+                      <p className="text-gray-500 text-xs truncate leading-tight mt-0.5">
+                        {appt.professional.full_name}
+                        {appt.professional.consultorio && ` · Consultorio ${appt.professional.consultorio}`}
+                      </p>
                     )}
                   </div>
                 </div>

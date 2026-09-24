@@ -843,22 +843,26 @@ export function ClinicalRecordModal({
                     </button>
                     {expandedHist === h.id && (
                       <div className="px-4 pb-4 space-y-2 border-t border-gray-50">
+                        <div className="pt-3">
+                          <span className="text-xs font-medium text-gray-500">Motivo / evolución:</span>
+                          <p className="text-sm text-gray-800 whitespace-pre-line mt-1">{h.motivo}</p>
+                        </div>
                         {h.diagnostico && (
-                          <div className="pt-3">
+                          <div>
                             <span className="text-xs font-medium text-gray-500">Diagnóstico: </span>
-                            <span className="text-sm text-gray-800">{h.diagnostico}</span>
+                            <span className="text-sm text-gray-800 whitespace-pre-line">{h.diagnostico}</span>
                           </div>
                         )}
                         {h.indicaciones && (
                           <div>
                             <span className="text-xs font-medium text-gray-500">Indicaciones: </span>
-                            <span className="text-sm text-gray-800">{h.indicaciones}</span>
+                            <span className="text-sm text-gray-800 whitespace-pre-line">{h.indicaciones}</span>
                           </div>
                         )}
                         {h.notas && (
                           <div>
                             <span className="text-xs font-medium text-gray-500">Notas: </span>
-                            <span className="text-sm text-gray-800">{h.notas}</span>
+                            <span className="text-sm text-gray-800 whitespace-pre-line">{h.notas}</span>
                           </div>
                         )}
                       </div>

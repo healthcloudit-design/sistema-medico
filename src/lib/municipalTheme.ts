@@ -153,6 +153,33 @@ const CURATED: Record<string, Partial<MunicipalTheme>> = {
     logoFallback: 'tigre_logo.svg',
     phoneFallback: '0810 444 3400',
   },
+
+  // ── José C. Paz: azul institucional oficial (#11547B, header de josecpaz.gob.ar)
+  //    + celeste oficial (#14B3E4, botones/links del sitio) como secundario.
+  //    El celeste NO se usa en botones (contraste insuficiente con blanco): solo
+  //    fondos de badge; el texto del badge va en azul oscuro. Ver _TENANTS/JOSECPAZ.
+  'salud-jose-c-paz': {
+    accent: '#11547B',
+    accentInk: '#0b3b57',
+    brand: '#14B3E4',
+    gradientFrom: '#0b3b57',
+    success: '#2E7D32',
+    secondary: '#0E86AD',
+    secondaryBg: '#E3F5FC',
+    secondaryTxt: '#0b4f6e',
+    subtitle: 'Municipio de José C. Paz · Secretaría de Salud',
+    heroMunicipio: ' de José C. Paz',
+    hoursLabel: 'Lun a Vie, 8 a 16 h',
+    emergency: { phone: '107', label: 'Emergencias', hours: '24 h' },
+    emergencyCard: {
+      name: 'Hospitales de Emergencias (HEM24 / UDP)',
+      address: 'Guardia 24 h en los HEM24 del distrito',
+      badge: 'Guardia 24 h — no requiere turno',
+    },
+    turnoPrefix: 'JCP',
+    logoFallback: 'josecpaz_logo.png',
+    phoneFallback: '(02320) 440-511',
+  },
 }
 
 export function getMunicipalTheme(org: Organization): MunicipalTheme {

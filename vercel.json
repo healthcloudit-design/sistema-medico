@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/privacidad.html",
+      "destination": "/privacidad.html"
+    },
+    {
       "source": "/agenda/assets/:path*",
       "destination": "/assets/:path*"
     },
@@ -19,6 +23,10 @@
     {
       "source": "/agenda/tigre_logo.svg",
       "destination": "/tigre_logo.svg"
+    },
+    {
+      "source": "/agenda/josecpaz_logo.png",
+      "destination": "/josecpaz_logo.png"
     },
     {
       "source": "/(.*)",

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Turnos Salud José C. Paz — One-pager</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --az:#11547B; --az-ink:#0b3b57; --az-soft:#E8F1F7;
+    --cel:#14B3E4; --cel-soft:#E3F5FC; --verde:#3E9B4F;
+    --ink:#161616; --muted:#5b6470; --line:#e3e7eb;
+  }
+  html,body{ font-family:'Inter',-apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:var(--ink); }
+  .page{ width:210mm; height:297mm; padding:13mm 15mm 11mm; margin:0 auto; background:#fff; display:flex; flex-direction:column; }
+  header{ display:flex; align-items:center; gap:14px; border-bottom:4px solid var(--az); padding-bottom:11px; }
+  header img{ height:50px; }
+  .brand b{ font-size:19px; } .brand div{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .tag{ margin-left:auto; text-align:right; font-size:10.5px; color:var(--muted); line-height:1.4; }
+  .tag b{ color:var(--az-ink); font-size:12.5px; }
+  .to{ margin-top:10px; font-size:11px; color:var(--muted); }
+  .to b{ color:var(--ink); }
+  h1{ font-size:25px; line-height:1.15; margin:8px 0 6px; letter-spacing:-.2px; }
+  h1 span{ color:var(--az); }
+  .lead{ font-size:13px; color:#333; line-height:1.5; }
+  .pill{ display:inline-block; background:var(--cel-soft); color:var(--az-ink); font-weight:700; font-size:11px; padding:5px 12px; border-radius:999px; margin:10px 0 2px; }
+  .stats{ display:flex; gap:9px; margin-top:12px; }
+  .stat{ flex:1; background:var(--az-soft); border-radius:11px; padding:11px 8px; text-align:center; }
+  .stat b{ display:block; font-size:23px; color:var(--az-ink); line-height:1; }
+  .stat span{ font-size:10px; color:#3d5566; display:block; margin-top:4px; line-height:1.3; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+  .card{ border:1px solid var(--line); border-radius:11px; padding:12px 14px; }
+  .card h3{ font-size:12.5px; color:var(--az-ink); margin-bottom:5px; }
+  .card p, .card li{ font-size:11.3px; color:#333; line-height:1.48; }
+  .card ul{ margin-left:14px; }
+  .flow{ background:#F6F8FA; border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin-top:12px; }
+  .flow h3{ font-size:12.5px; margin-bottom:7px; }
+  .steps{ display:flex; gap:7px; }
+  .step{ flex:1; font-size:10.5px; color:#333; background:#fff; border:1px solid var(--line); border-radius:9px; padding:7px 9px; line-height:1.4; }
+  .step b{ display:block; color:var(--az); font-size:10.5px; margin-bottom:2px; }
+  .concejal{ margin-top:12px; border-left:5px solid var(--verde); background:#F1F8F2; border-radius:0 11px 11px 0; padding:11px 14px; }
+  .concejal h3{ font-size:12.5px; color:#22602e; margin-bottom:5px; }
+  .concejal li{ font-size:11.3px; color:#24352a; line-height:1.48; }
+  .concejal ul{ margin-left:14px; }
+  .cta{ margin-top:auto; background:var(--az); color:#fff; border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:16px; }
+  .cta .big{ font-size:15px; font-weight:800; }
+  .cta .sm{ font-size:11.5px; opacity:.95; margin-top:3px; line-height:1.45; }
+  .cta .qr{ margin-left:auto; background:#fff; border-radius:8px; padding:5px; width:31mm; height:31mm; }
+  .cta .qr svg{ width:100%; height:100%; display:block; }
+  footer{ margin-top:9px; font-size:9.2px; color:#8a929c; border-top:1px solid var(--line); padding-top:7px; line-height:1.45; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <img src="{{LOGO}}" alt="Escudo de José C. Paz" />
+    <div class="brand"><b>Turnos Salud José C. Paz</b><div>Turnos online para los Centros de Salud Municipales</div></div>
+    <div class="tag">Solución donada · impacto social<br><b>Praxis Agenda</b> · Praxis Operativa</div>
+  </header>
+
+  <div class="to">Propuesta para el <b>Honorable Concejo Deliberante de José C. Paz</b> · a la atención de <b>{{CONCEJAL}}</b></div>
+
+  <h1>Que cada vecino saque su turno en la Unidad Sanitaria <span>desde el celular</span>, sin filas ni llamadas.</h1>
+  <p class="lead">Una plataforma web lista para usar con la red de salud municipal de José C. Paz: el vecino elige su centro, la atención y el horario, y recibe su código de turno al instante. Es la misma solución que ya funciona para los municipios de San Fernando y Tigre, adaptada a la identidad y a los efectores del distrito.</p>
+
+  <div class="pill">100% gratuito para el vecino · sin app para descargar · sin costo de licencia para el Municipio</div>
+
+  <div class="stats">
+    <div class="stat"><b>22</b><span>CAPS / Unidades Sanitarias ya cargadas</span></div>
+    <div class="stat"><b>3</b><span>hospitales municipales de especialidad</span></div>
+    <div class="stat"><b>24/7</b><span>reservas online, sin ventanilla</span></div>
+    <div class="stat"><b>$0</b><span>costo de licencia en el piloto</span></div>
+  </div>
+
+  <div class="flow">
+    <h3>Cómo lo usa el vecino</h3>
+    <div class="steps">
+      <div class="step"><b>1 · Centro</b>Elige la Unidad Sanitaria más cercana.</div>
+      <div class="step"><b>2 · Atención</b>Clínica, pediatría, gineco, odontología… Si necesita orden, lo guía a su médico de cabecera.</div>
+      <div class="step"><b>3 · Día y hora</b>Ve los horarios libres reales.</div>
+      <div class="step"><b>4 · Datos</b>Nombre, DNI y teléfono.</div>
+      <div class="step"><b>5 · Listo</b>Código de turno al instante.</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Para la Secretaría de Salud</h3>
+      <ul>
+        <li>Panel de gestión: agendas, profesionales y turnos por centro.</li>
+        <li>Recepción, llamador de sala de espera y tótem de autogestión.</li>
+        <li>Historia clínica digital para los médicos.</li>
+        <li>Datos de demanda por especialidad y por barrio.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Lo que queda igual</h3>
+      <ul>
+        <li>Guardias de los HEM24 / UDP: sin turno, como hoy.</li>
+        <li>Farmacia, vacunatorio y enfermería: por orden de llegada.</li>
+        <li>La atención presencial y telefónica sigue disponible para quien la necesite.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="concejal">
+    <h3>Cómo puede impulsarlo el Concejo</h3>
+    <ul>
+      <li>Presentar la propuesta a la Secretaría de Salud y acompañar un <b>piloto en 2 o 3 Unidades Sanitarias</b> durante 60 días.</li>
+      <li>Promover un <b>proyecto de comunicación o resolución</b> que solicite al Departamento Ejecutivo evaluar su implementación.</li>
+      <li>Medir resultados con datos concretos: turnos online, ausentismo y menos espera en ventanilla.</li>
+    </ul>
+  </div>
+
+  <div class="cta">
+    <div>
+      <div class="big">Demo funcionando: probala ahora</div>
+      <div class="sm">platform.praxisoperativa.com/agenda/salud-jose-c-paz<br>Sacá un turno de prueba en cualquier centro del distrito.</div>
+    </div>
+    <div class="qr">{{QR}}</div>
+  </div>
+
+  <footer>
+    Propuesta sin cargo con fines de impacto social. Efectores tomados del registro oficial de establecimientos de salud del Ministerio de Salud de la Provincia de Buenos Aires (Datos Abiertos PBA, 2025) y de josecpaz.gob.ar. Especialidades por centro, horarios y criterio de orden médica son una propuesta a validar con la Secretaría de Salud. Contacto: Isaac — Praxis Operativa · praxisoperativa.com
+  </footer>
+</div>
+</body>
+</html>

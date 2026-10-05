@@ -29,6 +29,10 @@
       "destination": "/josecpaz_logo.png"
     },
     {
+      "source": "/agenda/propuesta/salud-jose-c-paz",
+      "destination": "/propuesta-salud-jose-c-paz.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

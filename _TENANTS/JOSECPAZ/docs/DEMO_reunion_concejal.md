@@ -22,7 +22,7 @@ Contraseña de todos los usuarios demo: **SaludJCP2026!** · Login: https://plat
 - **Sin costo de licencia** para el Municipio en el piloto; **gratis siempre** para el vecino.
 - Guardias HEM24/UDP, farmacia, vacunatorio y enfermería **siguen igual** (sin turno).
 - Lo que pedimos: que lo lleve a la Secretaría de Salud y acompañe un **piloto de 60 días en 2–3 Unidades Sanitarias**
-  (puede ser un proyecto de comunicación/resolución del HCD).
+  con la Secretaría de Salud y la Intendencia; el HCD puede sumar una declaración de interés municipal.
 
 ## Cierre / qué pedir
 - Contacto en la Secretaría de Salud y fecha para la presentación.

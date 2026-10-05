@@ -31,6 +31,11 @@ El **código de plataforma** (reutilizable) NO vive acá: vive en `src/`, `publi
   Regenerar con el nombre del concejal: `python3 docs/build_pdfs.py "Concejal Nombre Apellido" tests/shots`
 - `docs/DEMO_reunion_concejal.md` — guion de la demo del miércoles.
 - `tests/e2e_jcp.py` + `tests/shots/` — E2E frontend Playwright (red mockeada) y screenshots.
+- `landing/` — **propuesta de portal "Salud José C. Paz"** (maqueta no oficial, marcada como tal):
+  `landing-fuente.html` (editable) → `python3 landing/build_landing.py` → `landing/index.html` (autocontenida, escudo embebido).
+  Copia publicada en `public/propuesta-salud-jose-c-paz.html` → **platform.praxisoperativa.com/agenda/propuesta/salud-jose-c-paz**
+  (rewrite en `vercel.json`, `noindex`). Mapa Leaflet + OSM con los 30 efectores (coordenadas del registro PBA),
+  "usar mi ubicación" → ordena por cercanía, filtros, hospitales, sin-turno, FAQ. Screens en `tests/landing_shots/`.
 
 ## Código de plataforma tocado (compartido)
 - `src/lib/municipalTheme.ts` — nueva entrada curada `'salud-jose-c-paz'` (azul/celeste oficiales, copy, prefijo `JCP`).

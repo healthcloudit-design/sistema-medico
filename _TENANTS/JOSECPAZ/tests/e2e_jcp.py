@@ -193,6 +193,25 @@ with sync_playwright() as p:
     assert r["p_patient_dni"] == '30123456' and r["p_patient_phone"] == '11 5555 1234', r
     print(f"  ✓ RPC reservar_turno llamada con médico de cabecera (Clínica Médica) a las {r['p_starts_at']}")
 
+    # Deep link desde la landing: ?centro=<clave> abre directo ese centro (sin home ni listado)
+    dl = ctx.new_page()
+    dl.on('pageerror', lambda e: errors.append(f"pageerror(deeplink): {e}"))
+    dl.on('console', lambda m: errors.append(f"console.error(deeplink): {m.text}") if m.type == 'error' else None)
+    dl.route(re.compile(r'https://xuwkxelrcglstvisbcnk\.supabase\.co/.*'), handle)
+    dl.goto(f'http://127.0.0.1:{PORT}/agenda/salud-jose-c-paz?centro=unidad-sanitaria-la-paz', wait_until='networkidle')
+    dl.get_by_text('Atención primaria — acceso directo').wait_for()
+    assert dl.locator('h1', has_text='Unidad Sanitaria La Paz').is_visible()
+    assert dl.get_by_text('Sacá tu turno en tu Centro de Salud').count() == 0, "no debería pasar por la home"
+    dl.screenshot(path=os.path.join(SHOTS, '11_deeplink_centro.png'), full_page=True)
+    print("  ✓ deep link ?centro=unidad-sanitaria-la-paz abre directo las atenciones de La Paz")
+    dl.get_by_role('button', name=re.compile('Cambiar de centro')).click()
+    dl.get_by_text('Elegí tu Centro de Salud').wait_for()
+    print("  ✓ 'Cambiar de centro' vuelve al listado")
+    dl.goto(f'http://127.0.0.1:{PORT}/agenda/salud-jose-c-paz?centro=no-existe', wait_until='networkidle')
+    dl.get_by_text('Elegí tu Centro de Salud').wait_for()
+    print("  ✓ clave inexistente cae en el listado de centros (fallback)")
+    dl.close()
+
     # Mobile: misma home en 375px, sin scroll horizontal
     m = b.new_context(viewport={"width": 375, "height": 812}, is_mobile=True)
     m.route(re.compile(r'https://fonts\.(googleapis|gstatic)\.com/.*'), lambda r, q: r.fulfill(status=200, content_type='text/css', body=''))

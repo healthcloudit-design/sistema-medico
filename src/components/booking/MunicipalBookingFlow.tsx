@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapPin, Phone, Search, ChevronRight, ChevronLeft,
   ShieldCheck, FileText, CheckCircle, CalendarCheck, Clock,
@@ -34,6 +34,12 @@ const INK = '#161616', MUTED = '#5b6470', SOFT = '#F4F6F8', BORDER = '#e5e7eb'
 
 const STEP_NUM: Record<Step, number> = { home: 0, centro: 1, servicio: 2, orden: 2, sinorden: 2, fechahora: 3, datos: 4, ok: 5 }
 const STEPS = ['Centro', 'Atención', 'Fecha y hora', 'Tus datos', 'Confirmación']
+
+/** Clave estable de un centro para deep links (?centro=<clave>): nombre sin tildes, en kebab-case.
+ *  Ej: "Unidad Sanitaria La Paz" -> "unidad-sanitaria-la-paz". No depende del id (sobrevive a re-seeds). */
+function centroKey(name: string) {
+  return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
 
 // ── Subcomponentes a NIVEL DE MÓDULO (identidad estable => los inputs no se
 //    re-montan en cada tecla y no pierden el foco) ────────────────────────────
@@ -97,7 +103,9 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
   const logoUrl = org.logo_url ?? `${import.meta.env.BASE_URL}${theme.logoFallback}`
   const phone = org.phone ?? theme.phoneFallback
 
-  const [step, setStep] = useState<Step>('home')
+  // Deep link (portal/landing): /agenda/:slug?centro=<clave> abre directo la atención de ese centro.
+  const [deepCentro] = useState(() => new URLSearchParams(window.location.search).get('centro'))
+  const [step, setStep] = useState<Step>(deepCentro ? 'centro' : 'home')
   const [centros, setCentros] = useState<Centro[]>([])
   const [loadingCentros, setLoadingCentros] = useState(true)
   const [query, setQuery] = useState('')
@@ -155,6 +163,16 @@ export function MunicipalBookingFlow({ org }: { org: Organization }) {
     setEntries(Array.from(map.values()).sort((a, b) => a.service.name.localeCompare(b.service.name, 'es')))
     setLoadingSvcs(false)
   }
+
+  // Resolver el deep link una sola vez, cuando ya cargaron los centros. Si la clave no
+  // coincide con ningún centro, queda en el listado de centros (fallback seguro).
+  const deepDone = useRef(false)
+  useEffect(() => {
+    if (deepDone.current || !deepCentro || loadingCentros) return
+    deepDone.current = true
+    const c = centros.find(x => centroKey(x.name) === deepCentro)
+    if (c) pickCentro(c)
+  }, [deepCentro, loadingCentros, centros]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cabecera = (): SvcEntry | null => {
     for (const name of PRIMARIA) { const e = entries.find(x => !x.service.requiere_orden && x.service.name === name); if (e) return e }

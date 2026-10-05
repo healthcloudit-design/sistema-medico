@@ -456,20 +456,23 @@
     ['Unidad Sanitaria Urquiza','Caracas e/ Bolívar y Canal de Panamá','2320 437666',-34.505954,-58.812418,'caps'],
     ['Unidad Sanitaria Sol y Verde','Dinamarca esq. Finlay','2320 491561',-34.502064,-58.798493,'caps'],
     ['Centro de Salud Santa Paula','Piñero 755','2320 447291',-34.505770,-58.747388,'caps'],
-    ['Centro Asistencial Tráiler Bº Piñeiro','Pedernera y Lacroce','2320 431127',-34.515966,-58.768902,'caps'],
+    ['Centro Asistencial Tráiler Bº Piñeiro','Pedernera y Lacroce','2320 431127',-34.515966,-58.768902,'caps','Centro Asistencial Tráiler Barrio Piñeiro'],
     ['Centro de Salud Suizo Ideal','Chile y Roque Sáenz Peña','2320 438808',-34.533719,-58.740605,'caps'],
     ['Unidad Sanitaria Frino Sur','Cesáreo B. de Quirós 1956','2320 465723',-34.506933,-58.771517,'caps'],
     ['Unidad Sanitaria Piñeyro II','11 de Septiembre y Carmen Puch','2320 421983',-34.512919,-58.782803,'caps'],
     ['Tráiler I — Secretaría de Salud','Av. H. Yrigoyen 2945','2320 589583',-34.523915,-58.763083,'caps'],
     ['Hospital Odontológico Eva Perón','Av. H. Yrigoyen 3072, Bº Argital','2320 422260',-34.524303,-58.764448,'esp'],
-    ['Hospital Oftalmológico Juan D. Perón','Av. H. Yrigoyen 2900','',-34.524985,-58.765941,'esp'],
+    ['Hospital Oftalmológico Juan D. Perón','Av. H. Yrigoyen 2900','',-34.524985,-58.765941,'esp','Hospital Oftalmológico Juan Domingo Perón'],
     ['Centro Integral del Diabético','Zuviría y Lavalle','',-34.522136,-58.748947,'esp'],
     ['HEM24 Traumatología “Domingo Angio”','Padre Ustarroz 5258','',-34.537923,-58.771726,'hem'],
     ['HEM24 Alta Complejidad “Rubén Caporaletti”','Av. Croacia 2312, Bº Vucetich','02320 353102',-34.512336,-58.796538,'hem'],
     ['HEM24 de la Mujer y el Niño “Nelly Quiroga”','Montes de Oca 2910, Bº Frino','02320 353104',-34.511629,-58.772428,'hem'],
     ['HEM24 Cardiovascular “Miguel Ángel Buljan”','Dinamarca 3627, Bº Sol y Verde','02320 353103',-34.502438,-58.797410,'hem'],
     ['Hospital Oncológico Municipal','Héctor Arregui 501','02320 353105',-34.514942,-58.754601,'hem']
-  ].map(function(r,i){ return { id:i, name:r[0], addr:r[1], tel:r[2], lat:r[3], lng:r[4], t:r[5] }; });
+  ].map(function(r,i){ return { id:i, name:r[0], addr:r[1], tel:r[2], lat:r[3], lng:r[4], t:r[5], k:(r[5]==='hem'?null:centroKey(r[6]||r[0])) }; });
+  // Misma clave que usa el turnero (MunicipalBookingFlow): nombre del centro en la base, sin tildes, kebab-case.
+  function centroKey(n){ return n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  function turnoUrl(c){ return TURNOS+'?centro='+encodeURIComponent(c.k); }
 
   var TL = { caps:['Unidad Sanitaria','tag-caps'], esp:['Especialidad · con turno','tag-esp'], hem:['Guardia 24 h · sin turno','tag-hem'] };
   var state = { q:'', f:'all', me:null, sel:null };
@@ -515,7 +518,7 @@
       C.forEach(function(c){
         var icon = L.divIcon({ className:'', html:'<div class="pin '+c.t+'"></div>', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24] });
         var m = L.marker([c.lat,c.lng], { icon:icon, title:c.name }).addTo(map);
-        m.bindPopup('<b>'+esc(c.name)+'</b><br>'+esc(c.addr)+(c.t!=='hem'?'<br><a href="'+TURNOS+'">Sacar turno →</a>':'<br><span style="color:#9b1c1c;font-weight:700">Guardia 24 h · sin turno</span>'));
+        m.bindPopup('<b>'+esc(c.name)+'</b><br>'+esc(c.addr)+(c.t!=='hem'?'<br><a href="'+turnoUrl(c)+'">Sacar turno en este centro →</a>':'<br><span style="color:#9b1c1c;font-weight:700">Guardia 24 h · sin turno</span>'));
         m.on('click', function(){ select(c.id, false); });
         markers[c.id]=m;
       });
@@ -535,7 +538,7 @@
       return '<div class="item'+(state.sel===c.id?' on':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+esc(c.name)+', '+esc(c.addr)+'">'+
         '<b>'+esc(c.name)+'</b>'+(state.me?'<span class="dist">'+(c.d<1?Math.round(c.d*1000)+' m':c.d.toFixed(1).replace('.',',')+' km')+'</span>':'<span></span>')+
         '<span class="addr">'+esc(c.addr)+'<br><span class="tag '+tl[1]+'">'+tl[0]+'</span></span>'+
-        '<div class="acts">'+(c.t!=='hem'?'<a class="a-turno" href="'+TURNOS+'">Sacar turno</a>':'')+
+        '<div class="acts">'+(c.t!=='hem'?'<a class="a-turno" href="'+turnoUrl(c)+'" aria-label="Sacar turno en '+esc(c.name)+'">Sacar turno aquí</a>':'')+
         '<a class="a-ir" href="'+gmaps(c)+'" target="_blank" rel="noopener">Cómo llegar</a>'+
         (c.tel?'<a class="a-tel" href="tel:'+c.tel.replace(/\s/g,'')+'">'+esc(c.tel)+'</a>':'')+'</div></div>';
     }).join('');

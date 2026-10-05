@@ -36,12 +36,15 @@ El **código de plataforma** (reutilizable) NO vive acá: vive en `src/`, `publi
   Copia publicada en `public/propuesta-salud-jose-c-paz.html` → **platform.praxisoperativa.com/agenda/propuesta/salud-jose-c-paz**
   (rewrite en `vercel.json`, `noindex`). Mapa Leaflet + OSM con los 30 efectores (coordenadas del registro PBA),
   "usar mi ubicación" → ordena por cercanía, filtros, hospitales, sin-turno, FAQ. Screens en `tests/landing_shots/`.
+  Cada "Sacar turno aquí" hace **deep link** al turnero: `/agenda/salud-jose-c-paz?centro=<clave>`, donde la clave es
+  el nombre del centro en la base sin tildes y en kebab-case (ej. `unidad-sanitaria-la-paz`). Si se renombra un centro
+  en la base, actualizar su nombre en el array `C` de `landing-fuente.html` (7º campo = nombre en la base).
 
 ## Código de plataforma tocado (compartido)
 - `src/lib/municipalTheme.ts` — nueva entrada curada `'salud-jose-c-paz'` (azul/celeste oficiales, copy, prefijo `JCP`).
   San Fernando y Tigre sin cambios.
 - `public/josecpaz_logo.png` + `vercel.json` (rewrite `/agenda/josecpaz_logo.png`).
-- `MunicipalBookingFlow.tsx` NO se tocó: ya estaba parametrizado y con `Shell`/`Back` a nivel de módulo.
+- `MunicipalBookingFlow.tsx`: soporta deep link `?centro=<clave>` (abre directo las atenciones de ese centro; clave inexistente → listado). Reutilizable por cualquier tenant `general`.
 
 ## Estado verificado (02/10/2026)
 - `tsc --noEmit`: OK · `vite build`: OK (2966 módulos).

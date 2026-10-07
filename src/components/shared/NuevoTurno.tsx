@@ -4,6 +4,7 @@ import { format, addDays, startOfWeek, subWeeks, addWeeks, isBefore, startOfDay,
 import { es } from 'date-fns/locale'
 import { supabase } from '../../lib/supabase'
 import { useAvailability } from '../../hooks/useAvailability'
+import { realBlockingMinutes } from '../../lib/serviceDuration'
 
 const DAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 
@@ -73,7 +74,7 @@ export function NuevoTurno({ organizationId, initialPatient, lockedProfessional 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Slots de disponibilidad
-  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate, selectedSvc?.duration_minutes ?? 30, undefined, selectedSvc?.id)
+  const { slots, availableDates } = useAvailability(selectedPro?.id, selectedDate, realBlockingMinutes(selectedSvc), undefined, selectedSvc?.id)
 
   const todayStart = startOfDay(new Date())
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -131,7 +132,7 @@ export function NuevoTurno({ organizationId, initialPatient, lockedProfessional 
         p_patient_notes:       notas        || undefined,
       })
       if (error) throw error
-      const result = data as { id?: string; status?: string; error?: string }
+      const result = data as { id?: string; status?: string; error?: string; block_full_day?: boolean; block_from?: string; block_to?: string }
       if (result?.error === 'slot_taken') {
         setErrorMsg('Ese horario ya fue reservado. Elegí otro.')
         setStep('fecha'); setSaving(false); return
@@ -142,6 +143,13 @@ export function NuevoTurno({ organizationId, initialPatient, lockedProfessional 
       }
       if (result?.error === 'service_conflict') {
         setErrorMsg('Ese horario no está disponible por un turno de otro servicio que ocupa a la profesional en ese momento. Elegí otro.')
+        setStep('fecha'); setSaving(false); return
+      }
+      if (result?.error === 'professional_unavailable') {
+        const bloqueo = result.block_full_day
+          ? 'La profesional tiene ese día bloqueado. Elegí otra fecha.'
+          : `La profesional tiene un bloqueo de ${result.block_from} a ${result.block_to} hs y ese servicio no entra antes de ese horario (se superpone). Elegí un horario más temprano u otra fecha.`
+        setErrorMsg(bloqueo)
         setStep('fecha'); setSaving(false); return
       }
       if (result?.error) throw new Error(result.error)

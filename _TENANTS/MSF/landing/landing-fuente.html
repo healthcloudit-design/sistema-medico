@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salud San Fernando — Propuesta de portal</title>
+<meta name="description" content="Maqueta de propuesta: portal de salud municipal de San Fernando con turnos online, mapa de centros y centros especializados." />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#3F7D1E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root{
+    --az:#3F7D1E; --az-900:#223f10; --az-700:#336318; --az-50:#EEF5E6; --az-100:#DCEBC9;
+    --cel:#8CC63F; --cel-50:#F1F8E4; --verde:#2F8A43; --verde-50:#ECF7EE;
+    --mag:#A31860; --mag-50:#FBE7F0;
+    --rojo:#C62828; --rojo-50:#FDECEC;
+    --ink:#161b14; --txt:#2c352a; --muted:#5f6b5a; --line:#e4e8de; --bg:#F6F8F3; --white:#fff;
+    --r:16px; --sh:0 1px 2px rgba(20,40,16,.06), 0 8px 24px rgba(20,40,16,.08);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{ font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color:var(--txt); background:var(--white); font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; }
+  img{ max-width:100%; display:block; }
+  .wrap{ max-width:1160px; margin:0 auto; padding:0 20px; }
+  :focus-visible{ outline:3px solid var(--cel); outline-offset:2px; border-radius:6px; }
+  .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+  /* Cinta de propuesta */
+  .ribbon{ background:#FFF4D6; color:#6b4e00; font-size:12.5px; text-align:center; padding:7px 14px; border-bottom:1px solid #f1dfa6; }
+  .ribbon b{ font-weight:700; }
+
+  /* Header */
+  header.top{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92); backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line); }
+  .top .wrap{ display:flex; align-items:center; gap:14px; height:70px; }
+  .brand{ display:flex; align-items:center; gap:11px; text-decoration:none; }
+  .brand img{ height:46px; width:auto; }
+  .brand b{ display:block; font-size:16.5px; color:var(--ink); letter-spacing:-.2px; line-height:1.15; }
+  .brand span{ display:block; font-size:12px; color:var(--muted); }
+  nav.main{ margin-left:auto; display:flex; gap:4px; align-items:center; }
+  nav.main a{ text-decoration:none; font-size:14.5px; font-weight:600; color:var(--txt); padding:9px 12px; border-radius:10px; }
+  nav.main a:hover{ background:var(--az-50); color:var(--az); }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:15.5px; text-decoration:none; border:0; cursor:pointer; border-radius:12px; padding:13px 20px; transition:transform .12s ease, box-shadow .12s ease, background .12s; font-family:inherit; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--az); color:#fff; box-shadow:0 6px 16px rgba(63,125,30,.28); }
+  .btn-primary:hover{ background:var(--az-700); }
+  .btn-light{ background:#fff; color:var(--az-900); }
+  .btn-ghost{ background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.55); }
+  .btn-outline{ background:#fff; color:var(--az); border:1.5px solid var(--az-100); }
+  nav.main .btn{ padding:10px 16px; font-size:14.5px; margin-left:6px; color:#fff; }
+  nav.main .btn:hover{ color:#fff; }
+  .menu-btn{ display:none; margin-left:auto; background:var(--az-50); color:var(--az); border:0; border-radius:10px; width:44px; height:44px; font-size:22px; cursor:pointer; }
+  @media (max-width: 920px){
+    nav.main{ display:none; position:absolute; top:70px; left:0; right:0; background:#fff; border-bottom:1px solid var(--line); flex-direction:column; align-items:stretch; padding:10px 16px 16px; box-shadow:var(--sh); }
+    nav.main.open{ display:flex; }
+    nav.main a{ padding:13px 12px; font-size:16px; }
+    nav.main .btn{ margin:6px 0 0; }
+    .menu-btn{ display:inline-flex; align-items:center; justify-content:center; }
+  }
+
+  /* Hero */
+  .hero{ position:relative; overflow:hidden; color:#fff; background:
+      radial-gradient(1100px 500px at 90% -10%, rgba(140,198,63,.55), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(163,24,96,.28), transparent 60%),
+      linear-gradient(135deg, var(--az-900) 0%, var(--az) 58%, #5fa32a 100%); }
+  .hero .wrap{ display:grid; grid-template-columns:1.15fr .85fr; gap:40px; align-items:center; padding-top:64px; padding-bottom:72px; }
+  .eyebrow{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600; }
+  .eyebrow i{ width:8px; height:8px; border-radius:50%; background:#CDE8A6; box-shadow:0 0 0 4px rgba(205,232,166,.25); }
+  .hero h1{ font-size:clamp(34px, 5.2vw, 56px); line-height:1.04; letter-spacing:-1.2px; font-weight:800; margin:18px 0 14px; }
+  .hero h1 span{ color:#D7EDB4; }
+  .hero p.lead{ font-size:clamp(16px, 1.6vw, 19px); opacity:.95; max-width:560px; }
+  .hero .ctas{ display:flex; gap:12px; flex-wrap:wrap; margin-top:26px; }
+  .hero .ctas .btn{ padding:15px 22px; font-size:16px; }
+  .hero-card{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.22); border-radius:22px; padding:22px; backdrop-filter:blur(6px); }
+  .hero-card h2{ font-size:15px; font-weight:700; opacity:.9; margin-bottom:12px; }
+  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat{ background:rgba(255,255,255,.95); color:var(--az-900); border-radius:14px; padding:14px; }
+  .stat b{ display:block; font-size:30px; font-weight:800; letter-spacing:-.6px; line-height:1; }
+  .stat span{ display:block; font-size:12.5px; color:#3c5230; margin-top:6px; line-height:1.3; }
+  .hero-card .note{ margin-top:12px; font-size:12.5px; opacity:.85; }
+  @media (max-width: 920px){ .hero .wrap{ grid-template-columns:1fr; padding-top:40px; padding-bottom:48px; gap:28px; } }
+
+  /* Accesos rápidos */
+  .quick{ margin-top:-34px; position:relative; z-index:2; }
+  .quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .q{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--sh); text-decoration:none; display:flex; flex-direction:column; gap:6px; transition:transform .15s ease, box-shadow .15s ease; }
+  .q:hover{ transform:translateY(-3px); box-shadow:0 14px 30px rgba(20,40,16,.12); }
+  .q .ic{ width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:4px; }
+  .q .ic svg{ width:24px; height:24px; }
+  .q b{ font-size:16.5px; color:var(--ink); }
+  .q span{ font-size:13.5px; color:var(--muted); }
+  @media (max-width: 920px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 420px){ .q{ padding:14px; } .q b{ font-size:15px; } }
+
+  /* Secciones */
+  section{ padding:72px 0; scroll-margin-top:74px; }
+  .sec-head{ max-width:720px; margin-bottom:28px; }
+  .kicker{ font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--az); }
+  .sec-head h2{ font-size:clamp(26px, 3.4vw, 38px); line-height:1.12; letter-spacing:-.7px; color:var(--ink); margin:8px 0 10px; font-weight:800; }
+  .sec-head p{ color:var(--muted); font-size:17px; }
+  .alt{ background:var(--bg); }
+
+  /* Urgencias */
+  .urg{ background:var(--rojo-50); border:1px solid #f6caca; border-radius:20px; padding:22px; display:grid; grid-template-columns:auto 1fr auto; gap:18px; align-items:center; }
+  .urg .big{ width:64px; height:64px; border-radius:18px; background:var(--rojo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:22px; }
+  .urg h3{ font-size:19px; color:#7a1414; }
+  .urg p{ color:#7a3434; font-size:14.5px; }
+  .urg .btn{ background:var(--rojo); color:#fff; }
+  @media (max-width: 720px){ .urg{ grid-template-columns:1fr; text-align:left; } }
+
+  /* Mapa + lista */
+  .finder{ display:grid; grid-template-columns:400px 1fr; gap:18px; }
+  .finder-panel{ background:#fff; border:1px solid var(--line); border-radius:var(--r); display:flex; flex-direction:column; min-height:0; }
+  .finder-tools{ padding:14px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+  .search{ position:relative; }
+  .search input{ width:100%; font:inherit; font-size:16px; padding:13px 14px 13px 42px; border:1.5px solid var(--line); border-radius:12px; background:#fff; color:var(--ink); }
+  .search input:focus{ border-color:var(--az); outline:none; box-shadow:0 0 0 4px var(--az-50); }
+  .search svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:19px; height:19px; color:#8a958a; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font:inherit; font-size:13px; font-weight:600; padding:7px 12px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--txt); cursor:pointer; }
+  .chip[aria-pressed="true"]{ background:var(--az); border-color:var(--az); color:#fff; }
+  .geo{ font:inherit; font-size:14px; font-weight:700; color:var(--az); background:var(--az-50); border:0; border-radius:10px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; justify-content:center; }
+  .list{ overflow:auto; max-height:560px; padding:6px; }
+  .item{ padding:12px; border-radius:12px; display:grid; grid-template-columns:1fr auto; gap:4px 10px; cursor:pointer; border:1px solid transparent; }
+  .item:hover, .item.on{ background:var(--az-50); border-color:var(--az-100); }
+  .item b{ color:var(--ink); font-size:15px; line-height:1.3; }
+  .item .addr{ grid-column:1/2; font-size:13.5px; color:var(--muted); }
+  .item .dist{ font-size:12.5px; font-weight:700; color:var(--az); white-space:nowrap; }
+  .item .tag{ display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:999px; margin-top:4px; }
+  .tag-caps{ background:var(--az-50); color:#2f5e16; }
+  .tag-esp{ background:var(--mag-50); color:#8a1452; }
+  .tag-hem{ background:var(--rojo-50); color:#9b1c1c; }
+  .item .acts{ grid-column:1/3; display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .item .acts a{ font-size:13px; font-weight:700; text-decoration:none; padding:8px 12px; border-radius:9px; }
+  .a-turno{ background:var(--az); color:#fff; }
+  .a-ir{ background:#fff; color:var(--az); border:1.5px solid var(--az-100); }
+  .a-tel{ background:#fff; color:var(--txt); border:1.5px solid var(--line); }
+  #map{ border-radius:var(--r); border:1px solid var(--line); min-height:640px; background:#e7eee2; z-index:1; }
+  .map-fallback{ display:flex; align-items:center; justify-content:center; text-align:center; color:var(--muted); padding:24px; }
+  @media (max-width: 920px){ .finder{ grid-template-columns:1fr; } #map{ min-height:340px; order:-1; } .list{ max-height:480px; } }
+
+  /* Centros especializados */
+  .hosp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .h{ background:#fff; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; display:flex; flex-direction:column; }
+  .h .art{ height:118px; position:relative; overflow:hidden; }
+  .h .art svg{ position:absolute; right:-8px; bottom:-10px; width:130px; height:130px; opacity:.95; }
+  .h .art .badge{ position:absolute; left:14px; top:14px; background:rgba(255,255,255,.92); color:var(--ink); font-size:12px; font-weight:700; padding:5px 10px; border-radius:999px; }
+  .h .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .h h3{ font-size:17px; color:var(--ink); line-height:1.25; letter-spacing:-.2px; }
+  .h p{ font-size:14px; color:var(--muted); }
+  .h .meta{ margin-top:auto; padding-top:8px; font-size:13px; color:var(--txt); display:flex; flex-direction:column; gap:2px; }
+  .g-red{ background:linear-gradient(135deg,#a51d1d,#e0473f); }
+  .g-az{ background:linear-gradient(135deg,var(--az-900),var(--az)); }
+  .g-cel{ background:linear-gradient(135deg,#2f6318,#8CC63F); }
+  .g-ver{ background:linear-gradient(135deg,#1f6b31,#45a35a); }
+  .g-vio{ background:linear-gradient(135deg,#6e1145,var(--mag)); }
+  .g-nar{ background:linear-gradient(135deg,#b4520e,#ee8a2f); }
+  @media (max-width: 920px){ .hosp-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 600px){ .hosp-grid{ grid-template-columns:1fr; } }
+
+  /* Pasos */
+  .steps{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; counter-reset:s; }
+  .step{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px 16px; position:relative; }
+  .step::before{ counter-increment:s; content:counter(s); width:34px; height:34px; border-radius:10px; background:var(--az); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
+  .step b{ display:block; color:var(--ink); font-size:16px; margin-bottom:4px; }
+  .step span{ font-size:14px; color:var(--muted); }
+  .orden{ margin-top:16px; background:var(--cel-50); border:1px solid #cfe6a6; border-radius:var(--r); padding:16px 18px; display:flex; gap:14px; align-items:flex-start; }
+  .orden svg{ flex:none; width:26px; height:26px; color:#2f6318; margin-top:2px; }
+  .orden p{ color:#2f4a18; font-size:15px; }
+  @media (max-width: 920px){ .steps{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 480px){ .steps{ grid-template-columns:1fr; } }
+
+  /* Sin turno */
+  .noturno{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .nt{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px; }
+  .nt b{ display:block; color:var(--ink); font-size:16.5px; margin:8px 0 4px; }
+  .nt span{ color:var(--muted); font-size:14px; }
+  .nt .ic{ width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--verde-50); color:var(--verde); }
+  .nt .ic svg{ width:22px; height:22px; }
+  @media (max-width: 720px){ .noturno{ grid-template-columns:1fr; } }
+
+  /* FAQ */
+  .faq{ display:grid; gap:10px; max-width:860px; }
+  details{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:4px 18px; }
+  summary{ cursor:pointer; list-style:none; font-weight:700; color:var(--ink); font-size:16px; padding:14px 0; display:flex; justify-content:space-between; gap:12px; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::after{ content:'+'; font-size:22px; color:var(--az); line-height:1; }
+  details[open] summary::after{ content:'–'; }
+  details p{ padding:0 0 16px; color:var(--txt); font-size:15px; }
+
+  /* CTA final */
+  .cta-band{ background:linear-gradient(135deg, var(--az-900), var(--az)); color:#fff; border-radius:24px; padding:36px; display:flex; align-items:center; gap:24px; justify-content:space-between; flex-wrap:wrap; }
+  .cta-band h2{ font-size:clamp(24px,3vw,32px); letter-spacing:-.5px; line-height:1.15; }
+  .cta-band p{ opacity:.9; margin-top:6px; }
+
+  footer{ background:#17250f; color:#cdd8c2; padding:44px 0 28px; margin-top:72px; font-size:14px; }
+  footer .cols{ display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:28px; }
+  footer b{ color:#fff; }
+  footer a{ color:#cdd8c2; text-decoration:none; }
+  footer a:hover{ color:#fff; text-decoration:underline; }
+  footer .legal{ margin-top:28px; padding-top:16px; border-top:1px solid rgba(255,255,255,.12); font-size:12.5px; color:#9fae92; }
+  @media (max-width: 720px){ footer .cols{ grid-template-columns:1fr; } }
+
+  /* Leaflet: popup y markers */
+  .leaflet-popup-content{ font-family:Inter, system-ui, sans-serif; font-size:13.5px; margin:12px 14px; }
+  .leaflet-popup-content b{ font-size:14.5px; color:var(--ink); }
+  .leaflet-popup-content a{ color:var(--az); font-weight:700; }
+  .pin{ width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:3px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,.3); }
+  .pin.caps{ background:var(--az); } .pin.esp{ background:var(--mag); } .pin.hem{ background:var(--rojo); }
+  .me{ width:18px; height:18px; border-radius:50%; background:var(--cel); border:3px solid #fff; box-shadow:0 0 0 6px rgba(140,198,63,.35); }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="ribbon" role="note"><b>Propuesta de diseño</b> · Maqueta no oficial elaborada por Praxis Operativa para su evaluación por el Municipio de San Fernando.</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#inicio" aria-label="Salud San Fernando, inicio">
+      <img src="{{LOGO}}" alt="" width="78" height="46" />
+      <div><b>Salud San Fernando</b><span>Secretaría de Salud · Municipio</span></div>
+    </a>
+    <button class="menu-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu" id="menuBtn">☰</button>
+    <nav class="main" id="menu" aria-label="Principal">
+      <a href="#centros">Centros de salud</a>
+      <a href="#especializados">Especializados</a>
+      <a href="#sin-turno">Vacunación</a>
+      <a href="#preguntas">Preguntas</a>
+      <a class="btn btn-primary" href="{{TURNOS}}">Sacar turno</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio">
+  <section class="hero" aria-labelledby="h1" style="padding:0">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow"><i></i> Turnos online · gratis y desde el celular</span>
+        <h1 id="h1">Tu salud,<br><span>cerca de casa.</span></h1>
+        <p class="lead">Sacá turno en tu Centro de Salud de San Fernando sin hacer fila, encontrá el centro más cercano y conocé los centros especializados del Municipio.</p>
+        <div class="ctas">
+          <a class="btn btn-light" href="{{TURNOS}}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+            Sacar un turno
+          </a>
+          <a class="btn btn-ghost" href="#centros">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            Encontrar mi centro
+          </a>
+        </div>
+      </div>
+      <aside class="hero-card" aria-label="La red de salud municipal en números">
+        <h2>La red de salud municipal</h2>
+        <div class="stats">
+          <div class="stat"><b>15</b><span>Centros de salud en los barrios y las islas</span></div>
+          <div class="stat"><b>24 h</b><span>guardia en el Centro de Emergencias</span></div>
+          <div class="stat"><b>4</b><span>centros especializados: rehabilitación, odontología, atención temprana y diagnóstico</span></div>
+          <div class="stat"><b>$0</b><span>atención y turnos gratuitos</span></div>
+        </div>
+        <p class="note">Red de salud del Municipio de San Fernando (sanfernando.gob.ar).</p>
+      </aside>
+    </div>
+  </section>
+
+  <div class="wrap quick" aria-label="Accesos rápidos">
+    <div class="quick-grid">
+      <a class="q" href="{{TURNOS}}">
+        <div class="ic" style="background:var(--az-50);color:var(--az)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <b>Sacar turno</b><span>Clínica, pediatría, gineco, odontología y más.</span>
+      </a>
+      <a class="q" href="#urgencias">
+        <div class="ic" style="background:var(--rojo-50);color:var(--rojo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <b>Emergencias 24 h</b><span>Guardia sin turno en Carlos Casares y Entre Ríos.</span>
+      </a>
+      <a class="q" href="#centros">
+        <div class="ic" style="background:var(--cel-50);color:#2f6318"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+        <b>Centro más cercano</b><span>Mapa, dirección y cómo llegar.</span>
+      </a>
+      <a class="q" href="#sin-turno">
+        <div class="ic" style="background:var(--verde-50);color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 2 4 4M17 7l3-3M19 9l-8.5 8.5a2.1 2.1 0 0 1-3 0l-.9-.9a2.1 2.1 0 0 1 0-3L15 5M9 11l4 4M5 19l-3 3"/></svg></div>
+        <b>Vacunación</b><span>Sin turno, en el Vacunatorio Municipal.</span>
+      </a>
+    </div>
+  </div>
+
+  <section id="urgencias" aria-labelledby="urg-h" style="padding-top:48px;padding-bottom:0">
+    <div class="wrap">
+      <div class="urg">
+        <div class="big" aria-hidden="true">107</div>
+        <div>
+          <h3 id="urg-h">¿Es una urgencia? No esperes un turno.</h3>
+          <p>Llamá al <b>107</b> (SAME) o acercate al <b>Centro de Emergencias de San Fernando</b> (Carlos Casares y Entre Ríos): atiende las 24 horas, sin turno previo.</p>
+        </div>
+        <a class="btn" href="tel:107">Llamar al 107</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="centros" aria-labelledby="centros-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Centros de salud</span>
+        <h2 id="centros-h">Encontrá tu centro más cercano</h2>
+        <p>Usá tu ubicación o buscá por barrio o calle. Desde cada centro podés sacar turno o ver cómo llegar.</p>
+      </div>
+      <div class="finder">
+        <div class="finder-panel">
+          <div class="finder-tools">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <label class="sr" for="q">Buscar centro por nombre o dirección</label>
+              <input id="q" type="search" placeholder="Buscar por barrio, calle o nombre…" autocomplete="off" />
+            </div>
+            <div class="chips" role="group" aria-label="Filtrar por tipo">
+              <button class="chip" data-f="all" aria-pressed="true">Todos</button>
+              <button class="chip" data-f="caps" aria-pressed="false">Centros de salud</button>
+              <button class="chip" data-f="esp" aria-pressed="false">Especializados</button>
+              <button class="chip" data-f="hem" aria-pressed="false">Emergencias 24 h</button>
+            </div>
+            <button class="geo" id="geo" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+              Usar mi ubicación
+            </button>
+            <div id="geoMsg" class="sr" aria-live="polite"></div>
+          </div>
+          <div class="list" id="list" aria-live="polite"></div>
+        </div>
+        <div id="map" role="region" aria-label="Mapa de centros de salud"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="turnos" aria-labelledby="turnos-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Turnos online</span>
+        <h2 id="turnos-h">Tu turno en 5 pasos, sin filas</h2>
+        <p>Gratis, sin descargar aplicaciones y desde cualquier celular.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><b>Elegí tu centro</b><span>El Centro de Salud más cercano a tu casa.</span></div>
+        <div class="step"><b>Elegí la atención</b><span>Clínica, pediatría, ginecología, obstetricia u odontología.</span></div>
+        <div class="step"><b>Día y horario</b><span>Ves solo los horarios realmente libres.</span></div>
+        <div class="step"><b>Tus datos</b><span>Nombre, DNI y teléfono. Nada más.</span></div>
+        <div class="step"><b>¡Listo!</b><span>Recibís tu código de turno al instante.</span></div>
+      </div>
+      <div class="orden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+        <p><b>¿Especialidades?</b> Para algunas atenciones necesitás la orden de tu médico de cabecera. Si no la tenés, el sistema te ayuda a sacar primero el turno con tu médico de cabecera en el mismo centro.</p>
+      </div>
+      <div style="margin-top:22px"><a class="btn btn-primary" href="{{TURNOS}}">Sacar mi turno ahora →</a></div>
+    </div>
+  </section>
+
+  <section id="especializados" aria-labelledby="hosp-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Centros especializados</span>
+        <h2 id="hosp-h">Centros especializados del Municipio</h2>
+        <p>Rehabilitación, atención temprana, odontología y diagnóstico por imágenes, gratuitos para todos los vecinos. Además, el Centro de Emergencias con guardia las 24 horas.</p>
+      </div>
+      <div class="hosp-grid" id="hospGrid"></div>
+    </div>
+  </section>
+
+  <section class="alt" id="sin-turno" aria-labelledby="st-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Sin turno</span>
+        <h2 id="st-h">Esto no necesita turno</h2>
+        <p>Acercate a tu Centro de Salud dentro del horario de atención: se atiende por orden de llegada.</p>
+      </div>
+      <div class="noturno">
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 2 4 4M17 7l3-3M19 9l-8.5 8.5a2.1 2.1 0 0 1-3 0l-.9-.9a2.1 2.1 0 0 1 0-3L15 5M9 11l4 4M5 19l-3 3"/></svg></div><b>Vacunatorio</b><span>Calendario nacional y campañas (antigripal, etc.) en el Vacunatorio Municipal (Av. Avellaneda 1460). Llevá tu DNI y carnet de vacunas.</span></div>
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3M12 11v6M9 14h6"/></svg></div><b>Farmacia</b><span>Entrega de medicamentos con receta de un profesional del sistema público municipal.</span></div>
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></div><b>Enfermería</b><span>Controles de presión, curaciones, inyectables y controles de rutina.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="preguntas" aria-labelledby="faq-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Preguntas frecuentes</span>
+        <h2 id="faq-h">Lo que más nos consultan</h2>
+      </div>
+      <div class="faq">
+        <details><summary>¿Cuánto cuesta sacar un turno?</summary><p>Nada. Los turnos y la atención en los centros de salud municipales de San Fernando son gratuitos. Nunca te vamos a pedir pagos ni señas.</p></details>
+        <details><summary>¿Necesito obra social?</summary><p>No. La atención en la red municipal es para todos los vecinos, tengan o no obra social.</p></details>
+        <details><summary>No tengo celular o internet, ¿cómo saco turno?</summary><p>Podés seguir pidiéndolo en persona en tu Centro de Salud o por teléfono. La recepción lo carga en el mismo sistema.</p></details>
+        <details><summary>¿Qué tengo que llevar el día del turno?</summary><p>Tu DNI. Si es una especialidad, también la orden de tu médico de cabecera.</p></details>
+        <details><summary>No voy a poder ir, ¿qué hago?</summary><p>Cancelá tu turno desde el enlace de confirmación para que otro vecino pueda usarlo.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="cta-band">
+      <div>
+        <h2>Sacá tu turno ahora, sin filas.</h2>
+        <p>Elegí tu centro, el día y el horario. Te lleva menos de 2 minutos.</p>
+      </div>
+      <a class="btn btn-light" href="{{TURNOS}}">Sacar un turno →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <b>Secretaría de Salud · San Fernando</b>
+        <p style="margin-top:8px">Municipio de San Fernando, Buenos Aires</p>
+        <p>Vacunatorio y Centro San Fernando Centro: Av. Avellaneda 1460</p>
+      </div>
+      <div>
+        <b>Atención</b>
+        <p style="margin-top:8px"><a href="{{TURNOS}}">Turnos online</a></p>
+        <p><a href="#centros">Centros de salud</a></p>
+        <p><a href="#especializados">Centros especializados</a></p>
+      </div>
+      <div>
+        <b>Urgencias</b>
+        <p style="margin-top:8px">Emergencias: <a href="tel:107">107</a></p>
+        <p>Guardia 24 h · Carlos Casares y Entre Ríos</p>
+      </div>
+    </div>
+    <div class="legal">Maqueta de propuesta elaborada por Praxis Operativa (praxisoperativa.com). No es un sitio oficial del Municipio. Centros y direcciones de la red de salud municipal de San Fernando (sanfernando.gob.ar); coordenadas de OpenStreetMap y del servicio de normalización de datos del Estado (datos.gob.ar). Especialidades, horarios y criterio de orden médica son una propuesta a confirmar con la Secretaría de Salud.</div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var TURNOS = '{{TURNOS}}';
+  // Centros de la red de salud municipal de San Fernando.
+  // Campos: [nombre en la base, dirección, teléfono, lat, lng, tipo, (opcional) nombre en la base si difiere del display].
+  // Coordenadas: OpenStreetMap / normalizador de direcciones del Estado (datos.gob.ar).
+  var C = [
+    ['Centro de Salud y Vacunatorio Municipal San Fernando Centro','Av. Avellaneda 1460','11 2732 8608',-34.449058,-58.550360,'caps'],
+    ['Centro de Salud 31 Dr. Carcagno','Entre Ríos y Carlos Casares','11 2732 8618',-34.458648,-58.555615,'caps'],
+    ['Centro de Salud Villa Jardín','Guatemala 3069','11 2732 8590',-34.478821,-58.583289,'caps'],
+    ['Centro de Salud N°66 Dr. Pietranera','Balcarce 2950','11 2732 8609',-34.469955,-58.573887,'caps'],
+    ['Centro de Salud Piaggi','Málaga y Garibaldi','11 2732 8612',-34.472621,-58.591794,'caps'],
+    ['Centro de Salud María Isabel','Arenales 3200','4746 1941',-34.456006,-58.568727,'caps'],
+    ['Centro de Salud Finochietto','Ruta 202 km 5,5','11 2732 8583',-34.465974,-58.595883,'caps'],
+    ['Centro de Salud Crisol','Martín Rodríguez y Tucumán','11 2732 8605',-34.462048,-58.550913,'caps'],
+    ['Centro de Salud Bertrés','Azcuénaga 1745','4714 6214',-34.457322,-58.577098,'caps'],
+    ['Centro de Salud Reinecke','Alvear 600','11 2732 8603',-34.433455,-58.558151,'caps'],
+    ['Centro de Salud Absalón Rojas (Islas)','Arroyo Felicaria · 2ª Sección de Islas','11 2754 0109',-34.217277,-58.531866,'caps'],
+    ['Centro de Rehabilitación y Kinesiología','Besares 2172','11 7109 5732',-34.451498,-58.552291,'esp'],
+    ['CeMAT – Dr. Pedro Di Matteo (Atención Temprana)','Sarmiento 3244','11 7154 3950',-34.450761,-58.573931,'esp'],
+    ['Unidad de Diagnóstico Precoz N°27','25 de Mayo 2290','11 2732 8644',-34.446607,-58.567052,'esp'],
+    ['Centro Odontológico Dr. Gálvez','Portugal 2276','11 2732 8591',-34.469150,-58.586981,'esp'],
+    ['Centro de Emergencias San Fernando','Carlos Casares y Entre Ríos · guardia 24 h','',-34.459050,-58.555000,'hem']
+  ].map(function(r,i){ return { id:i, name:r[0], addr:r[1], tel:r[2], lat:r[3], lng:r[4], t:r[5], k:(r[5]==='hem'?null:centroKey(r[6]||r[0])) }; });
+  // Misma clave que usa el turnero (MunicipalBookingFlow): nombre del centro en la base, sin tildes, kebab-case.
+  function centroKey(n){ return n.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  function turnoUrl(c){ return TURNOS+'?centro='+encodeURIComponent(c.k); }
+
+  var TL = { caps:['Centro de salud','tag-caps'], esp:['Especializado · con turno','tag-esp'], hem:['Emergencias 24 h · sin turno','tag-hem'] };
+  var state = { q:'', f:'all', me:null, sel:null };
+
+  // Centros especializados destacados
+  var H = [
+    ['g-red','Guardia 24 h','Centro de Emergencias San Fernando','Guardia de urgencias y emergencias las 24 horas, todos los días. Sin turno: por orden de gravedad.','Carlos Casares y Entre Ríos · 107','cross'],
+    ['g-az','Rehabilitación','Centro de Rehabilitación y Kinesiología','Kinesiología traumatológica, geriátrica, deportiva y cardiovascular, hidroterapia, RPG y talleres grupales.','Besares 2172 · (11) 7109 5732','heart'],
+    ['g-cel','Atención temprana','CeMAT – Dr. Pedro Di Matteo','Estimulación y atención temprana: pediatría, fonoaudiología, psicomotricidad, terapia ocupacional y psicopedagogía.','Sarmiento 3244 · (11) 7154 3950','baby'],
+    ['g-ver','Consultorio externo','Centro Odontológico Dr. Gálvez','Odontología general y odontopediatría de acceso directo; endodoncia y ortodoncia con orden.','Portugal 2276 · (11) 2732 8591','tooth'],
+    ['g-vio','Diagnóstico','Unidad de Diagnóstico Precoz N°27','Diagnóstico por imágenes: radiología y mamografía, además de clínica, pediatría y nutrición.','25 de Mayo 2290 · (11) 2732 8644','eye'],
+    ['g-nar','Vacunación','Vacunatorio Municipal San Fernando Centro','Calendario nacional y campañas de vacunación, y clínica médica. Vacunación sin turno.','Av. Avellaneda 1460 · (11) 2732 8608','ribbon']
+  ];
+  var ICONS = {
+    cross:'<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
+    ribbon:'<path d="M12 3c2 0 3.5 1.6 3.5 3.6 0 2.4-2 5.3-3.5 7.4-1.5-2.1-3.5-5-3.5-7.4C8.5 4.6 10 3 12 3z"/><path d="M9.5 12 6 21l3-1.5L11 21M14.5 12 18 21l-3-1.5L13 21"/>',
+    eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    tooth:'<path d="M7 3c-2.5 0-4 2-4 4.5C3 12 5 13 5.5 17c.3 2.4 1 4 2.2 4 1.6 0 1.8-5 4.3-5s2.7 5 4.3 5c1.2 0 1.9-1.6 2.2-4 .5-4 2.5-5 2.5-9.5C21 5 19.5 3 17 3c-2 0-3 1-5 1S9 3 7 3z"/>',
+    heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/>',
+    baby:'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M10 8h.01M14 8h.01"/>'
+  };
+  var hg = document.getElementById('hospGrid');
+  hg.innerHTML = H.map(function(h){
+    return '<article class="h"><div class="art '+h[0]+'"><span class="badge">'+h[1]+'</span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[h[5]]+'</svg></div>'+
+      '<div class="body"><h3>'+h[2]+'</h3><p>'+h[3]+'</p><div class="meta">'+h[4]+'</div></div></article>';
+  }).join('');
+
+  // Distancia (km)
+  function km(a,b){ var R=6371, dLa=(b.lat-a.lat)*Math.PI/180, dLo=(b.lng-a.lng)*Math.PI/180;
+    var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+  function norm(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function gmaps(c){ return 'https://www.google.com/maps/dir/?api=1&destination='+c.lat+','+c.lng; }
+
+  // Mapa (degrada con gracia si no carga Leaflet / sin red)
+  var map=null, markers={}, meMarker=null;
+  try {
+    if (window.L) {
+      map = L.map('map', { scrollWheelZoom:false, zoomControl:true }).setView([-34.456,-58.566], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
+      C.forEach(function(c){
+        var icon = L.divIcon({ className:'', html:'<div class="pin '+c.t+'"></div>', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24] });
+        var m = L.marker([c.lat,c.lng], { icon:icon, title:c.name }).addTo(map);
+        m.bindPopup('<b>'+esc(c.name)+'</b><br>'+esc(c.addr)+(c.t!=='hem'?'<br><a href="'+turnoUrl(c)+'">Sacar turno en este centro →</a>':'<br><span style="color:#9b1c1c;font-weight:700">Guardia 24 h · sin turno</span>'));
+        m.on('click', function(){ select(c.id, false); });
+        markers[c.id]=m;
+      });
+    } else { throw new Error('no leaflet'); }
+  } catch(e) {
+    var el=document.getElementById('map'); el.classList.add('map-fallback'); el.textContent='El mapa no está disponible en este momento. Usá la lista para encontrar tu centro.';
+  }
+
+  function render(){
+    var q = norm(state.q.trim());
+    var rows = C.filter(function(c){ return (state.f==='all'||c.t===state.f) && (!q || norm(c.name+' '+c.addr).indexOf(q)>=0); });
+    if (state.me) { rows.forEach(function(c){ c.d=km(state.me,c); }); rows.sort(function(a,b){ return a.d-b.d; }); }
+    var list=document.getElementById('list');
+    if (!rows.length) { list.innerHTML='<p style="padding:14px;color:var(--muted)">No encontramos centros con esa búsqueda.</p>'; return; }
+    list.innerHTML = rows.map(function(c){
+      var tl=TL[c.t];
+      return '<div class="item'+(state.sel===c.id?' on':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+esc(c.name)+', '+esc(c.addr)+'">'+
+        '<b>'+esc(c.name)+'</b>'+(state.me?'<span class="dist">'+(c.d<1?Math.round(c.d*1000)+' m':c.d.toFixed(1).replace('.',',')+' km')+'</span>':'<span></span>')+
+        '<span class="addr">'+esc(c.addr)+'<br><span class="tag '+tl[1]+'">'+tl[0]+'</span></span>'+
+        '<div class="acts">'+(c.t!=='hem'?'<a class="a-turno" href="'+turnoUrl(c)+'" aria-label="Sacar turno en '+esc(c.name)+'">Sacar turno aquí</a>':'')+
+        '<a class="a-ir" href="'+gmaps(c)+'" target="_blank" rel="noopener">Cómo llegar</a>'+
+        (c.tel?'<a class="a-tel" href="tel:'+c.tel.replace(/\s/g,'')+'">'+esc(c.tel)+'</a>':'')+'</div></div>';
+    }).join('');
+  }
+  function select(id, fly){
+    state.sel=id; render();
+    var c=C[id]; if (map && markers[id]) { if (fly!==false) map.flyTo([c.lat,c.lng], 15, { duration:.6 }); markers[id].openPopup(); }
+    var el=document.querySelector('.item[data-id="'+id+'"]'); if (el && fly===false) el.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }
+  document.getElementById('list').addEventListener('click', function(e){
+    if (e.target.closest('a')) return; var it=e.target.closest('.item'); if (it) select(+it.dataset.id);
+  });
+  document.getElementById('list').addEventListener('keydown', function(e){
+    if ((e.key==='Enter'||e.key===' ') && e.target.classList.contains('item')) { e.preventDefault(); select(+e.target.dataset.id); }
+  });
+  document.getElementById('q').addEventListener('input', function(e){ state.q=e.target.value; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(b){
+    b.addEventListener('click', function(){
+      state.f=b.dataset.f;
+      Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      render();
+    });
+  });
+  document.getElementById('geo').addEventListener('click', function(){
+    var msg=document.getElementById('geoMsg'), btn=this;
+    if (!navigator.geolocation) { btn.textContent='Tu navegador no permite ubicación'; return; }
+    btn.textContent='Buscando tu ubicación…';
+    navigator.geolocation.getCurrentPosition(function(p){
+      state.me={ lat:p.coords.latitude, lng:p.coords.longitude };
+      btn.textContent='Ordenado por cercanía ✓'; msg.textContent='Centros ordenados por distancia a tu ubicación.';
+      if (map) {
+        if (meMarker) map.removeLayer(meMarker);
+        meMarker=L.marker([state.me.lat,state.me.lng], { icon:L.divIcon({ className:'', html:'<div class="me"></div>', iconSize:[18,18], iconAnchor:[9,9] }), title:'Tu ubicación' }).addTo(map);
+      }
+      render(); var first=document.querySelector('.item'); if (first) select(+first.dataset.id);
+    }, function(){ btn.textContent='No pudimos obtener tu ubicación'; msg.textContent='No se pudo obtener la ubicación.'; }, { enableHighAccuracy:true, timeout:10000 });
+  });
+
+  // Menú mobile
+  var mb=document.getElementById('menuBtn'), menu=document.getElementById('menu');
+  mb.addEventListener('click', function(){ var o=menu.classList.toggle('open'); mb.setAttribute('aria-expanded', o?'true':'false'); });
+  Array.prototype.forEach.call(menu.querySelectorAll('a'), function(a){ a.addEventListener('click', function(){ menu.classList.remove('open'); mb.setAttribute('aria-expanded','false'); }); });
+
+  render();
+})();
+</script>
+</body>
+</html>

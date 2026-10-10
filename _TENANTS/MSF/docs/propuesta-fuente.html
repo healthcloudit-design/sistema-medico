@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Propuesta institucional — Turnos Salud San Fernando</title>
+<style>
+  @page { size: A4; margin: 16mm 17mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{ --az:#3F7D1E; --az-ink:#285212; --az-soft:#EDF4E5; --cel-soft:#F1F8E4; --verde:#2F8A43;
+         --ink:#161b14; --muted:#5f6b5a; --line:#e4e8de; }
+  html,body{ font-family:'Inter',-apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:var(--ink); font-size:11.5px; line-height:1.55; }
+  h2{ font-size:16px; color:var(--az-ink); margin:20px 0 7px; padding-bottom:4px; border-bottom:2px solid var(--az-soft); break-after:avoid; }
+  h3{ font-size:12.5px; margin:12px 0 4px; break-after:avoid; }
+  p{ margin:5px 0; color:#2b2f2a; }
+  ul,ol{ margin:5px 0 5px 18px; } li{ margin:2px 0; color:#2b2f2a; }
+  table{ width:100%; border-collapse:collapse; margin:8px 0; font-size:10.5px; break-inside:auto; }
+  th{ background:var(--az); color:#fff; text-align:left; padding:6px 8px; font-weight:600; }
+  td{ padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr{ break-inside:avoid; }
+  .cover{ height:262mm; display:flex; flex-direction:column; break-after:page; }
+  .cover .top{ display:flex; align-items:center; gap:14px; border-bottom:4px solid var(--az); padding-bottom:12px; }
+  .cover .top img{ height:58px; }
+  .cover .top b{ font-size:15px; } .cover .top div div{ color:var(--muted); font-size:11px; }
+  .cover h1{ font-size:34px; line-height:1.12; margin-top:50mm; color:var(--az-ink); letter-spacing:-.4px; }
+  .cover .sub{ font-size:15px; color:#33423d; margin-top:10px; max-width:150mm; }
+  .cover .dest{ margin-top:22mm; border-left:5px solid var(--az); padding:10px 16px; background:var(--az-soft); border-radius:0 10px 10px 0; font-size:12.5px; }
+  .cover .dest b{ font-size:14px; }
+  .cover .foot{ margin-top:auto; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; border-top:1px solid var(--line); padding-top:8px; }
+  .box{ border:1px solid var(--line); border-radius:10px; padding:10px 13px; margin:8px 0; break-inside:avoid; }
+  .key{ background:var(--az-soft); border:none; }
+  .green{ background:#F1F8ED; border-left:5px solid var(--verde); border-radius:0 10px 10px 0; border-top:none; border-right:none; border-bottom:none; }
+  .shots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0; break-inside:avoid; }
+  .shots figure{ border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .shots img{ width:100%; display:block; }
+  .shots figcaption{ font-size:9.5px; color:var(--muted); padding:4px 6px; background:#fafbf9; }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .muted{ color:var(--muted); font-size:10px; }
+  .nb{ break-inside:avoid; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="top">
+    <img src="{{LOGO}}" alt="Municipio de San Fernando" />
+    <div><b>Turnos Salud San Fernando</b><div>Propuesta de implementación sin cargo · Praxis Agenda</div></div>
+  </div>
+  <h1>Turnos online para los Centros de Salud Municipales de San Fernando</h1>
+  <p class="sub">Propuesta institucional para que cada vecino pueda sacar su turno en el Centro de Salud más cercano desde el celular, de forma gratuita, ordenada y sin filas.</p>
+  <div class="dest">
+    Dirigida a la <b>Secretaría de Salud del Municipio de San Fernando</b><br>
+    A la atención de <b>{{DEST}}</b><br>
+    <span style="color:var(--muted)">Para su evaluación y puesta en marcha de un piloto en la red de salud municipal.</span>
+  </div>
+  <div class="foot"><span>Presenta: Isaac — Praxis Operativa · praxisoperativa.com</span><span>{{FECHA}}</span></div>
+</section>
+
+<h2>1. Resumen</h2>
+<p>Proponemos implementar en San Fernando, <b>sin costo de licencia para el Municipio y gratis para el vecino</b>, una plataforma de turnos online multi-centro para la red de salud municipal. La plataforma ya está en uso en el corredor norte y <b>ya tiene cargada la red de San Fernando</b>: 15 centros de salud municipales (11 de atención primaria y 4 especializados) y el Centro de Emergencias, con la identidad visual del Municipio.</p>
+<div class="box key">
+  <b>Qué proponemos:</b> poner en marcha un <b>piloto de 60 días en 2 o 3 centros de salud</b> que defina la Secretaría, con evaluación de resultados al cierre y extensión al resto de la red.
+</div>
+
+<h2>2. El problema</h2>
+<ul>
+  <li>Hoy el turno se consigue <b>en forma presencial o por teléfono</b>: filas desde temprano, líneas ocupadas y vecinos que pierden la mañana (o el jornal) para conseguir una consulta.</li>
+  <li>La demanda no queda registrada: la Secretaría no tiene datos en tiempo real de <b>cuántos turnos se piden, en qué centro y para qué especialidad</b>.</li>
+  <li>Los turnos de especialidades se piden sin la derivación correspondiente, y eso genera consultas que no se pueden concretar y horarios que se pierden.</li>
+</ul>
+
+<h2>3. La solución</h2>
+<p>Una web institucional con la identidad del Municipio, pensada para vecinos de todas las edades y con baja destreza digital. No hay que descargar ninguna aplicación y funciona en cualquier celular.</p>
+<div class="shots">
+  <figure><img src="{{SHOT_HOME}}" alt=""><figcaption>1 · Inicio, con la identidad del Municipio</figcaption></figure>
+  <figure><img src="{{SHOT_SERV}}" alt=""><figcaption>2 · Atención primaria directa y especialidades con orden</figcaption></figure>
+  <figure><img src="{{SHOT_OK}}" alt=""><figcaption>3 · Confirmación con código de turno</figcaption></figure>
+</div>
+<h3>Recorrido del vecino</h3>
+<ol>
+  <li><b>Elige el centro</b>, con un buscador por nombre o dirección.</li>
+  <li><b>Elige la atención.</b> Clínica médica, pediatría, ginecología, obstetricia y odontología son de <b>acceso directo</b>. Las especialidades piden la <b>orden del médico de cabecera</b>: si el vecino no la tiene, el sistema le explica el paso y le ofrece sacar turno con su médico de cabecera en el mismo centro.</li>
+  <li><b>Elige día y horario</b> entre los turnos realmente libres. Los horarios ocupados se ven tachados.</li>
+  <li><b>Carga sus datos</b>: nombre, DNI y teléfono.</li>
+  <li><b>Recibe el código de turno</b> y el recordatorio de qué llevar (DNI y, si corresponde, la orden).</li>
+</ol>
+<h3>Herramientas para los equipos de salud</h3>
+<div class="two">
+  <div class="box"><b>Gestión y recepción</b><ul><li>Panel por centro con agendas, profesionales y turnos del día.</li><li>Alta de turnos presenciales o telefónicos en el mismo sistema, para que no haya dos agendas.</li><li>Reportes de demanda por especialidad y por centro.</li></ul></div>
+  <div class="box"><b>Sala de espera y consultorio</b><ul><li><b>Llamador</b> en pantalla para la sala de espera.</li><li><b>Tótem</b> de autogestión con ticket impreso.</li><li><b>Historia clínica digital</b> para el médico, con acceso por rol.</li></ul></div>
+</div>
+
+<h3>Complemento opcional: portal "Salud San Fernando"</h3>
+<p>Junto con el turnero proponemos un <b>portal de salud moderno y pensado para el celular</b>: acceso directo a turnos, <b>mapa de los centros con "el más cercano a tu ubicación"</b>, Emergencias 24 h, centros especializados, vacunación y preguntas frecuentes. Es la vidriera de la red de salud del distrito. Maqueta navegable: <b>platform.praxisoperativa.com/agenda/propuesta/salud-san-fernando</b>.</p>
+
+<h2>4. Alcance propuesto para San Fernando</h2>
+<p>La red se tomó de la información pública del <b>Municipio de San Fernando</b> (sanfernando.gob.ar); las ubicaciones del mapa se normalizaron con OpenStreetMap y el servicio de direcciones del Estado (datos.gob.ar).</p>
+<table>
+  <tr><th style="width:34%">Grupo</th><th>Efectores</th><th style="width:22%">Turnos online</th></tr>
+  <tr><td><b>Centros de salud de atención primaria</b> (11)</td><td>San Fernando Centro, 31 Dr. Carcagno, Villa Jardín, N°66 Dr. Pietranera, Piaggi, María Isabel, Finochietto, Crisol, Bertrés, Reinecke y Absalón Rojas (Islas)</td><td><b>Sí</b>: clínica, pediatría, ginecología, obstetricia, odontología; nutrición y otras con orden</td></tr>
+  <tr><td><b>Centros especializados</b> (4)</td><td>Rehabilitación y Kinesiología · CeMAT – Atención Temprana · Centro Odontológico Dr. Gálvez · Unidad de Diagnóstico Precoz N°27</td><td><b>Sí</b>, consultorio externo (subespecialidades con orden)</td></tr>
+  <tr><td><b>Centro de Emergencias</b></td><td>Carlos Casares y Entre Ríos · guardia 24 h</td><td><b>No</b>: guardia 24 h y derivación, sin cambios</td></tr>
+  <tr><td><b>Demanda espontánea</b></td><td>Vacunatorio Municipal, farmacia y enfermería</td><td><b>No</b>: por orden de llegada; el sistema lo informa</td></tr>
+</table>
+<p class="muted">Especialidades por centro, horarios de atención y criterio de orden médica son una <b>propuesta inicial</b>, a validar y ajustar con la Secretaría de Salud.</p>
+
+<h2>5. Beneficios</h2>
+<div class="two">
+  <div class="box"><b>Para el vecino</b><ul><li>Turno desde el celular, a cualquier hora.</li><li>Menos filas y menos horas perdidas.</li><li>Sabe de antemano qué llevar y a dónde ir.</li></ul></div>
+  <div class="box"><b>Para el Municipio</b><ul><li>Demanda medida y visible, para planificar recursos.</li><li>Menos turnos perdidos gracias al circuito de derivación.</li><li>Modernización visible y de bajo costo en un servicio esencial.</li></ul></div>
+</div>
+
+<h2>6. Cómo ponerlo en marcha</h2>
+<div class="box green">
+  <ol>
+    <li><b>Validación con la Secretaría de Salud</b>: se eligen los centros del piloto y se confirman especialidades, horarios y el criterio de orden médica, con demostración en vivo del sistema ya cargado con la red de San Fernando.</li>
+    <li><b>Piloto acotado</b> de 60 días en 2 o 3 centros de salud que defina el Municipio, con informe de resultados.</li>
+    <li><b>Extensión</b> al resto de la red y a los centros especializados, según los resultados del piloto.</li>
+  </ol>
+</div>
+
+<h2 class="nb">7. Plan de implementación del piloto</h2>
+<table class="nb">
+  <tr><th style="width:22%">Etapa</th><th style="width:16%">Plazo</th><th>Qué se hace</th></tr>
+  <tr><td><b>Validación</b></td><td>Semana 1–2</td><td>La Secretaría elige los centros del piloto y confirma especialidades, horarios y el criterio de orden médica.</td></tr>
+  <tr><td><b>Carga y capacitación</b></td><td>Semana 2–3</td><td>Se cargan los profesionales y agendas reales. Se capacita a recepción, médicos y administración, con manual por rol.</td></tr>
+  <tr><td><b>Piloto en marcha</b></td><td>Semana 4–10</td><td>Turnos online abiertos en los centros piloto, con difusión al vecino (cartelería con QR en el centro y redes del Municipio).</td></tr>
+  <tr><td><b>Evaluación</b></td><td>Semana 11–12</td><td>Informe con turnos online vs. presenciales, ausentismo y espera en ventanilla, y propuesta de extensión al resto de la red.</td></tr>
+</table>
+
+<h2 class="nb">8. Datos personales y seguridad</h2>
+<ul class="nb">
+  <li>Se pide al vecino lo mínimo indispensable: nombre, DNI y teléfono.</li>
+  <li>Acceso por rol (administración, recepción y médico), con aislamiento total entre organismos.</li>
+  <li>Tratamiento de datos conforme a la <b>Ley 25.326</b> de Protección de Datos Personales y a la <b>Ley 26.529</b> de Derechos del Paciente en lo relativo a la historia clínica.</li>
+  <li>Para la puesta en producción definitiva se ofrece una <b>instancia dedicada para el Municipio</b>, con su base de datos separada.</li>
+</ul>
+
+<h2 class="nb">9. Condiciones</h2>
+<ul class="nb">
+  <li><b>Sin costo de licencia</b> para el Municipio durante el piloto y <b>gratuito siempre para el vecino</b>, sin pagos ni señas.</li>
+  <li>El Municipio aporta la información de su red (profesionales, agendas y criterios clínicos) y un referente de la Secretaría de Salud.</li>
+  <li>Al cierre del piloto se acuerdan, de común acuerdo, las condiciones de continuidad y extensión.</li>
+</ul>
+
+<h2 class="nb">10. Próximos pasos</h2>
+<ol class="nb">
+  <li>Definir los centros del piloto y un referente técnico del Municipio.</li>
+  <li>Recibir profesionales y agendas reales para cargar.</li>
+  <li>Acordar fecha de puesta en marcha y plan de difusión al vecino.</li>
+</ol>
+<div class="box key nb">
+  <b>Demo disponible:</b> platform.praxisoperativa.com/agenda/salud-san-fernando · Contacto: Isaac — Praxis Operativa · praxisoperativa.com
+</div>
+
+</body>
+</html>

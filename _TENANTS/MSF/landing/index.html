@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salud San Fernando — Propuesta de portal</title>
+<meta name="description" content="Maqueta de propuesta: portal de salud municipal de San Fernando con turnos online, mapa de centros y centros especializados." />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#3F7D1E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root{
+    --az:#3F7D1E; --az-900:#223f10; --az-700:#336318; --az-50:#EEF5E6; --az-100:#DCEBC9;
+    --cel:#8CC63F; --cel-50:#F1F8E4; --verde:#2F8A43; --verde-50:#ECF7EE;
+    --mag:#A31860; --mag-50:#FBE7F0;
+    --rojo:#C62828; --rojo-50:#FDECEC;
+    --ink:#161b14; --txt:#2c352a; --muted:#5f6b5a; --line:#e4e8de; --bg:#F6F8F3; --white:#fff;
+    --r:16px; --sh:0 1px 2px rgba(20,40,16,.06), 0 8px 24px rgba(20,40,16,.08);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{ font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color:var(--txt); background:var(--white); font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; }
+  img{ max-width:100%; display:block; }
+  .wrap{ max-width:1160px; margin:0 auto; padding:0 20px; }
+  :focus-visible{ outline:3px solid var(--cel); outline-offset:2px; border-radius:6px; }
+  .sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+  /* Cinta de propuesta */
+  .ribbon{ background:#FFF4D6; color:#6b4e00; font-size:12.5px; text-align:center; padding:7px 14px; border-bottom:1px solid #f1dfa6; }
+  .ribbon b{ font-weight:700; }
+
+  /* Header */
+  header.top{ position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92); backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line); }
+  .top .wrap{ display:flex; align-items:center; gap:14px; height:70px; }
+  .brand{ display:flex; align-items:center; gap:11px; text-decoration:none; }
+  .brand img{ height:46px; width:auto; }
+  .brand b{ display:block; font-size:16.5px; color:var(--ink); letter-spacing:-.2px; line-height:1.15; }
+  .brand span{ display:block; font-size:12px; color:var(--muted); }
+  nav.main{ margin-left:auto; display:flex; gap:4px; align-items:center; }
+  nav.main a{ text-decoration:none; font-size:14.5px; font-weight:600; color:var(--txt); padding:9px 12px; border-radius:10px; }
+  nav.main a:hover{ background:var(--az-50); color:var(--az); }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:15.5px; text-decoration:none; border:0; cursor:pointer; border-radius:12px; padding:13px 20px; transition:transform .12s ease, box-shadow .12s ease, background .12s; font-family:inherit; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--az); color:#fff; box-shadow:0 6px 16px rgba(63,125,30,.28); }
+  .btn-primary:hover{ background:var(--az-700); }
+  .btn-light{ background:#fff; color:var(--az-900); }
+  .btn-ghost{ background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.55); }
+  .btn-outline{ background:#fff; color:var(--az); border:1.5px solid var(--az-100); }
+  nav.main .btn{ padding:10px 16px; font-size:14.5px; margin-left:6px; color:#fff; }
+  nav.main .btn:hover{ color:#fff; }
+  .menu-btn{ display:none; margin-left:auto; background:var(--az-50); color:var(--az); border:0; border-radius:10px; width:44px; height:44px; font-size:22px; cursor:pointer; }
+  @media (max-width: 920px){
+    nav.main{ display:none; position:absolute; top:70px; left:0; right:0; background:#fff; border-bottom:1px solid var(--line); flex-direction:column; align-items:stretch; padding:10px 16px 16px; box-shadow:var(--sh); }
+    nav.main.open{ display:flex; }
+    nav.main a{ padding:13px 12px; font-size:16px; }
+    nav.main .btn{ margin:6px 0 0; }
+    .menu-btn{ display:inline-flex; align-items:center; justify-content:center; }
+  }
+
+  /* Hero */
+  .hero{ position:relative; overflow:hidden; color:#fff; background:
+      radial-gradient(1100px 500px at 90% -10%, rgba(140,198,63,.55), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(163,24,96,.28), transparent 60%),
+      linear-gradient(135deg, var(--az-900) 0%, var(--az) 58%, #5fa32a 100%); }
+  .hero .wrap{ display:grid; grid-template-columns:1.15fr .85fr; gap:40px; align-items:center; padding-top:64px; padding-bottom:72px; }
+  .eyebrow{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600; }
+  .eyebrow i{ width:8px; height:8px; border-radius:50%; background:#CDE8A6; box-shadow:0 0 0 4px rgba(205,232,166,.25); }
+  .hero h1{ font-size:clamp(34px, 5.2vw, 56px); line-height:1.04; letter-spacing:-1.2px; font-weight:800; margin:18px 0 14px; }
+  .hero h1 span{ color:#D7EDB4; }
+  .hero p.lead{ font-size:clamp(16px, 1.6vw, 19px); opacity:.95; max-width:560px; }
+  .hero .ctas{ display:flex; gap:12px; flex-wrap:wrap; margin-top:26px; }
+  .hero .ctas .btn{ padding:15px 22px; font-size:16px; }
+  .hero-card{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.22); border-radius:22px; padding:22px; backdrop-filter:blur(6px); }
+  .hero-card h2{ font-size:15px; font-weight:700; opacity:.9; margin-bottom:12px; }
+  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat{ background:rgba(255,255,255,.95); color:var(--az-900); border-radius:14px; padding:14px; }
+  .stat b{ display:block; font-size:30px; font-weight:800; letter-spacing:-.6px; line-height:1; }
+  .stat span{ display:block; font-size:12.5px; color:#3c5230; margin-top:6px; line-height:1.3; }
+  .hero-card .note{ margin-top:12px; font-size:12.5px; opacity:.85; }
+  @media (max-width: 920px){ .hero .wrap{ grid-template-columns:1fr; padding-top:40px; padding-bottom:48px; gap:28px; } }
+
+  /* Accesos rápidos */
+  .quick{ margin-top:-34px; position:relative; z-index:2; }
+  .quick-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .q{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px; box-shadow:var(--sh); text-decoration:none; display:flex; flex-direction:column; gap:6px; transition:transform .15s ease, box-shadow .15s ease; }
+  .q:hover{ transform:translateY(-3px); box-shadow:0 14px 30px rgba(20,40,16,.12); }
+  .q .ic{ width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:4px; }
+  .q .ic svg{ width:24px; height:24px; }
+  .q b{ font-size:16.5px; color:var(--ink); }
+  .q span{ font-size:13.5px; color:var(--muted); }
+  @media (max-width: 920px){ .quick-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 420px){ .q{ padding:14px; } .q b{ font-size:15px; } }
+
+  /* Secciones */
+  section{ padding:72px 0; scroll-margin-top:74px; }
+  .sec-head{ max-width:720px; margin-bottom:28px; }
+  .kicker{ font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--az); }
+  .sec-head h2{ font-size:clamp(26px, 3.4vw, 38px); line-height:1.12; letter-spacing:-.7px; color:var(--ink); margin:8px 0 10px; font-weight:800; }
+  .sec-head p{ color:var(--muted); font-size:17px; }
+  .alt{ background:var(--bg); }
+
+  /* Urgencias */
+  .urg{ background:var(--rojo-50); border:1px solid #f6caca; border-radius:20px; padding:22px; display:grid; grid-template-columns:auto 1fr auto; gap:18px; align-items:center; }
+  .urg .big{ width:64px; height:64px; border-radius:18px; background:var(--rojo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:22px; }
+  .urg h3{ font-size:19px; color:#7a1414; }
+  .urg p{ color:#7a3434; font-size:14.5px; }
+  .urg .btn{ background:var(--rojo); color:#fff; }
+  @media (max-width: 720px){ .urg{ grid-template-columns:1fr; text-align:left; } }
+
+  /* Mapa + lista */
+  .finder{ display:grid; grid-template-columns:400px 1fr; gap:18px; }
+  .finder-panel{ background:#fff; border:1px solid var(--line); border-radius:var(--r); display:flex; flex-direction:column; min-height:0; }
+  .finder-tools{ padding:14px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+  .search{ position:relative; }
+  .search input{ width:100%; font:inherit; font-size:16px; padding:13px 14px 13px 42px; border:1.5px solid var(--line); border-radius:12px; background:#fff; color:var(--ink); }
+  .search input:focus{ border-color:var(--az); outline:none; box-shadow:0 0 0 4px var(--az-50); }
+  .search svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:19px; height:19px; color:#8a958a; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font:inherit; font-size:13px; font-weight:600; padding:7px 12px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--txt); cursor:pointer; }
+  .chip[aria-pressed="true"]{ background:var(--az); border-color:var(--az); color:#fff; }
+  .geo{ font:inherit; font-size:14px; font-weight:700; color:var(--az); background:var(--az-50); border:0; border-radius:10px; padding:10px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; justify-content:center; }
+  .list{ overflow:auto; max-height:560px; padding:6px; }
+  .item{ padding:12px; border-radius:12px; display:grid; grid-template-columns:1fr auto; gap:4px 10px; cursor:pointer; border:1px solid transparent; }
+  .item:hover, .item.on{ background:var(--az-50); border-color:var(--az-100); }
+  .item b{ color:var(--ink); font-size:15px; line-height:1.3; }
+  .item .addr{ grid-column:1/2; font-size:13.5px; color:var(--muted); }
+  .item .dist{ font-size:12.5px; font-weight:700; color:var(--az); white-space:nowrap; }
+  .item .tag{ display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:999px; margin-top:4px; }
+  .tag-caps{ background:var(--az-50); color:#2f5e16; }
+  .tag-esp{ background:var(--mag-50); color:#8a1452; }
+  .tag-hem{ background:var(--rojo-50); color:#9b1c1c; }
+  .item .acts{ grid-column:1/3; display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .item .acts a{ font-size:13px; font-weight:700; text-decoration:none; padding:8px 12px; border-radius:9px; }
+  .a-turno{ background:var(--az); color:#fff; }
+  .a-ir{ background:#fff; color:var(--az); border:1.5px solid var(--az-100); }
+  .a-tel{ background:#fff; color:var(--txt); border:1.5px solid var(--line); }
+  #map{ border-radius:var(--r); border:1px solid var(--line); min-height:640px; background:#e7eee2; z-index:1; }
+  .map-fallback{ display:flex; align-items:center; justify-content:center; text-align:center; color:var(--muted); padding:24px; }
+  @media (max-width: 920px){ .finder{ grid-template-columns:1fr; } #map{ min-height:340px; order:-1; } .list{ max-height:480px; } }
+
+  /* Centros especializados */
+  .hosp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .h{ background:#fff; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; display:flex; flex-direction:column; }
+  .h .art{ height:118px; position:relative; overflow:hidden; }
+  .h .art svg{ position:absolute; right:-8px; bottom:-10px; width:130px; height:130px; opacity:.95; }
+  .h .art .badge{ position:absolute; left:14px; top:14px; background:rgba(255,255,255,.92); color:var(--ink); font-size:12px; font-weight:700; padding:5px 10px; border-radius:999px; }
+  .h .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .h h3{ font-size:17px; color:var(--ink); line-height:1.25; letter-spacing:-.2px; }
+  .h p{ font-size:14px; color:var(--muted); }
+  .h .meta{ margin-top:auto; padding-top:8px; font-size:13px; color:var(--txt); display:flex; flex-direction:column; gap:2px; }
+  .g-red{ background:linear-gradient(135deg,#a51d1d,#e0473f); }
+  .g-az{ background:linear-gradient(135deg,var(--az-900),var(--az)); }
+  .g-cel{ background:linear-gradient(135deg,#2f6318,#8CC63F); }
+  .g-ver{ background:linear-gradient(135deg,#1f6b31,#45a35a); }
+  .g-vio{ background:linear-gradient(135deg,#6e1145,var(--mag)); }
+  .g-nar{ background:linear-gradient(135deg,#b4520e,#ee8a2f); }
+  @media (max-width: 920px){ .hosp-grid{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 600px){ .hosp-grid{ grid-template-columns:1fr; } }
+
+  /* Pasos */
+  .steps{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; counter-reset:s; }
+  .step{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px 16px; position:relative; }
+  .step::before{ counter-increment:s; content:counter(s); width:34px; height:34px; border-radius:10px; background:var(--az); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
+  .step b{ display:block; color:var(--ink); font-size:16px; margin-bottom:4px; }
+  .step span{ font-size:14px; color:var(--muted); }
+  .orden{ margin-top:16px; background:var(--cel-50); border:1px solid #cfe6a6; border-radius:var(--r); padding:16px 18px; display:flex; gap:14px; align-items:flex-start; }
+  .orden svg{ flex:none; width:26px; height:26px; color:#2f6318; margin-top:2px; }
+  .orden p{ color:#2f4a18; font-size:15px; }
+  @media (max-width: 920px){ .steps{ grid-template-columns:1fr 1fr; } }
+  @media (max-width: 480px){ .steps{ grid-template-columns:1fr; } }
+
+  /* Sin turno */
+  .noturno{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .nt{ background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:18px; }
+  .nt b{ display:block; color:var(--ink); font-size:16.5px; margin:8px 0 4px; }
+  .nt span{ color:var(--muted); font-size:14px; }
+  .nt .ic{ width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--verde-50); color:var(--verde); }
+  .nt .ic svg{ width:22px; height:22px; }
+  @media (max-width: 720px){ .noturno{ grid-template-columns:1fr; } }
+
+  /* FAQ */
+  .faq{ display:grid; gap:10px; max-width:860px; }
+  details{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:4px 18px; }
+  summary{ cursor:pointer; list-style:none; font-weight:700; color:var(--ink); font-size:16px; padding:14px 0; display:flex; justify-content:space-between; gap:12px; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::after{ content:'+'; font-size:22px; color:var(--az); line-height:1; }
+  details[open] summary::after{ content:'–'; }
+  details p{ padding:0 0 16px; color:var(--txt); font-size:15px; }
+
+  /* CTA final */
+  .cta-band{ background:linear-gradient(135deg, var(--az-900), var(--az)); color:#fff; border-radius:24px; padding:36px; display:flex; align-items:center; gap:24px; justify-content:space-between; flex-wrap:wrap; }
+  .cta-band h2{ font-size:clamp(24px,3vw,32px); letter-spacing:-.5px; line-height:1.15; }
+  .cta-band p{ opacity:.9; margin-top:6px; }
+
+  footer{ background:#17250f; color:#cdd8c2; padding:44px 0 28px; margin-top:72px; font-size:14px; }
+  footer .cols{ display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:28px; }
+  footer b{ color:#fff; }
+  footer a{ color:#cdd8c2; text-decoration:none; }
+  footer a:hover{ color:#fff; text-decoration:underline; }
+  footer .legal{ margin-top:28px; padding-top:16px; border-top:1px solid rgba(255,255,255,.12); font-size:12.5px; color:#9fae92; }
+  @media (max-width: 720px){ footer .cols{ grid-template-columns:1fr; } }
+
+  /* Leaflet: popup y markers */
+  .leaflet-popup-content{ font-family:Inter, system-ui, sans-serif; font-size:13.5px; margin:12px 14px; }
+  .leaflet-popup-content b{ font-size:14.5px; color:var(--ink); }
+  .leaflet-popup-content a{ color:var(--az); font-weight:700; }
+  .pin{ width:26px; height:26px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:3px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,.3); }
+  .pin.caps{ background:var(--az); } .pin.esp{ background:var(--mag); } .pin.hem{ background:var(--rojo); }
+  .me{ width:18px; height:18px; border-radius:50%; background:var(--cel); border:3px solid #fff; box-shadow:0 0 0 6px rgba(140,198,63,.35); }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="ribbon" role="note"><b>Propuesta de diseño</b> · Maqueta no oficial elaborada por Praxis Operativa para su evaluación por el Municipio de San Fernando.</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#inicio" aria-label="Salud San Fernando, inicio">
+      <img src="data:image/png;base64,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EEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nIo/AghhLgcCj9CCCEuh8KPEEKIy6HwI4QQ4nL+D1+ahWp5zbwkAAAAAElFTkSuQmCC" alt="" width="78" height="46" />
+      <div><b>Salud San Fernando</b><span>Secretaría de Salud · Municipio</span></div>
+    </a>
+    <button class="menu-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu" id="menuBtn">☰</button>
+    <nav class="main" id="menu" aria-label="Principal">
+      <a href="#centros">Centros de salud</a>
+      <a href="#especializados">Especializados</a>
+      <a href="#sin-turno">Vacunación</a>
+      <a href="#preguntas">Preguntas</a>
+      <a class="btn btn-primary" href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">Sacar turno</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio">
+  <section class="hero" aria-labelledby="h1" style="padding:0">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow"><i></i> Turnos online · gratis y desde el celular</span>
+        <h1 id="h1">Tu salud,<br><span>cerca de casa.</span></h1>
+        <p class="lead">Sacá turno en tu Centro de Salud de San Fernando sin hacer fila, encontrá el centro más cercano y conocé los centros especializados del Municipio.</p>
+        <div class="ctas">
+          <a class="btn btn-light" href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+            Sacar un turno
+          </a>
+          <a class="btn btn-ghost" href="#centros">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            Encontrar mi centro
+          </a>
+        </div>
+      </div>
+      <aside class="hero-card" aria-label="La red de salud municipal en números">
+        <h2>La red de salud municipal</h2>
+        <div class="stats">
+          <div class="stat"><b>15</b><span>Centros de salud en los barrios y las islas</span></div>
+          <div class="stat"><b>24 h</b><span>guardia en el Centro de Emergencias</span></div>
+          <div class="stat"><b>4</b><span>centros especializados: rehabilitación, odontología, atención temprana y diagnóstico</span></div>
+          <div class="stat"><b>$0</b><span>atención y turnos gratuitos</span></div>
+        </div>
+        <p class="note">Red de salud del Municipio de San Fernando (sanfernando.gob.ar).</p>
+      </aside>
+    </div>
+  </section>
+
+  <div class="wrap quick" aria-label="Accesos rápidos">
+    <div class="quick-grid">
+      <a class="q" href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">
+        <div class="ic" style="background:var(--az-50);color:var(--az)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <b>Sacar turno</b><span>Clínica, pediatría, gineco, odontología y más.</span>
+      </a>
+      <a class="q" href="#urgencias">
+        <div class="ic" style="background:var(--rojo-50);color:var(--rojo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <b>Emergencias 24 h</b><span>Guardia sin turno en Carlos Casares y Entre Ríos.</span>
+      </a>
+      <a class="q" href="#centros">
+        <div class="ic" style="background:var(--cel-50);color:#2f6318"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+        <b>Centro más cercano</b><span>Mapa, dirección y cómo llegar.</span>
+      </a>
+      <a class="q" href="#sin-turno">
+        <div class="ic" style="background:var(--verde-50);color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 2 4 4M17 7l3-3M19 9l-8.5 8.5a2.1 2.1 0 0 1-3 0l-.9-.9a2.1 2.1 0 0 1 0-3L15 5M9 11l4 4M5 19l-3 3"/></svg></div>
+        <b>Vacunación</b><span>Sin turno, en el Vacunatorio Municipal.</span>
+      </a>
+    </div>
+  </div>
+
+  <section id="urgencias" aria-labelledby="urg-h" style="padding-top:48px;padding-bottom:0">
+    <div class="wrap">
+      <div class="urg">
+        <div class="big" aria-hidden="true">107</div>
+        <div>
+          <h3 id="urg-h">¿Es una urgencia? No esperes un turno.</h3>
+          <p>Llamá al <b>107</b> (SAME) o acercate al <b>Centro de Emergencias de San Fernando</b> (Carlos Casares y Entre Ríos): atiende las 24 horas, sin turno previo.</p>
+        </div>
+        <a class="btn" href="tel:107">Llamar al 107</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="centros" aria-labelledby="centros-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Centros de salud</span>
+        <h2 id="centros-h">Encontrá tu centro más cercano</h2>
+        <p>Usá tu ubicación o buscá por barrio o calle. Desde cada centro podés sacar turno o ver cómo llegar.</p>
+      </div>
+      <div class="finder">
+        <div class="finder-panel">
+          <div class="finder-tools">
+            <div class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <label class="sr" for="q">Buscar centro por nombre o dirección</label>
+              <input id="q" type="search" placeholder="Buscar por barrio, calle o nombre…" autocomplete="off" />
+            </div>
+            <div class="chips" role="group" aria-label="Filtrar por tipo">
+              <button class="chip" data-f="all" aria-pressed="true">Todos</button>
+              <button class="chip" data-f="caps" aria-pressed="false">Centros de salud</button>
+              <button class="chip" data-f="esp" aria-pressed="false">Especializados</button>
+              <button class="chip" data-f="hem" aria-pressed="false">Emergencias 24 h</button>
+            </div>
+            <button class="geo" id="geo" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+              Usar mi ubicación
+            </button>
+            <div id="geoMsg" class="sr" aria-live="polite"></div>
+          </div>
+          <div class="list" id="list" aria-live="polite"></div>
+        </div>
+        <div id="map" role="region" aria-label="Mapa de centros de salud"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="turnos" aria-labelledby="turnos-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Turnos online</span>
+        <h2 id="turnos-h">Tu turno en 5 pasos, sin filas</h2>
+        <p>Gratis, sin descargar aplicaciones y desde cualquier celular.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><b>Elegí tu centro</b><span>El Centro de Salud más cercano a tu casa.</span></div>
+        <div class="step"><b>Elegí la atención</b><span>Clínica, pediatría, ginecología, obstetricia u odontología.</span></div>
+        <div class="step"><b>Día y horario</b><span>Ves solo los horarios realmente libres.</span></div>
+        <div class="step"><b>Tus datos</b><span>Nombre, DNI y teléfono. Nada más.</span></div>
+        <div class="step"><b>¡Listo!</b><span>Recibís tu código de turno al instante.</span></div>
+      </div>
+      <div class="orden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>
+        <p><b>¿Especialidades?</b> Para algunas atenciones necesitás la orden de tu médico de cabecera. Si no la tenés, el sistema te ayuda a sacar primero el turno con tu médico de cabecera en el mismo centro.</p>
+      </div>
+      <div style="margin-top:22px"><a class="btn btn-primary" href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">Sacar mi turno ahora →</a></div>
+    </div>
+  </section>
+
+  <section id="especializados" aria-labelledby="hosp-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Centros especializados</span>
+        <h2 id="hosp-h">Centros especializados del Municipio</h2>
+        <p>Rehabilitación, atención temprana, odontología y diagnóstico por imágenes, gratuitos para todos los vecinos. Además, el Centro de Emergencias con guardia las 24 horas.</p>
+      </div>
+      <div class="hosp-grid" id="hospGrid"></div>
+    </div>
+  </section>
+
+  <section class="alt" id="sin-turno" aria-labelledby="st-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Sin turno</span>
+        <h2 id="st-h">Esto no necesita turno</h2>
+        <p>Acercate a tu Centro de Salud dentro del horario de atención: se atiende por orden de llegada.</p>
+      </div>
+      <div class="noturno">
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 2 4 4M17 7l3-3M19 9l-8.5 8.5a2.1 2.1 0 0 1-3 0l-.9-.9a2.1 2.1 0 0 1 0-3L15 5M9 11l4 4M5 19l-3 3"/></svg></div><b>Vacunatorio</b><span>Calendario nacional y campañas (antigripal, etc.) en el Vacunatorio Municipal (Av. Avellaneda 1460). Llevá tu DNI y carnet de vacunas.</span></div>
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3M12 11v6M9 14h6"/></svg></div><b>Farmacia</b><span>Entrega de medicamentos con receta de un profesional del sistema público municipal.</span></div>
+        <div class="nt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></div><b>Enfermería</b><span>Controles de presión, curaciones, inyectables y controles de rutina.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="preguntas" aria-labelledby="faq-h">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">Preguntas frecuentes</span>
+        <h2 id="faq-h">Lo que más nos consultan</h2>
+      </div>
+      <div class="faq">
+        <details><summary>¿Cuánto cuesta sacar un turno?</summary><p>Nada. Los turnos y la atención en los centros de salud municipales de San Fernando son gratuitos. Nunca te vamos a pedir pagos ni señas.</p></details>
+        <details><summary>¿Necesito obra social?</summary><p>No. La atención en la red municipal es para todos los vecinos, tengan o no obra social.</p></details>
+        <details><summary>No tengo celular o internet, ¿cómo saco turno?</summary><p>Podés seguir pidiéndolo en persona en tu Centro de Salud o por teléfono. La recepción lo carga en el mismo sistema.</p></details>
+        <details><summary>¿Qué tengo que llevar el día del turno?</summary><p>Tu DNI. Si es una especialidad, también la orden de tu médico de cabecera.</p></details>
+        <details><summary>No voy a poder ir, ¿qué hago?</summary><p>Cancelá tu turno desde el enlace de confirmación para que otro vecino pueda usarlo.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="cta-band">
+      <div>
+        <h2>Sacá tu turno ahora, sin filas.</h2>
+        <p>Elegí tu centro, el día y el horario. Te lleva menos de 2 minutos.</p>
+      </div>
+      <a class="btn btn-light" href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">Sacar un turno →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <b>Secretaría de Salud · San Fernando</b>
+        <p style="margin-top:8px">Municipio de San Fernando, Buenos Aires</p>
+        <p>Vacunatorio y Centro San Fernando Centro: Av. Avellaneda 1460</p>
+      </div>
+      <div>
+        <b>Atención</b>
+        <p style="margin-top:8px"><a href="https://platform.praxisoperativa.com/agenda/salud-san-fernando">Turnos online</a></p>
+        <p><a href="#centros">Centros de salud</a></p>
+        <p><a href="#especializados">Centros especializados</a></p>
+      </div>
+      <div>
+        <b>Urgencias</b>
+        <p style="margin-top:8px">Emergencias: <a href="tel:107">107</a></p>
+        <p>Guardia 24 h · Carlos Casares y Entre Ríos</p>
+      </div>
+    </div>
+    <div class="legal">Maqueta de propuesta elaborada por Praxis Operativa (praxisoperativa.com). No es un sitio oficial del Municipio. Centros y direcciones de la red de salud municipal de San Fernando (sanfernando.gob.ar); coordenadas de OpenStreetMap y del servicio de normalización de datos del Estado (datos.gob.ar). Especialidades, horarios y criterio de orden médica son una propuesta a confirmar con la Secretaría de Salud.</div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var TURNOS = 'https://platform.praxisoperativa.com/agenda/salud-san-fernando';
+  // Centros de la red de salud municipal de San Fernando.
+  // Campos: [nombre en la base, dirección, teléfono, lat, lng, tipo, (opcional) nombre en la base si difiere del display].
+  // Coordenadas: OpenStreetMap / normalizador de direcciones del Estado (datos.gob.ar).
+  var C = [
+    ['Centro de Salud y Vacunatorio Municipal San Fernando Centro','Av. Avellaneda 1460','11 2732 8608',-34.449058,-58.550360,'caps'],
+    ['Centro de Salud 31 Dr. Carcagno','Entre Ríos y Carlos Casares','11 2732 8618',-34.458648,-58.555615,'caps'],
+    ['Centro de Salud Villa Jardín','Guatemala 3069','11 2732 8590',-34.478821,-58.583289,'caps'],
+    ['Centro de Salud N°66 Dr. Pietranera','Balcarce 2950','11 2732 8609',-34.469955,-58.573887,'caps'],
+    ['Centro de Salud Piaggi','Málaga y Garibaldi','11 2732 8612',-34.472621,-58.591794,'caps'],
+    ['Centro de Salud María Isabel','Arenales 3200','4746 1941',-34.456006,-58.568727,'caps'],
+    ['Centro de Salud Finochietto','Ruta 202 km 5,5','11 2732 8583',-34.465974,-58.595883,'caps'],
+    ['Centro de Salud Crisol','Martín Rodríguez y Tucumán','11 2732 8605',-34.462048,-58.550913,'caps'],
+    ['Centro de Salud Bertrés','Azcuénaga 1745','4714 6214',-34.457322,-58.577098,'caps'],
+    ['Centro de Salud Reinecke','Alvear 600','11 2732 8603',-34.433455,-58.558151,'caps'],
+    ['Centro de Salud Absalón Rojas (Islas)','Arroyo Felicaria · 2ª Sección de Islas','11 2754 0109',-34.217277,-58.531866,'caps'],
+    ['Centro de Rehabilitación y Kinesiología','Besares 2172','11 7109 5732',-34.451498,-58.552291,'esp'],
+    ['CeMAT – Dr. Pedro Di Matteo (Atención Temprana)','Sarmiento 3244','11 7154 3950',-34.450761,-58.573931,'esp'],
+    ['Unidad de Diagnóstico Precoz N°27','25 de Mayo 2290','11 2732 8644',-34.446607,-58.567052,'esp'],
+    ['Centro Odontológico Dr. Gálvez','Portugal 2276','11 2732 8591',-34.469150,-58.586981,'esp'],
+    ['Centro de Emergencias San Fernando','Carlos Casares y Entre Ríos · guardia 24 h','',-34.459050,-58.555000,'hem']
+  ].map(function(r,i){ return { id:i, name:r[0], addr:r[1], tel:r[2], lat:r[3], lng:r[4], t:r[5], k:(r[5]==='hem'?null:centroKey(r[6]||r[0])) }; });
+  // Misma clave que usa el turnero (MunicipalBookingFlow): nombre del centro en la base, sin tildes, kebab-case.
+  function centroKey(n){ return n.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  function turnoUrl(c){ return TURNOS+'?centro='+encodeURIComponent(c.k); }
+
+  var TL = { caps:['Centro de salud','tag-caps'], esp:['Especializado · con turno','tag-esp'], hem:['Emergencias 24 h · sin turno','tag-hem'] };
+  var state = { q:'', f:'all', me:null, sel:null };
+
+  // Centros especializados destacados
+  var H = [
+    ['g-red','Guardia 24 h','Centro de Emergencias San Fernando','Guardia de urgencias y emergencias las 24 horas, todos los días. Sin turno: por orden de gravedad.','Carlos Casares y Entre Ríos · 107','cross'],
+    ['g-az','Rehabilitación','Centro de Rehabilitación y Kinesiología','Kinesiología traumatológica, geriátrica, deportiva y cardiovascular, hidroterapia, RPG y talleres grupales.','Besares 2172 · (11) 7109 5732','heart'],
+    ['g-cel','Atención temprana','CeMAT – Dr. Pedro Di Matteo','Estimulación y atención temprana: pediatría, fonoaudiología, psicomotricidad, terapia ocupacional y psicopedagogía.','Sarmiento 3244 · (11) 7154 3950','baby'],
+    ['g-ver','Consultorio externo','Centro Odontológico Dr. Gálvez','Odontología general y odontopediatría de acceso directo; endodoncia y ortodoncia con orden.','Portugal 2276 · (11) 2732 8591','tooth'],
+    ['g-vio','Diagnóstico','Unidad de Diagnóstico Precoz N°27','Diagnóstico por imágenes: radiología y mamografía, además de clínica, pediatría y nutrición.','25 de Mayo 2290 · (11) 2732 8644','eye'],
+    ['g-nar','Vacunación','Vacunatorio Municipal San Fernando Centro','Calendario nacional y campañas de vacunación, y clínica médica. Vacunación sin turno.','Av. Avellaneda 1460 · (11) 2732 8608','ribbon']
+  ];
+  var ICONS = {
+    cross:'<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>',
+    ribbon:'<path d="M12 3c2 0 3.5 1.6 3.5 3.6 0 2.4-2 5.3-3.5 7.4-1.5-2.1-3.5-5-3.5-7.4C8.5 4.6 10 3 12 3z"/><path d="M9.5 12 6 21l3-1.5L11 21M14.5 12 18 21l-3-1.5L13 21"/>',
+    eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    tooth:'<path d="M7 3c-2.5 0-4 2-4 4.5C3 12 5 13 5.5 17c.3 2.4 1 4 2.2 4 1.6 0 1.8-5 4.3-5s2.7 5 4.3 5c1.2 0 1.9-1.6 2.2-4 .5-4 2.5-5 2.5-9.5C21 5 19.5 3 17 3c-2 0-3 1-5 1S9 3 7 3z"/>',
+    heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/>',
+    baby:'<circle cx="12" cy="8" r="4"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M10 8h.01M14 8h.01"/>'
+  };
+  var hg = document.getElementById('hospGrid');
+  hg.innerHTML = H.map(function(h){
+    return '<article class="h"><div class="art '+h[0]+'"><span class="badge">'+h[1]+'</span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICONS[h[5]]+'</svg></div>'+
+      '<div class="body"><h3>'+h[2]+'</h3><p>'+h[3]+'</p><div class="meta">'+h[4]+'</div></div></article>';
+  }).join('');
+
+  // Distancia (km)
+  function km(a,b){ var R=6371, dLa=(b.lat-a.lat)*Math.PI/180, dLo=(b.lng-a.lng)*Math.PI/180;
+    var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+    return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+  function norm(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function gmaps(c){ return 'https://www.google.com/maps/dir/?api=1&destination='+c.lat+','+c.lng; }
+
+  // Mapa (degrada con gracia si no carga Leaflet / sin red)
+  var map=null, markers={}, meMarker=null;
+  try {
+    if (window.L) {
+      map = L.map('map', { scrollWheelZoom:false, zoomControl:true }).setView([-34.456,-58.566], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
+      C.forEach(function(c){
+        var icon = L.divIcon({ className:'', html:'<div class="pin '+c.t+'"></div>', iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24] });
+        var m = L.marker([c.lat,c.lng], { icon:icon, title:c.name }).addTo(map);
+        m.bindPopup('<b>'+esc(c.name)+'</b><br>'+esc(c.addr)+(c.t!=='hem'?'<br><a href="'+turnoUrl(c)+'">Sacar turno en este centro →</a>':'<br><span style="color:#9b1c1c;font-weight:700">Guardia 24 h · sin turno</span>'));
+        m.on('click', function(){ select(c.id, false); });
+        markers[c.id]=m;
+      });
+    } else { throw new Error('no leaflet'); }
+  } catch(e) {
+    var el=document.getElementById('map'); el.classList.add('map-fallback'); el.textContent='El mapa no está disponible en este momento. Usá la lista para encontrar tu centro.';
+  }
+
+  function render(){
+    var q = norm(state.q.trim());
+    var rows = C.filter(function(c){ return (state.f==='all'||c.t===state.f) && (!q || norm(c.name+' '+c.addr).indexOf(q)>=0); });
+    if (state.me) { rows.forEach(function(c){ c.d=km(state.me,c); }); rows.sort(function(a,b){ return a.d-b.d; }); }
+    var list=document.getElementById('list');
+    if (!rows.length) { list.innerHTML='<p style="padding:14px;color:var(--muted)">No encontramos centros con esa búsqueda.</p>'; return; }
+    list.innerHTML = rows.map(function(c){
+      var tl=TL[c.t];
+      return '<div class="item'+(state.sel===c.id?' on':'')+'" data-id="'+c.id+'" tabindex="0" role="button" aria-label="'+esc(c.name)+', '+esc(c.addr)+'">'+
+        '<b>'+esc(c.name)+'</b>'+(state.me?'<span class="dist">'+(c.d<1?Math.round(c.d*1000)+' m':c.d.toFixed(1).replace('.',',')+' km')+'</span>':'<span></span>')+
+        '<span class="addr">'+esc(c.addr)+'<br><span class="tag '+tl[1]+'">'+tl[0]+'</span></span>'+
+        '<div class="acts">'+(c.t!=='hem'?'<a class="a-turno" href="'+turnoUrl(c)+'" aria-label="Sacar turno en '+esc(c.name)+'">Sacar turno aquí</a>':'')+
+        '<a class="a-ir" href="'+gmaps(c)+'" target="_blank" rel="noopener">Cómo llegar</a>'+
+        (c.tel?'<a class="a-tel" href="tel:'+c.tel.replace(/\s/g,'')+'">'+esc(c.tel)+'</a>':'')+'</div></div>';
+    }).join('');
+  }
+  function select(id, fly){
+    state.sel=id; render();
+    var c=C[id]; if (map && markers[id]) { if (fly!==false) map.flyTo([c.lat,c.lng], 15, { duration:.6 }); markers[id].openPopup(); }
+    var el=document.querySelector('.item[data-id="'+id+'"]'); if (el && fly===false) el.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }
+  document.getElementById('list').addEventListener('click', function(e){
+    if (e.target.closest('a')) return; var it=e.target.closest('.item'); if (it) select(+it.dataset.id);
+  });
+  document.getElementById('list').addEventListener('keydown', function(e){
+    if ((e.key==='Enter'||e.key===' ') && e.target.classList.contains('item')) { e.preventDefault(); select(+e.target.dataset.id); }
+  });
+  document.getElementById('q').addEventListener('input', function(e){ state.q=e.target.value; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(b){
+    b.addEventListener('click', function(){
+      state.f=b.dataset.f;
+      Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      render();
+    });
+  });
+  document.getElementById('geo').addEventListener('click', function(){
+    var msg=document.getElementById('geoMsg'), btn=this;
+    if (!navigator.geolocation) { btn.textContent='Tu navegador no permite ubicación'; return; }
+    btn.textContent='Buscando tu ubicación…';
+    navigator.geolocation.getCurrentPosition(function(p){
+      state.me={ lat:p.coords.latitude, lng:p.coords.longitude };
+      btn.textContent='Ordenado por cercanía ✓'; msg.textContent='Centros ordenados por distancia a tu ubicación.';
+      if (map) {
+        if (meMarker) map.removeLayer(meMarker);
+        meMarker=L.marker([state.me.lat,state.me.lng], { icon:L.divIcon({ className:'', html:'<div class="me"></div>', iconSize:[18,18], iconAnchor:[9,9] }), title:'Tu ubicación' }).addTo(map);
+      }
+      render(); var first=document.querySelector('.item'); if (first) select(+first.dataset.id);
+    }, function(){ btn.textContent='No pudimos obtener tu ubicación'; msg.textContent='No se pudo obtener la ubicación.'; }, { enableHighAccuracy:true, timeout:10000 });
+  });
+
+  // Menú mobile
+  var mb=document.getElementById('menuBtn'), menu=document.getElementById('menu');
+  mb.addEventListener('click', function(){ var o=menu.classList.toggle('open'); mb.setAttribute('aria-expanded', o?'true':'false'); });
+  Array.prototype.forEach.call(menu.querySelectorAll('a'), function(a){ a.addEventListener('click', function(){ menu.classList.remove('open'); mb.setAttribute('aria-expanded','false'); }); });
+
+  render();
+})();
+</script>
+</body>
+</html>

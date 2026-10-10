@@ -33,6 +33,10 @@
       "destination": "/propuesta-salud-jose-c-paz.html"
     },
     {
+      "source": "/agenda/propuesta/salud-san-fernando",
+      "destination": "/propuesta-salud-san-fernando.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Calendar, Building2, Store, Menu, X,
-  LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2, ChevronRight, Settings,
+  LogOut, Stethoscope, Clock, Users, Puzzle, BarChart2, ChevronRight, Settings, FileDown,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -28,7 +28,7 @@ export const PA = {
 
 export type AdminView =
   | 'dashboard' | 'appointments' | 'availability' | 'services'
-  | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes' | 'configuracion'
+  | 'professionals' | 'users' | 'modules' | 'centros' | 'reportes' | 'configuracion' | 'exportar'
 
 interface NavItem {
   label: string
@@ -47,6 +47,7 @@ const NAV: NavItem[] = [
   { label: 'Centros',        icon: Store,           view: 'centros',      superadminOnly: true },
   { label: 'Reportes',       icon: BarChart2,       view: 'reportes',     superadminOnly: true },
   { label: 'Módulos',        icon: Puzzle,          view: 'modules',      superadminOnly: true },
+  { label: 'Exportar reporte', icon: FileDown,       view: 'exportar'      },
   { label: 'Configuración',  icon: Settings,        view: 'configuracion' },
 ]
 

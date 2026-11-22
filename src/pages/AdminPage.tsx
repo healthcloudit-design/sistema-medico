@@ -14,6 +14,7 @@ import { ModulesManager } from '../components/admin/ModulesManager'
 import { CentrosManager } from '../components/admin/CentrosManager'
 import { ReportsView }   from '../components/admin/ReportsView'
 import { OrgSettings }   from '../components/admin/OrgSettings'
+import { ExportReport } from '../components/admin/ExportReport'
 
 export function AdminPage() {
   const [user, setUser]               = useState<User | null>(null)
@@ -68,6 +69,7 @@ export function AdminPage() {
       {view === 'modules'       && <ModulesManager />}
       {view === 'centros'       && <CentrosManager userRole={profile?.role} />}
       {view === 'reportes'      && <ReportsView />}
+      {view === 'exportar'      && <ExportReport organizationId={(profile as any)?.organization_id ?? null} role={profile?.role ?? 'admin'} isSuperAdmin={profile?.role === 'superadmin'} userEmail={user.email ?? ''} />}
       {view === 'configuracion' && <OrgSettings organizationId={(profile as any)?.organization_id ?? null} />}
     </AdminLayout>
   )

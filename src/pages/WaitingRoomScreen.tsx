@@ -87,6 +87,8 @@ export function WaitingRoomScreen() {
   const audioCtxRef      = useRef<AudioContext | null>(null)
   // Ids de pacientes ya anunciados, para no repetir la campana en cada refresco de realtime.
   const announcedIdsRef  = useRef<Set<string>>(new Set())
+  // Voces de síntesis (TTS) para el llamador por voz.
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([])
 
   // Campana sintetizada con Web Audio (sin archivo de audio). Dos tonos tipo "ding-dong".
   const playChime = () => {
@@ -117,6 +119,41 @@ export function WaitingRoomScreen() {
     }
   }
 
+  // ── Llamador por voz (Web Speech API) ─────────────────────────
+  const apellidoDe = (full: string): string => {
+    const n = (full || '').trim()
+    if (!n) return ''
+    if (n.includes(',')) return n.split(',')[0].trim()
+    const parts = n.split(/\s+/)
+    return parts[parts.length - 1]
+  }
+
+  const pickVoice = (): SpeechSynthesisVoice | null => {
+    const vs = voicesRef.current
+    return vs.find(v => v.lang && v.lang.toLowerCase().startsWith('es')) ?? null
+  }
+
+  const speakOnce = (text: string, onDone?: () => void) => {
+    try {
+      if (!('speechSynthesis' in window)) { onDone?.(); return }
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'es-AR'
+      u.rate = 0.95
+      const v = pickVoice()
+      if (v) u.voice = v
+      if (onDone) u.onend = () => onDone()
+      window.speechSynthesis.speak(u)
+    } catch { onDone?.() }
+  }
+
+  // Dice "Apellido, consultorio X" y lo repite 3 s después de terminar.
+  const announceVoice = (patientName: string, consultorio?: string | null) => {
+    const ap = apellidoDe(patientName)
+    if (!ap) return
+    const frase = consultorio ? `${ap}, consultorio ${consultorio}` : ap
+    speakOnce(frase, () => window.setTimeout(() => speakOnce(frase), 3000))
+  }
+
   // Desbloqueo del audio: los navegadores no dejan sonar nada hasta que hubo una interacción
   // del usuario. Este toque único crea el AudioContext y suena una campana de prueba.
   const enableSound = () => {
@@ -127,6 +164,8 @@ export function WaitingRoomScreen() {
       if (ctx.state === 'suspended') ctx.resume()
       setSoundReady(true)
       playChime()
+      // Prime + confirma el TTS con el gesto del usuario
+      try { window.speechSynthesis.getVoices(); window.speechSynthesis.cancel(); speakOnce('Llamador de voz activado') } catch { /* noop */ }
     } catch {
       setSoundReady(true)
     }
@@ -146,6 +185,15 @@ export function WaitingRoomScreen() {
         setOrg(data as Org)
       })
   }, [slug])
+
+  // Cargar voces de TTS (en algunos navegadores llegan async).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    const load = () => { voicesRef.current = window.speechSynthesis.getVoices() }
+    load()
+    window.speechSynthesis.onvoiceschanged = load
+    return () => { try { window.speechSynthesis.onvoiceschanged = null } catch { /* noop */ } }
+  }, [])
 
   // Cargar turnos del día
   const loadAppointments = async (orgId: string) => {
@@ -172,9 +220,11 @@ export function WaitingRoomScreen() {
     const waiting       = appts.filter(a => a.status !== 'en_atencion')
 
     // Campana + destello SOLO para los recién llamados (ids que no anunciamos antes).
-    const nuevos = attendingList.filter(a => !announcedIdsRef.current.has(a.id)).map(a => a.id)
+    const nuevosAppts = attendingList.filter(a => !announcedIdsRef.current.has(a.id))
+    const nuevos = nuevosAppts.map(a => a.id)
     if (nuevos.length > 0) {
       playChime()
+      nuevosAppts.forEach(a => announceVoice(a.patient_name, a.professional?.consultorio))
       setFlashIds(prev => {
         const s = new Set(prev)
         nuevos.forEach(id => s.add(id))
@@ -236,8 +286,8 @@ export function WaitingRoomScreen() {
         >
           <div className="text-center px-6">
             <div className="text-7xl mb-6">🔔</div>
-            <p className="text-white text-3xl font-semibold mb-2">Tocá para activar el sonido</p>
-            <p className="text-gray-400 text-lg">El llamador sonará cada vez que se llame a un paciente</p>
+            <p className="text-white text-3xl font-semibold mb-2">Tocá para activar el sonido y la voz</p>
+            <p className="text-gray-400 text-lg">Se anunciará por voz cada vez que se llame a un paciente</p>
           </div>
         </div>
       )}

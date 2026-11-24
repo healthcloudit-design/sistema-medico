@@ -124,8 +124,8 @@ export function WaitingRoomScreen() {
     const n = (full || '').trim()
     if (!n) return ''
     if (n.includes(',')) return n.split(',')[0].trim()
-    const parts = n.split(/\s+/)
-    return parts[parts.length - 1]
+    // En Bicentenario agendan "APELLIDO NOMBRE" -> el apellido es la primera palabra.
+    return n.split(/\s+/)[0]
   }
 
   const pickVoice = (): SpeechSynthesisVoice | null => {

@@ -67,7 +67,17 @@ serve(async (req) => {
       user_metadata: { full_name, role },
     })
 
-    if (createError) throw createError
+    if (createError) {
+      const m = String((createError as any)?.message ?? createError)
+      const code = (createError as any)?.code
+      if (code === 'email_exists' || /already.*registered|already been registered|duplicate|exists/i.test(m)) {
+        return new Response(
+          JSON.stringify({ error: 'Ya existe un usuario con ese email.' }),
+          { status: 409, headers: { ...CORS, 'Content-Type': 'application/json' } }
+        )
+      }
+      throw createError
+    }
     if (!newUser.user) throw new Error('No se pudo crear el usuario')
 
     // Actualizar profile con full_name, organization_id y professional_id

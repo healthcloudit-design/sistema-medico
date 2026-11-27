@@ -71,7 +71,7 @@ export function CreateUserForm({
     if (needsProfessional && !form.professional_id) { setError('Selecciona el profesional asociado'); return }
     if (needsOrg && !form.organization_id) { setError('Selecciona el centro al que pertenece el usuario'); return }
     setSaving(true)
-    const { error: fnErr } = await supabase.functions.invoke('admin-create-user', {
+    const { data: fnData, error: fnErr } = await supabase.functions.invoke('admin-create-user', {
       body: {
         email:           form.email,
         password:        form.password,
@@ -82,7 +82,18 @@ export function CreateUserForm({
       },
     })
     if (fnErr) {
-      setError(fnErr.message ?? 'Error al crear el usuario')
+      let msg = 'Error al crear el usuario'
+      try {
+        // El cuerpo real del error de la Edge Function viene en error.context (Response)
+        const ctx = (fnErr as any).context
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json()
+          if (body?.error) msg = body.error
+        } else if ((fnData as any)?.error) {
+          msg = (fnData as any).error
+        }
+      } catch { /* si no se puede leer, queda el genérico */ }
+      setError(msg)
       setSaving(false)
       return
     }
